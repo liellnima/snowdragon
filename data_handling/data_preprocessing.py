@@ -10,6 +10,7 @@ import os
 import glob
 import csv
 import time
+import re
 from pathlib import Path # for os independent path handling
 from snowmicropyn import Profile
 
@@ -62,8 +63,9 @@ def get_smp_data(csv_dir):
     return smp
 
 # TODO add labeling option, add windowing option, rename function
+# TODO update doc
 # unites and labels smp data and adds smp index
-def label_smp_data(smp, target_dir, filename="smp_all.csv", export=False, overwrite=False):
+def label_smp_data(csv_dir, filename="smp_all.csv"):
     """ Gets unlabelled smp data. Writes the complete data into one csv.
     Unlabelled data with pnt file extension is fetched and exported to csv files if export=True.
     csv files are subsequently transformed to pandas frame.
@@ -77,13 +79,17 @@ def label_smp_data(smp, target_dir, filename="smp_all.csv", export=False, overwr
 
     """
     # check if something has been exported in smp_csv
-    if len(os.listdir(target_dir)) == 0:
+    if len(os.listdir(csv_dir)) == 0:
+        # TODO update print statement
         print("Your target directory is empty. Consider setting export=True in the get_smp_data in order to export the pnt files to csv first.")
+
+    # dictionary to resolve smp indexing
+    smp_idx_resolver = {}
 
     # a list to save them all
     smp_all_rows = []
     # matching csv files recursively (recursively just to be safe)
-    match_csv = target_dir.as_posix() + "/**/*.csv"
+    match_csv = csv_dir.as_posix() + "/**/*.csv"
     # use generator to reduce ram usage
     file_generator = glob.iglob(match_csv, recursive=True)
 
@@ -91,7 +97,7 @@ def label_smp_data(smp, target_dir, filename="smp_all.csv", export=False, overwr
     col_names = ["distance", "force", "smp_idx"]
 
     # we will write all data in one csv file. file is cleared automatically if already existant
-    with open(smp_all_filename, "w+") as smp_all:
+    with open(filename, "w+") as smp_all:
         # writer for writing rows in our file
         writer = csv.writer(smp_all)
         # yields each matching csv file
@@ -99,6 +105,8 @@ def label_smp_data(smp, target_dir, filename="smp_all.csv", export=False, overwr
         for file in file_generator:
             # get smp datapoint name
             current_smp_idx = file.split("/")[-1].split(".")[0]
+            current_smp_idx_int = idx_to_int(current_smp_idx)
+            # TODO: go into label_csv and get columns marker and value for current_smp_idx
             # open csv file and write each row to  smp_all_rows
             with open(Path(file)) as csv_file:
                 # skip the first two lines of the file (comments)
@@ -109,7 +117,8 @@ def label_smp_data(smp, target_dir, filename="smp_all.csv", export=False, overwr
                 # each dictionary row is appended to the shared row list
                 for row in current_smp_rows:
                      # row gets extended by its current smp index name
-                     row["smp_idx"] = current_smp_idx
+                     row["smp_idx"] = current_smp_idx_int
+                     # TODO: call a function here. func finds out which marker and value must be written here
                      # write the row into the csv file
                      writer.writerow([row["distance"], row["force"], row["smp_idx"]])
 
@@ -119,6 +128,32 @@ def label_smp_data(smp, target_dir, filename="smp_all.csv", export=False, overwr
     # labelled data has init file extension
     # convert to csv files
     # put it in pandas frame (or csv_all)
+def idx_to_int(string_idx):
+    """ Converts a string that indexes the smp profile to an int.
+
+    Paramters:
+        string_idx (String): the index that is converted
+
+    Returns:
+        int32: the index as int.
+        For smp profiles starting with S31H, S43M, S49M [1, 2, 3, 4] + the last four digits are the int.
+        For smp profiles starting with PS122, [0] + 1 digit Leg + 2 digit week + 3 digit id are the int.
+        All other profiles are NULL.
+    """
+    if "PS122" in string_idx:
+        str_parts = re.split("_|-", string_idx)
+        #     Mosaic + Leg          + week                  + id number
+        return int("1" + str_parts[1] + str_parts[2].zfill(2) + str_parts[3].zfill(3))
+
+    elif "S31H" in string_idx:
+        return int("2" + string_idx[-4:].zfill(6))
+    elif "S43M" in string_idx:
+        return int("3" + string_idx[-4:].zfill(6))
+    elif "S49M" in string_idx:
+        return int("4" + string_idx[-4:].zfill(6))
+    else:
+        return None
+
 
 # function to get temperature data
 def get_temperature(temp):
@@ -128,7 +163,7 @@ def get_temperature(temp):
     Returns:
         dd.DataFrame: complete data in pd.DataFrame format
     """
-    return dd.read_csv(temp)
+    return pd.read_csv(temp)
 
 # method to check if all pnt files have found their way into the united smp dataframe
 # ATTENTION: this method takes extremely long! Some minutes for checking the existence of one file.
@@ -200,24 +235,30 @@ def main():
 
     print("Starting to export and/or convert data")
     # get temp data
-    tmp = get_temperature(temp=T_LOC)
-    print(tmp.head())
+    #tmp = get_temperature(temp=T_LOC)
+    #print(tmp.head())
 
     # export, unite and label smp data
     start = time.time()
-    pnt_to_csv(pnt_dir=SMP_LOC, target_dir=EXP_LOC, overwrite=False)
+
+    #pnt_to_csv(pnt_dir=SMP_LOC, target_dir=EXP_LOC, overwrite=False)
+
+    #smp = label_smp_data(csv_dir=EXP_LOC, filename="test02.csv")
+
     #smp = label_smp_data(csv_dir=EXP_LOC)
-    smp = dd.read_csv("smp_all.csv", names=["distance", "force", "smp_idx"])
+    #smp = dd.read_csv("smp_all.csv", names=["distance", "force", "smp_idx"])
     # one can use directly get_smp_data if no further changes to the csv files are needed
     # smp = get_smp_data(csv_dir=EXP_LOC)
+
+    #smp_num_cols = pd.read_csv("smp_all.csv", usecols=[0, 1], dtype=np.float32, engine="c", sep=",", low_memory=True, header=0)
     end = time.time()
     print("Elapsed time for export and dataframe creation: ", end-start)
+    print(smp_num_cols.head())
 
     print("Number of files in export folder: ", len(os.listdir(EXP_LOC)))
     #print("All pnt files from source dir were also found in the given dataframe: ", check_export(SMP_LOC, smp))
 
-
-    print_test_df(smp, fast=True)
+    #print_test_df(smp, fast=True)
     print("Finished export, transformation and printing example features of data.")
 
 
