@@ -46,37 +46,16 @@ def pnt_to_csv (pnt_dir, target_dir, overwrite=False):
 
     print("finished exporting")
 
-# function to load all smp data into one dask dataframe
-def get_smp_data(csv_dir):
-    """ Returns a dask dataframe with all smp profiles in it.
-    Should be only used if no further changes to the csv files are necessary. Otherwise use label_smp_data, which returns
-    a single united csv file, that can easily be transformed to a dask dataframe.
-    Paramters:
-        csv_dir (Path): folder location of csv files
-    Returns:
-        dask dataframe with all smp profiles
-    """
-    # matching csv files recursively (recursively just to be safe)
-    match_csv = csv_dir.as_posix() + "/*.csv"
-    print(match_csv)
-    smp = dd.read_csv(match_csv, header=1, include_path_column="smp_idx", converters={"smp_idx": lambda path: os.path.split(path)[1]})
-    return smp
-
-# TODO add labeling option, add windowing option, rename function
-# TODO update doc
-# unites and labels smp data and adds smp index
-def label_smp_data(csv_dir, filename="smp_all.csv"):
-    """ Gets unlabelled smp data. Writes the complete data into one csv.
-    Unlabelled data with pnt file extension is fetched and exported to csv files if export=True.
-    csv files are subsequently transformed to pandas frame.
+# unites the csv data into one csv and adds smp index to data
+# and saves everything in pd.DataFrame that can be reloaded from the npz data
+def get_smp_data(csv_dir, csv_filename="smp_all.csv", npz_filename=None):
+    """ Gets unlabelled smp data. Indexes the data. Writes the complete data into one csv.
+    csv files are subsequently transformed to pandas frame. Return the pd.DataFrame and stores it as npz.
 
     Parameters:
-        smp (Path): folder location of smp profiles
-        target_dir (Path): folder name where converted csv files should get exported or were they have already been exported
-        filename (String): Name for file, where all the smp data is written to. File extension must be csv!
-        export (Boolean): indicates if data should be exported from pnt to csv. Default is False
-        overwrite (Boolean): important during export; indicates if csv file should be overwriting if csv file already exists
-
+        csv_dir (Path): folder location of smp profiles as csv files
+        csv_filename (String): Name for file, where all the smp data is written to. File extension must be csv!
+        npz_filename (String): If none (default) same name as csv_filename but with npz extension.
     """
     # check if something has been exported in smp_csv
     if len(os.listdir(csv_dir)) == 0:
@@ -103,9 +82,8 @@ def label_smp_data(csv_dir, filename="smp_all.csv"):
         # yields each matching csv file
         print("starting with csv generator")
         for file in file_generator:
-            # get smp datapoint name
-            current_smp_idx = file.split("/")[-1].split(".")[0]
-            current_smp_idx_int = idx_to_int(current_smp_idx)
+            # get smp datapoint name and convert it to int
+            current_smp_idx = idx_to_int(file.split("/")[-1].split(".")[0])
             # TODO: go into label_csv and get columns marker and value for current_smp_idx
             # open csv file and write each row to  smp_all_rows
             with open(Path(file)) as csv_file:
@@ -117,17 +95,31 @@ def label_smp_data(csv_dir, filename="smp_all.csv"):
                 # each dictionary row is appended to the shared row list
                 for row in current_smp_rows:
                      # row gets extended by its current smp index name
-                     row["smp_idx"] = current_smp_idx_int
+                     row["smp_idx"] = current_smp_idx
                      # TODO: call a function here. func finds out which marker and value must be written here
                      # write the row into the csv file
                      writer.writerow([row["distance"], row["force"], row["smp_idx"]])
 
-    print("finished producing united csv file")
+    print("\nExported united csv files to {}.".format(csv_filename))
+
+    # read as pd.DataFrame
+    smp_df = pd.read_csv(csv_filename, dtype={"distance": np.float32, "force": np.float32, "smp_idx": np.int32}, sep=",", header=0, engine="c", low_memory=True)
+
+    # save as npz
+    if npz_filename is None:
+        npz_filename = csv_filename.split(".")[0] + ".npz"
+
+    np.savez(npz_filename, distance=smp_df.values[:, 0], force=smp_df.values[:, 1], smp_idx=smp_df.values[:, 2])
+    print("\nExported pd.DataFrame data as numpy arrays to {}.".format(npz_filename))
+
+    # return the pd.DataFrame
+    return smp_df
 
 # TODO function to get all labelled data
     # labelled data has init file extension
     # convert to csv files
-    # put it in pandas frame (or csv_all)
+    # put it in pandas frame
+
 def idx_to_int(string_idx):
     """ Converts a string that indexes the smp profile to an int.
 
@@ -212,24 +204,20 @@ def check_export(pnt_dir, smp_df, break_imm=True):
     # and return False
     return False
 
-# Attention, might be slow!
-def print_test_df(smp, fast=True):
-    """ Printing some features and information of smp DataFrame. This might be very slow.
+def print_test_df(smp):
+    """ Printing some features and information of smp DataFrame.
     Paramters:
-        smp (dd.DataFrame): dataframe from which the information is retrieved
-        fast (Boolean): if fast, only head and datatypes is printed
+        smp (pd.DataFrame): dataframe from which the information is retrieved
     """
+    print("Info about pd.DataFrame:\n", smp.info())
     print("Overview of smp dataframe: \n", smp.head())
     print("Dataypes of columns: \n", smp.dtypes)
-
-    if not fast:
-        #print("Datapoints per SMP File: \n", smp["smp_idx"].value_counts().compute())
-        # accessing a specific row is not dask-like. One could do it by creating a special indexing column
-        print("First row: \n", smp.iloc[0].compute())
-        print("Force at first row: ", smp["force"].iloc[0])
-        print("Amount of datapoints with a force > 40: ", len(smp[smp["force"] > 40]))
-        print("Was S31H0117 found in the dataframe? ", any(smp.smp_idx == "S31H0117"))
-        print("Only S31H0117 data: \n", smp[smp["smp_idx"] == "S31H0117"].head(npartitions=-1))
+    print("Datapoints per SMP File: \n", smp["smp_idx"].value_counts())
+    print("First row: \n", smp.iloc[0])
+    print("Force at first row: ", smp["force"].iloc[0])
+    print("Amount of datapoints with a force > 40: ", len(smp[smp["force"] > 40]))
+    print("Was S31H0117 found in the dataframe? ", any(smp.smp_idx == "S31H0117"))
+    print("Only S31H0117 data: \n", smp[smp["smp_idx"] == "S31H0117"].head())
 
 def main():
 
@@ -240,29 +228,24 @@ def main():
 
     # export, unite and label smp data
     start = time.time()
-
+    # export data from pnt to csv
     #pnt_to_csv(pnt_dir=SMP_LOC, target_dir=EXP_LOC, overwrite=False)
+    # unite data in one csv file, index it, convert it to pandas (and save it as npz)
+    #smp = get_smp_data(csv_dir=EXP_LOC, filename="test02.csv")
+    smp_df = pd.read_csv("test02.csv", dtype={"distance": np.float32, "force": np.float32, "smp_idx": np.int32}, sep=",", header=0, engine="c", low_memory=True)
 
-    #smp = label_smp_data(csv_dir=EXP_LOC, filename="test02.csv")
+    np.savez("smp_all.npz", distance=smp_df.values[:, 0], force=smp_df.values[:, 1], smp_idx=smp_df.values[:, 2])
 
-    #smp = label_smp_data(csv_dir=EXP_LOC)
-    #smp = dd.read_csv("smp_all.csv", names=["distance", "force", "smp_idx"])
-    # one can use directly get_smp_data if no further changes to the csv files are needed
-    # smp = get_smp_data(csv_dir=EXP_LOC)
-
-    #smp_num_cols = pd.read_csv("smp_all.csv", usecols=[0, 1], dtype=np.float32, engine="c", sep=",", low_memory=True, header=0)
     end = time.time()
     print("Elapsed time for export and dataframe creation: ", end-start)
-    print(smp_num_cols.head())
 
     print("Number of files in export folder: ", len(os.listdir(EXP_LOC)))
     #print("All pnt files from source dir were also found in the given dataframe: ", check_export(SMP_LOC, smp))
 
-    #print_test_df(smp, fast=True)
+    print_test_df(smp_df)
     print("Finished export, transformation and printing example features of data.")
 
-
-# Middleterm TODO: label_smp_data
+# Middleterm TODO: labelling and windowing data -> do this on a pandas frame
 # Types of dataframes we will need: smp, temp, labelled and unlabelled, different window sizes
 if __name__ == "__main__":
     main()
