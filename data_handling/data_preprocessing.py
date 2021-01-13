@@ -192,12 +192,10 @@ def get_temperature(temp):
 # ATTENTION: this method takes extremely long! Some minutes for checking the existence of one file.
 # It works perfectly fine and fast for small dataframes. Searching large dataframes just takes time.
 def check_export(pnt_dir, smp_df, break_imm=True):
-    """ Checks if all smp pnt files can be found in a dataframe. Don't use this for large dataframes! It will take hours.
-    Everything what you can process with a pandas dataframe takes only seconds.
-    If the dataframe does not fit in your RAM and you are using dask - don't use this method or go read some book in the meantime.
+    """ Checks if all smp pnt files can be found in a dataframe. Takes a lot of time.
     Parameters:
         pnt_dir (Path): folder location where all the unlabelled pnt data is stored
-        smp_df (pd.DataFrame or dd.DataFrame): dataframe with column "smp_idx", where the complete smp data is collected
+        smp_df (pd.DataFrame): dataframe with column "smp_idx", where the complete smp data is collected
         break_imm (Boolean): indicates if search should be aborted immediately when a file was not found.
             This is faster and prints out which file has not been found. Default value is True.
     Returns:
@@ -214,13 +212,13 @@ def check_export(pnt_dir, smp_df, break_imm=True):
     found_all = []
 
     # match all files in the dir who end on .pnt recursively
-    match_pnt = smp.as_posix() + "/**/*.pnt"
+    match_pnt = pnt_dir.as_posix() + "/**/*.pnt"
     # use generator to reduce memory usage
     file_generator = glob.iglob(match_pnt, recursive=True)
     # yields each matching file and exports it
     for file in file_generator:
-        print("trying to determine if file was found in dataframe")
-        smp_was_found = any(smp_df.smp_idx == file.split(".")[0])
+        print("Determining if file {} is in the dataframe".format(file))
+        smp_was_found = any(smp_df.smp_idx == idx_to_int(file.split("/")[-1].split(".")[0]))
         found_all.append(smp_was_found)
         if break_imm and not smp_was_found:
             print("The following file was not found: ", file.split(".")[0])
@@ -266,13 +264,13 @@ def main():
     # export data from pnt to csv
     pnt_to_csv(pnt_dir=SMP_LOC, target_dir=EXP_LOC, overwrite=False)
     # unite data in one csv file, index it, convert it to pandas (and save it as npz)
-    smp = get_smp_data(csv_dir=EXP_LOC, csv_filename="smp_all.csv", npz_filename="smp_all.npz")
+    smp = get_smp_data(csv_dir=EXP_LOC, csv_filename="smp_all.csv", npz_filename="smp_all.npz", skip_unify=True, skip_npz=True)
 
     end = time.time()
     print("Elapsed time for export and dataframe creation: ", end-start)
 
     print("Number of files in export folder: ", len(os.listdir(EXP_LOC)))
-    #print("All pnt files from source dir were also found in the given dataframe: ", check_export(SMP_LOC, smp))
+    print("All pnt files from source dir were also found in the given dataframe: ", check_export(SMP_LOC, smp))
 
     print_test_df(smp)
     print("Finished export, transformation and printing example features of data.")
