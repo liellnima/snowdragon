@@ -5,7 +5,6 @@ import data_generators
 # external imports
 import numpy as np
 import pandas as pd
-import dask.dataframe as dd
 import os
 import glob
 import csv
@@ -13,6 +12,7 @@ import time
 import re
 from pathlib import Path # for os independent path handling
 from snowmicropyn import Profile
+#from smpfunc import preprocess
 
 # Set folder location of smp data (pnt format)
 SMP_LOC = Path("/home/julia/Documents/University/BA/Data/Arctic/")
@@ -21,6 +21,7 @@ T_LOC = Path("/home/julia/Documents/University/BA/Data/Arctic/MOSAiC_ICE_Tempera
 # Set folder name were export files get saved
 EXP_LOC = Path("smp_csv")
 
+# TODO export surface and ground markers
 # exports pnt files (our smp profiles!) to csv files in a target directory
 def pnt_to_csv (pnt_dir, target_dir, overwrite=False):
     """ Exports all pnt files from a dir and its subdirs as csv files into a new dir.
@@ -42,10 +43,24 @@ def pnt_to_csv (pnt_dir, target_dir, overwrite=False):
         file_name = Path(target_dir, file.split("/")[-2] + ".csv")
         # exports file only if we want to overwrite it or it doesnt exist yet
         if overwrite or not file_name.is_file():
-            Profile.load(file).export_samples(file_name)
+            smp_profile = Profile.load(file)
+            # TODO this part here!!!
+            # https://snowmicropyn.readthedocs.io/en/latest/api_reference.html
+            # https://github.com/kingjml/SMP-Sea-Ice/blob/master/smpfunc.py
+            # do preprocessing function of Joshua King!!!
+            # Attention!!! check if ini files exists beforehand!!! file will be overwritten otherwise!
+            smp_profile.detect_ground()
+            smp_profile.detect_surface()
+            # get pandas dataframe snow pack only
+            # 1. apply rolling window size
+            # 2. apply labelling (check smpfunc.py for that!) [you need to find the ini file first]
+            # 3. make the pandas dataframe a csv
+            # we should do everything here: indexing, labelling and windows
+            smp_profile.export_samples(file_name, precision=6, snowpack_only=True)
 
     print("Finished exporting all pnt file as csv files in {}.".format(target_dir))
 
+# TODO remove indexing (index already when doing pnt_to_csv)
 # unites the csv data into one csv and adds smp index to data
 # and saves everything in pd.DataFrame that can be reloaded from the npz data
 def get_smp_data(csv_dir, csv_filename="smp_all.csv", npz_filename=None, skip_unify=False, skip_npz=False):
@@ -140,8 +155,6 @@ def save_csv_as_npz(csv_filename, npz_filename):
     np.savez(npz_filename, distance=distance.values[:, 0], force=force.values[:, 0], smp_idx=smp_idx.values[:, 0])
     print("\nExported pd.DataFrame data as numpy arrays to {}.".format(npz_filename))
 
-
-
 def npz_to_pd(npz_file):
     """ Converts a npz file to a pandas DataFrame.
     Paramters:
@@ -176,7 +189,6 @@ def idx_to_int(string_idx):
         return int("4" + string_idx[-4:].zfill(6))
     else:
         return 0
-
 
 # function to get temperature data
 def get_temperature(temp):
@@ -255,27 +267,53 @@ def print_test_df(smp):
 def main():
 
     print("Starting to export and/or convert data")
+
+    profile = Profile.load("/home/julia/Documents/University/BA/Data/Arctic/S49M0040.pnt")
+    ground = profile.detect_ground()
+    surface = profile.detect_surface()
+    print(ground)
+    print(surface)
+    print(ground - surface)
+    print(profile.markers)
+
+    in_snowpack = profile.samples_within_snowpack()
+    in_snowpack["smp_idx"] = "S49M0040"
+    print(in_snowpack.head())
+
+
+    profile.export_samples(file=Path("one_test_profile.csv"), precision=6, snowpack_only=True)
+    print(len(pd.read_csv("one_test_profile.csv", header=1)))
+
     # get temp data
-    tmp = get_temperature(temp=T_LOC)
-    print(tmp.head())
+    #tmp = get_temperature(temp=T_LOC)
+    #print(tmp.head())
 
     # export, unite and label smp data
-    start = time.time()
+    #start = time.time()
     # export data from pnt to csv
-    pnt_to_csv(pnt_dir=SMP_LOC, target_dir=EXP_LOC, overwrite=False)
+    #pnt_to_csv(pnt_dir=SMP_LOC, target_dir=EXP_LOC, overwrite=False)
     # unite data in one csv file, index it, convert it to pandas (and save it as npz)
-    smp = get_smp_data(csv_dir=EXP_LOC, csv_filename="smp_all.csv", npz_filename="smp_all.npz", skip_unify=True, skip_npz=True)
+    #smp = get_smp_data(csv_dir=EXP_LOC, csv_filename="smp_all.csv", npz_filename="smp_all.npz", skip_unify=True, skip_npz=True)
 
-    end = time.time()
-    print("Elapsed time for export and dataframe creation: ", end-start)
+    #end = time.time()
+    #print("Elapsed time for export and dataframe creation: ", end-start)
 
-    print("Number of files in export folder: ", len(os.listdir(EXP_LOC)))
-    print("All pnt files from source dir were also found in the given dataframe: ", check_export(SMP_LOC, smp))
+    #print(smp.head())
 
-    print_test_df(smp)
+    # 1. windowing
+
+    # 2. labelling
+
+    #print("Number of files in export folder: ", len(os.listdir(EXP_LOC)))
+    #print("All pnt files from source dir were also found in the given dataframe: ", check_export(SMP_LOC, smp))
+
+    # print_test_df(smp)
     print("Finished export, transformation and printing example features of data.")
 
 # Middleterm TODO: labelling and windowing data -> do this on a pandas frame
 # Types of dataframes we will need: smp, temp, labelled and unlabelled, different window sizes
+
+# Longterm TODO: make everything faster by using profile.samples() -> you get immediately a pandas dataframe,
+# which can be written to npz arrays
 if __name__ == "__main__":
     main()
