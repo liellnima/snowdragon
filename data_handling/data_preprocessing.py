@@ -1,6 +1,4 @@
 # Data Preprocessing is done here
-# imports from this project
-import data_generators
 
 # external imports
 import numpy as np
@@ -28,7 +26,7 @@ LABELS = {"not_labelled": 0, "surface": 1, "ground": 2, "dh": 3, "dhid": 4, "mfd
           "df": 7, "if": 8, "ifwp": 9, "sh": 10, "drift_end": 11, "snow-ice": 12}
 # arguments for Preprocessing
 PARAMS = {"sum_mm": 1, "window_size": [4,12], "window_type": "gaussian",
-          "window_type_std": 1, "rolling_cols": ["mean_force", "std_force", "min_force", "max_force"]}
+          "window_type_std": 1, "rolling_cols": ["mean_force", "var_force", "min_force", "max_force"]}
 
 # TODO export as npz and not csv
 # exports pnt files (our smp profiles!) to csv files in a target directory
@@ -247,7 +245,7 @@ def print_test_df(smp):
     print("Dataypes of columns: \n", smp.dtypes)
     print("Datapoints per SMP File: \n", smp["smp_idx"].value_counts())
     print("First row: \n", smp.iloc[0])
-    print("Force at first row: \n", smp[["mean_force", "std_force", "min_force", "max_force"]].iloc[0])
+    print("Force at first row: \n", smp[["mean_force", "var_force", "min_force", "max_force"]].iloc[0])
     print("Amount of datapoints with a force > 40: ", len(smp[smp["max_force"] > 40]))
     print("Was S31H0117 found in the dataframe? ", any(smp.smp_idx == idx_to_int("S31H0117")))
     print("Only S31H0117 data: \n", smp[smp["smp_idx"] == idx_to_int("S31H0117")].head())
@@ -283,7 +281,7 @@ def relativize(df):
 
 def summarize_rows(df, mm_window=1):
     """ Summarizes the rows of a dataframe with columns "force", "distance" and "labels".
-    Produces mean, std, min and max of force. Most often label is used. Last distance point is used.
+    Produces mean, var, min and max of force. Most often label is used. Last distance point is used.
     Parameters:
         df (pd.DataFrame): DataFrame that is summarized.
         mm_window (num): how many mm should be summed up. E.g. 1 [mm] (default), 0.5 [mm], etc.
@@ -296,14 +294,14 @@ def summarize_rows(df, mm_window=1):
     window_stepper = range(0, len(df)-window_size, window_size)
     # get stats for window
     mean_force = [df["force"].iloc[i:(i+window_size)].mean() for i in window_stepper]
-    std_force = [df["force"].iloc[i:(i+window_size)].std() for i in window_stepper]
+    var_force = [df["force"].iloc[i:(i+window_size)].var() for i in window_stepper]
     min_force = [df["force"].iloc[i:(i+window_size)].min() for i in window_stepper]
     max_force = [df["force"].iloc[i:(i+window_size)].max() for i in window_stepper]
     distance = [df["distance"].iloc[i+window_size] for i in window_stepper]
     label = [df["label"].iloc[i:(i+window_size)].value_counts().idxmax() for i in window_stepper]
     # returns summarized dataframe
-    return pd.DataFrame(np.column_stack([distance, mean_force, std_force, min_force, max_force, label]),
-                        columns=["distance", "mean_force", "std_force", "min_force", "max_force", "label"])
+    return pd.DataFrame(np.column_stack([distance, mean_force, var_force, min_force, max_force, label]),
+                        columns=["distance", "mean_force", "var_force", "min_force", "max_force", "label"])
 
 
 def rolling_window(df, window_size, rolling_cols, window_type="gaussian", window_type_std=1):
@@ -319,7 +317,8 @@ def rolling_window(df, window_size, rolling_cols, window_type="gaussian", window
     Returns:
         pd.DataFrame: concatenated dataframes (original and new rolled ones)
     """
-    rolling_cols = ["mean_force", "std_force", "min_force", "max_force"]
+    # TODO check if the specification here is necessary
+    # rolling_cols = ["mean_force", "var_force", "min_force", "max_force"]
     all_dfs = [df]
     # roll over columns with different window sizes
     for window in window_size:
@@ -449,13 +448,13 @@ def main():
     # unite data in one csv file, index it, convert it to pandas (and save it as npz)
         # smp = get_smp_data(csv_dir=EXP_LOC, csv_filename="test02.csv", npz_filename="smp_all.npz", skip_unify=True, skip_npz=True)
     # first time to use npz_to_pd:
-        # smp_first = npz_to_pd(EXP_LOC, is_dir=True)
+    #smp_first = npz_to_pd(EXP_LOC, is_dir=True)
     # than: export smp as united npz
-        # dict = smp_first.to_dict(orient="list")
-        #np.savez_compressed("smp_all_npz.npz", **dict)
+    #dict = smp_first.to_dict(orient="list")
+    #np.savez_compressed("smp_all_final.npz", **dict)
 
     # and load pd directly from this npz
-    smp = npz_to_pd("smp_all_npz.npz", is_dir=False)
+    smp = npz_to_pd("smp_all_final.npz", is_dir=False)
 
     end = time.time()
     print("Elapsed time for export and dataframe creation: ", end-start)
@@ -468,6 +467,7 @@ def main():
     print_test_df(smp)
     print("Finished export, transformation and printing example features of data.")
 
+# TODO:
 # TODO: structure this more nicely. remove methods (other file!) which are not useful anymore
 # TODO: make it possible to call a method from here in order to get pandas dataframe! (feeds in the constants from above, constants stay default)
 # Middleterm TODO: include temp in pandas dataframe
