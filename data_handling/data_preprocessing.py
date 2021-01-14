@@ -4,12 +4,15 @@ import data_generators
 
 # external imports
 import numpy as np
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 import pandas as pd
 import os
 import glob
 import csv
 import time
 import re
+import xarray
 from pathlib import Path # for os independent path handling
 from snowmicropyn import Profile
 #from smpfunc import preprocess
@@ -19,16 +22,24 @@ SMP_LOC = Path("/home/julia/Documents/University/BA/Data/Arctic/")
 # Set file location of temperature data
 T_LOC = Path("/home/julia/Documents/University/BA/Data/Arctic/MOSAiC_ICE_Temperature.csv")
 # Set folder name were export files get saved
-EXP_LOC = Path("smp_csv")
+EXP_LOC = Path("smp_csv_test03")
+# labels for the different grain type markers
+LABELS = {"not_labelled": 0, "surface": 1, "ground": 2, "dh": 3, "dhid": 4, "mfdh": 5, "rgwp": 6,
+          "df": 7, "if": 8, "ifwp": 9, "sh": 10, "drift_end": 11, "snow-ice": 12}
+# arguments for Preprocessing
+PARAMS = {"sum_mm": 1, "window_size": [4,12], "window_type": "gaussian",
+          "window_type_std": 1, "rolling_cols": ["mean_force", "std_force", "min_force", "max_force"]}
 
-# TODO export surface and ground markers
+# TODO export as npz and not csv
 # exports pnt files (our smp profiles!) to csv files in a target directory
-def pnt_to_csv (pnt_dir, target_dir, overwrite=False):
+def pnt_to_csv (pnt_dir, target_dir, overwrite=False, **kwargs):
     """ Exports all pnt files from a dir and its subdirs as csv files into a new dir.
+    Preproceses the profiles, according to kwargs arguments.
     Parameters:
         pnt_dir (Path): folder location of pnt files (in our case the smp profiles)
         target_dir (Path): folder name where converted csv files should get exported or were they have already been exported
         overwrite (Boolean): indicates if csv file should be overwriting if csv file already exists
+        **kwargs: arguments for preprocessing function, for description see preprocess_profile()
     """
     # create dir for csv exports
     if not os.path.exists(target_dir):
@@ -40,23 +51,12 @@ def pnt_to_csv (pnt_dir, target_dir, overwrite=False):
     file_generator = glob.iglob(match_pnt, recursive=True)
     # yields each matching file and exports it
     for file in file_generator:
-        file_name = Path(target_dir, file.split("/")[-2] + ".csv")
+        file_name = Path(target_dir, file.split("/")[-1].split(".")[0] + ".csv")
         # exports file only if we want to overwrite it or it doesnt exist yet
         if overwrite or not file_name.is_file():
             smp_profile = Profile.load(file)
-            # TODO this part here!!!
-            # https://snowmicropyn.readthedocs.io/en/latest/api_reference.html
-            # https://github.com/kingjml/SMP-Sea-Ice/blob/master/smpfunc.py
-            # do preprocessing function of Joshua King!!!
-            # Attention!!! check if ini files exists beforehand!!! file will be overwritten otherwise!
-            smp_profile.detect_ground()
-            smp_profile.detect_surface()
-            # get pandas dataframe snow pack only
-            # 1. apply rolling window size
-            # 2. apply labelling (check smpfunc.py for that!) [you need to find the ini file first]
-            # 3. make the pandas dataframe a csv
-            # we should do everything here: indexing, labelling and windows
-            smp_profile.export_samples(file_name, precision=6, snowpack_only=True)
+            # indexes, labels, summarizes and applies a rolling window to the data
+            preprocess_profile(smp_profile, target_dir, **kwargs)
 
     print("Finished exporting all pnt file as csv files in {}.".format(target_dir))
 
@@ -125,8 +125,6 @@ def unify_and_index(csv_dir, csv_filename):
                 current_smp_rows = csv.DictReader(csv_file, fieldnames=col_names)
                 # each dictionary row is appended to the shared row list
                 for row in current_smp_rows:
-                     # row gets extended by its current smp index name
-                     row["smp_idx"] = current_smp_idx
                      # write the row into the csv file
                      writer.writerow([row["distance"], row["force"], row["smp_idx"]])
 
@@ -152,8 +150,8 @@ def save_csv_as_npz(csv_filename, npz_filename):
         npz_filename = csv_filename.split(".")[0] + ".npz"
 
     # save npz
-    np.savez(npz_filename, distance=distance.values[:, 0], force=force.values[:, 0], smp_idx=smp_idx.values[:, 0])
-    print("\nExported pd.DataFrame data as numpy arrays to {}.".format(npz_filename))
+    np.savez_compressed(npz_filename, distance=distance.values[:, 0], force=force.values[:, 0], smp_idx=smp_idx.values[:, 0])
+    print("\nExported csv as numpy arrays to {}.".format(npz_filename))
 
 def npz_to_pd(npz_file):
     """ Converts a npz file to a pandas DataFrame.
@@ -163,7 +161,7 @@ def npz_to_pd(npz_file):
         pd.DataFrame: the converted pandas Dataframe
 
     """
-    smp_npz = np.load("test02.npz")
+    smp_npz = np.load(npz_file)
     return pd.DataFrame.from_dict({item: smp_npz[item] for item in smp_npz.files})
 
 def idx_to_int(string_idx):
@@ -245,11 +243,6 @@ def check_export(pnt_dir, smp_df, break_imm=True):
     # and return False
     return False
 
-# TODO function to get all labelled data
-    # labelled data has init file extension
-    # convert to csv files
-    # put it in pandas frame
-
 def print_test_df(smp):
     """ Printing some features and information of smp DataFrame.
     Paramters:
@@ -264,26 +257,166 @@ def print_test_df(smp):
     print("Was S31H0117 found in the dataframe? ", any(smp.smp_idx == idx_to_int("S31H0117")))
     print("Only S31H0117 data: \n", smp[smp["smp_idx"] == idx_to_int("S31H0117")].head())
 
+
+def label_pd(df, profile):
+    """ Labels the given pandas dataframe, according to the markers saved in profile.
+    Parameters:
+        df (pd.DataFrame): the dataframe to label
+        profile (Profile): the smp profile where the markers are saved (in a separate ini file)
+    """
+    # save starting point of labelling
+    last_marker = profile.markers.get("surface")
+    # markers are assigned to the pd.DataFrame in a sorted manner
+    for marker in sorted(profile.markers, key=profile.markers.get, reverse=False):
+        if marker is not "surface" or "ground" or "not_labelled":
+            # everything between last_marker and new marker gets labelled
+            sel_rows = (df["distance"] > last_marker) & (df["distance"] <= profile.markers.get(marker))
+            integer_label = LABELS.get(marker.translate({ord(ch): None for ch in '0123456789'}))
+            if integer_label is None:
+                raise ValueError("LABELS does not contain the marker {}. Please add it to continue.".format(marker))
+            df.loc[sel_rows, "label"] = integer_label
+            # assign new last_marker
+            last_marker = profile.markers.get(marker)
+
+def relativize(df):
+    """ Relativizes a dataframe with column "distance", such that the first distance value is 0.
+    Parameters:
+        df (pd.DataFrame): the dataframe whose distance column is relativized
+    """
+    surface_value = df["distance"].iloc[0]
+    df["distance"] = df["distance"].apply(lambda x: x - surface_value)
+
+def summarize_rows(df, mm_window=1):
+    """ Summarizes the rows of a dataframe with columns "force", "distance" and "labels".
+    Produces mean, std, min and max of force. Most often label is used. Last distance point is used.
+    Parameters:
+        df (pd.DataFrame): DataFrame that is summarized.
+        mm_window (num): how many mm should be summed up. E.g. 1 [mm] (default), 0.5 [mm], etc.
+    Returns:
+        pd.DataFrame: the summarized DataFrame
+    """
+    # number of rows we summarize (1mm = 242 rows)
+    window_size = mm_window * 242
+    # TODO do not cut off last part!
+    window_stepper = range(0, len(df)-window_size, window_size)
+    # get stats for window
+    mean_force = [df["force"].iloc[i:(i+window_size)].mean() for i in window_stepper]
+    std_force = [df["force"].iloc[i:(i+window_size)].std() for i in window_stepper]
+    min_force = [df["force"].iloc[i:(i+window_size)].min() for i in window_stepper]
+    max_force = [df["force"].iloc[i:(i+window_size)].max() for i in window_stepper]
+    distance = [df["distance"].iloc[i+window_size] for i in window_stepper]
+    label = [df["label"].iloc[i:(i+window_size)].value_counts().idxmax() for i in window_stepper]
+    # returns summarized dataframe
+    return pd.DataFrame(np.column_stack([distance, mean_force, std_force, min_force, max_force, label]),
+                        columns=["distance", "mean_force", "std_force", "min_force", "max_force", "label"])
+
+
+def rolling_window(df, window_size, rolling_cols, window_type="gaussian", window_type_std=1):
+    """ Applies one or several rolling windows to a dataframe. Concatenates the different results to a new dataframe.
+    Parameters:
+        df (pd.DataFrame): Original dataframe over whom we roll.
+        window_size (list): List of window sizes that should be applied. e.g. [4]
+        rolling_cols (list): list of columns over which should be rolled
+        window_type (String): E.g. Gaussian (default). None is a normal window. Accepts any window types listed here:
+            https://docs.scipy.org/doc/scipy/reference/signal.windows.html#module-scipy.signal.windows
+        window_type_std (int): std used for window type
+
+    Returns:
+        pd.DataFrame: concatenated dataframes (original and new rolled ones)
+    """
+    rolling_cols = ["mean_force", "std_force", "min_force", "max_force"]
+    all_dfs = [df]
+    # roll over columns with different window sizes
+    for window in window_size:
+        # TODO catch exception
+        try:
+            df_rolled = df[rolling_cols].rolling(window, win_type=window_type).mean(std=window_type_std)
+        except KeyError:
+            print("The dataframe given does not have the columns indicated in rolling_cols.")
+        # rename columns of rolled dataframe for distinction
+        df_rolled.columns = [col + "_" + str(window) for col in rolling_cols]
+        all_dfs.append(df_rolled)
+
+    return pd.concat(all_dfs, axis=1)
+
+def preprocess_profile(profile, target_dir, export_as="csv", sum_mm=1, **kwargs):
+    """ Preprocesses a smp profile. Jobs done:
+    Indexing, labelling, select data between surface and ground (and relativizes this data).
+    Summarizing data in a certain mm window (reduces precision/num of rows).
+    Applies a rolling window.
+    Exports profile as csv.
+
+    Parameters:
+        profile (Profile): the profile which is preprocessed
+        target_dir (Path): in which directory the data should be saved
+        export_as (String): how the data should be exported. Either as "csv" possible or "npz"
+        sum_mm: arg for summarize_rows function - indicates how many mm should be packed together
+        **kwargs:
+            window_size (list): arg for rolling_window function - List of window sizes that should be applied. e.g. [4]
+            rolling_cols (list): arg for rolling_window function - List of columns over which should be rolled
+            window_type (String): arg for rolling_window function - E.g. Gaussian (default). None is a normal window.
+            window_type_std (int): arg for rolling_window function - std used for window type
+    """
+
+    # check if this is a labelled profile
+    labelled_data = len(profile.markers) != 0
+
+    # detect surface and ground if labels don't exist yet
+    if not labelled_data:
+        # no markers exist yet
+        try:
+            profile.detect_ground()
+            profile.detect_surface()
+        except ValueError:
+            print("Profile {} is too short for data processing. Profile is skipped".format(profile.name))
+            # leave function
+            return
+
+    # 1. restrict dataframe between surface and ground (absolute distance values!)
+    df = profile.samples_within_snowpack(relativize=False)
+    # add label column
+    df["label"] = 0
+
+    # 2. label dataframe, if labels are there
+    if labelled_data:
+        label_pd(df, profile)
+
+    # 3. relativize, such that the first distance value is 0
+    relativize(df)
+
+    # 4. summarize data (precision: 1mm)
+    df_1mm = summarize_rows(df, mm_window=sum_mm)
+
+    # 5. rolling window in order to know distribution of next and past values
+    final_df = rolling_window(df_1mm, **kwargs)
+
+    # 6. index DataFrame
+    final_df["smp_idx"] = idx_to_int(profile.name)
+
+    # export as csv
+    if export_as == "csv":
+        final_df.to_csv(os.path.join(target_dir, Path(profile.name + ".csv")))
+    elif export_as == "npz":
+        np.savez_compressed(os.path.join(target_dir, Path(profile.name)), final_df.to_numpy())
+    else:
+        raise ValueError("export_as must be either csv or npz")
+
 def main():
 
     print("Starting to export and/or convert data")
 
-    profile = Profile.load("/home/julia/Documents/University/BA/Data/Arctic/S49M0040.pnt")
-    ground = profile.detect_ground()
-    surface = profile.detect_surface()
-    print(ground)
-    print(surface)
-    print(ground - surface)
-    print(profile.markers)
+    profile1 = Profile.load("/home/julia/Documents/University/BA/snowdragon/smp_csv_test/S31H0607.pnt")
+    profile2 = Profile.load("/home/julia/Documents/University/BA/snowdragon/smp_csv_test/S49M0040.pnt")
 
-    in_snowpack = profile.samples_within_snowpack()
-    in_snowpack["smp_idx"] = "S49M0040"
-    print(in_snowpack.head())
+    preprocess_profile(profile1, target_dir="/home/julia/Documents/University/BA/snowdragon/smp_csv_test", export_as="npz", **PARAMS)
+    preprocess_profile(profile2, target_dir="/home/julia/Documents/University/BA/snowdragon/smp_csv_test", export_as="npz", **PARAMS)
 
+    # load both npz files and concatenate them
+    profile1_pd = npz_to_pd("smp_csv_test/S31H0607.npz")
+    profile2_pd = npz_to_pd("smp_csv_test/S49M0040.npz")
 
-    profile.export_samples(file=Path("one_test_profile.csv"), precision=6, snowpack_only=True)
-    print(len(pd.read_csv("one_test_profile.csv", header=1)))
-
+    print(profile1_pd.head())
+    print(profile2_pd.head())
     # get temp data
     #tmp = get_temperature(temp=T_LOC)
     #print(tmp.head())
@@ -291,9 +424,9 @@ def main():
     # export, unite and label smp data
     #start = time.time()
     # export data from pnt to csv
-    #pnt_to_csv(pnt_dir=SMP_LOC, target_dir=EXP_LOC, overwrite=False)
+    #pnt_to_csv(pnt_dir=SMP_LOC, target_dir=EXP_LOC, overwrite=False, **PARAMS)
     # unite data in one csv file, index it, convert it to pandas (and save it as npz)
-    #smp = get_smp_data(csv_dir=EXP_LOC, csv_filename="smp_all.csv", npz_filename="smp_all.npz", skip_unify=True, skip_npz=True)
+    #smp = get_smp_data(csv_dir=EXP_LOC, csv_filename="test02.csv", npz_filename="smp_all.npz", skip_unify=True, skip_npz=True)
 
     #end = time.time()
     #print("Elapsed time for export and dataframe creation: ", end-start)
@@ -307,7 +440,7 @@ def main():
     #print("Number of files in export folder: ", len(os.listdir(EXP_LOC)))
     #print("All pnt files from source dir were also found in the given dataframe: ", check_export(SMP_LOC, smp))
 
-    # print_test_df(smp)
+    #print_test_df(smp)
     print("Finished export, transformation and printing example features of data.")
 
 # Middleterm TODO: labelling and windowing data -> do this on a pandas frame
