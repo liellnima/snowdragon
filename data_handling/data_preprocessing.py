@@ -22,7 +22,7 @@ SMP_LOC = Path("/home/julia/Documents/University/BA/Data/Arctic/")
 # Set file location of temperature data
 T_LOC = Path("/home/julia/Documents/University/BA/Data/Arctic/MOSAiC_ICE_Temperature.csv")
 # Set folder name were export files get saved
-EXP_LOC = Path("smp_csv_test03")
+EXP_LOC = Path("smp_csv_test")
 # labels for the different grain type markers
 LABELS = {"not_labelled": 0, "surface": 1, "ground": 2, "dh": 3, "dhid": 4, "mfdh": 5, "rgwp": 6,
           "df": 7, "if": 8, "ifwp": 9, "sh": 10, "drift_end": 11, "snow-ice": 12}
@@ -32,12 +32,13 @@ PARAMS = {"sum_mm": 1, "window_size": [4,12], "window_type": "gaussian",
 
 # TODO export as npz and not csv
 # exports pnt files (our smp profiles!) to csv files in a target directory
-def pnt_to_csv (pnt_dir, target_dir, overwrite=False, **kwargs):
+def export_pnt (pnt_dir, target_dir, export_as="npz", overwrite=False, **kwargs):
     """ Exports all pnt files from a dir and its subdirs as csv files into a new dir.
     Preproceses the profiles, according to kwargs arguments.
     Parameters:
         pnt_dir (Path): folder location of pnt files (in our case the smp profiles)
         target_dir (Path): folder name where converted csv files should get exported or were they have already been exported
+        export_as (String): either as "csv" or "npz" (default)
         overwrite (Boolean): indicates if csv file should be overwriting if csv file already exists
         **kwargs: arguments for preprocessing function, for description see preprocess_profile()
     """
@@ -51,16 +52,16 @@ def pnt_to_csv (pnt_dir, target_dir, overwrite=False, **kwargs):
     file_generator = glob.iglob(match_pnt, recursive=True)
     # yields each matching file and exports it
     for file in file_generator:
-        file_name = Path(target_dir, file.split("/")[-1].split(".")[0] + ".csv")
+        file_name = Path(target_dir, file.split("/")[-1].split(".")[0] + "." + export_as)
         # exports file only if we want to overwrite it or it doesnt exist yet
         if overwrite or not file_name.is_file():
             smp_profile = Profile.load(file)
             # indexes, labels, summarizes and applies a rolling window to the data
-            preprocess_profile(smp_profile, target_dir, **kwargs)
+            preprocess_profile(smp_profile, target_dir, export_as=export_as, **kwargs)
 
-    print("Finished exporting all pnt file as csv files in {}.".format(target_dir))
+    print("Finished exporting all pnt file as {} files in {}.".format(export_as, target_dir))
 
-# TODO remove indexing (index already when doing pnt_to_csv)
+# TODO remove method
 # unites the csv data into one csv and adds smp index to data
 # and saves everything in pd.DataFrame that can be reloaded from the npz data
 def get_smp_data(csv_dir, csv_filename="smp_all.csv", npz_filename=None, skip_unify=False, skip_npz=False):
@@ -89,6 +90,8 @@ def get_smp_data(csv_dir, csv_filename="smp_all.csv", npz_filename=None, skip_un
     # convert the npz to a pandas DataFrame and return it
     return npz_to_pd(npz_filename)
 
+
+# TODO remove
 def unify_and_index(csv_dir, csv_filename):
     """ Gets unlabelled smp data. Indexes the data. Writes the complete data into one csv.
     Parameters:
@@ -130,6 +133,7 @@ def unify_and_index(csv_dir, csv_filename):
 
     print("\nExported united csv files to {}.".format(csv_filename))
 
+# TODO remove
 def save_csv_as_npz(csv_filename, npz_filename):
     """ Exports a smp csv file produced by get_smp_data as npz.
     Paramters:
@@ -152,17 +156,6 @@ def save_csv_as_npz(csv_filename, npz_filename):
     # save npz
     np.savez_compressed(npz_filename, distance=distance.values[:, 0], force=force.values[:, 0], smp_idx=smp_idx.values[:, 0])
     print("\nExported csv as numpy arrays to {}.".format(npz_filename))
-
-def npz_to_pd(npz_file):
-    """ Converts a npz file to a pandas DataFrame.
-    Paramters:
-        npz_file (np.npz): A numpy npz file
-    Returns:
-        pd.DataFrame: the converted pandas Dataframe
-
-    """
-    smp_npz = np.load(npz_file)
-    return pd.DataFrame.from_dict({item: smp_npz[item] for item in smp_npz.files})
 
 def idx_to_int(string_idx):
     """ Converts a string that indexes the smp profile to an int.
@@ -249,11 +242,13 @@ def print_test_df(smp):
         smp (pd.DataFrame): dataframe from which the information is retrieved
     """
     print("Overview of smp dataframe: \n", smp.head())
+    print("Info about smp dataframe:\n")
+    smp.info()
     print("Dataypes of columns: \n", smp.dtypes)
     print("Datapoints per SMP File: \n", smp["smp_idx"].value_counts())
     print("First row: \n", smp.iloc[0])
-    print("Force at first row: ", smp["force"].iloc[0])
-    print("Amount of datapoints with a force > 40: ", len(smp[smp["force"] > 40]))
+    print("Force at first row: \n", smp[["mean_force", "std_force", "min_force", "max_force"]].iloc[0])
+    print("Amount of datapoints with a force > 40: ", len(smp[smp["max_force"] > 40]))
     print("Was S31H0117 found in the dataframe? ", any(smp.smp_idx == idx_to_int("S31H0117")))
     print("Only S31H0117 data: \n", smp[smp["smp_idx"] == idx_to_int("S31H0117")].head())
 
@@ -390,63 +385,94 @@ def preprocess_profile(profile, target_dir, export_as="csv", sum_mm=1, **kwargs)
     # 5. rolling window in order to know distribution of next and past values
     final_df = rolling_window(df_1mm, **kwargs)
 
-    # 6. index DataFrame
+    # 6. index DataFrame and convert dtypes
     final_df["smp_idx"] = idx_to_int(profile.name)
 
-    # export as csv
+    for col in final_df:
+        if col == "label" or col == "smp_idx":
+            final_df[col] = final_df[col].astype("int32")
+        else:
+            final_df[col] = final_df[col].astype("float32")
+
+    # export as csv or npz
     if export_as == "csv":
         final_df.to_csv(os.path.join(target_dir, Path(profile.name + ".csv")))
     elif export_as == "npz":
-        np.savez_compressed(os.path.join(target_dir, Path(profile.name)), final_df.to_numpy())
+        dict = final_df.to_dict(orient="list")
+        np.savez_compressed(os.path.join(target_dir, Path(profile.name)), **dict)
     else:
         raise ValueError("export_as must be either csv or npz")
+
+def npz_to_pd(npz_file, is_dir):
+    """ Converts a npz file to a pandas DataFrame. In case npz_file is a directory,
+    all npz files within are loaded, concatenated and returned as one dataframe
+    Paramters:
+        npz_file (np.npz or Path): A numpy npz file or the path to a npz directory
+        is_dir (Boolean): whether npz_file is Path or not
+    Returns:
+        pd.DataFrame: the converted pandas Dataframe
+    """
+    if not is_dir:
+        smp_npz = np.load(npz_file)
+        return pd.DataFrame.from_dict({item: smp_npz[item] for item in smp_npz.files})
+    else:
+        # match all npz files in the directory
+        match_npz = npz_file.as_posix() + "/**/*.npz"
+        file_generator = glob.iglob(match_npz, recursive=True)
+        # list for all dictionaries
+        all_dicts = []
+        for file in file_generator:
+            # load npz file
+            smp_npz = np.load(file)
+            # creata dict and save all dicts
+            smp_dict = {item: smp_npz[item] for item in smp_npz.files}
+            all_dicts.append(smp_dict)
+        # merge all dictionaries (columns of first dictionary are used)
+        final_dict = {col: np.concatenate([dict[col] for dict in all_dicts]) for col in all_dicts[0]}
+        # convert to pandas
+        return pd.DataFrame.from_dict(final_dict)
 
 def main():
 
     print("Starting to export and/or convert data")
 
-    profile1 = Profile.load("/home/julia/Documents/University/BA/snowdragon/smp_csv_test/S31H0607.pnt")
-    profile2 = Profile.load("/home/julia/Documents/University/BA/snowdragon/smp_csv_test/S49M0040.pnt")
-
-    preprocess_profile(profile1, target_dir="/home/julia/Documents/University/BA/snowdragon/smp_csv_test", export_as="npz", **PARAMS)
-    preprocess_profile(profile2, target_dir="/home/julia/Documents/University/BA/snowdragon/smp_csv_test", export_as="npz", **PARAMS)
-
-    # load both npz files and concatenate them
-    profile1_pd = npz_to_pd("smp_csv_test/S31H0607.npz")
-    profile2_pd = npz_to_pd("smp_csv_test/S49M0040.npz")
-
-    print(profile1_pd.head())
-    print(profile2_pd.head())
     # get temp data
-    #tmp = get_temperature(temp=T_LOC)
-    #print(tmp.head())
+    tmp = get_temperature(temp=T_LOC)
+    print(tmp.head())
 
     # export, unite and label smp data
-    #start = time.time()
+    start = time.time()
     # export data from pnt to csv
-    #pnt_to_csv(pnt_dir=SMP_LOC, target_dir=EXP_LOC, overwrite=False, **PARAMS)
+    export_pnt(pnt_dir=SMP_LOC, target_dir=EXP_LOC, export_as="npz", overwrite=False, **PARAMS)
+
+    # OTHER OPTIONS
     # unite data in one csv file, index it, convert it to pandas (and save it as npz)
-    #smp = get_smp_data(csv_dir=EXP_LOC, csv_filename="test02.csv", npz_filename="smp_all.npz", skip_unify=True, skip_npz=True)
+        # smp = get_smp_data(csv_dir=EXP_LOC, csv_filename="test02.csv", npz_filename="smp_all.npz", skip_unify=True, skip_npz=True)
+    # first time to use npz_to_pd:
+        # smp_first = npz_to_pd(EXP_LOC, is_dir=True)
+    # than: export smp as united npz
+        # dict = smp_first.to_dict(orient="list")
+        #np.savez_compressed("smp_all_npz.npz", **dict)
 
-    #end = time.time()
-    #print("Elapsed time for export and dataframe creation: ", end-start)
+    # and load pd directly from this npz
+    smp = npz_to_pd("smp_all_npz.npz", is_dir=False)
 
-    #print(smp.head())
+    end = time.time()
+    print("Elapsed time for export and dataframe creation: ", end-start)
 
-    # 1. windowing
+    print(smp.head())
 
-    # 2. labelling
-
-    #print("Number of files in export folder: ", len(os.listdir(EXP_LOC)))
+    print("Number of files in export folder: ", len(os.listdir(EXP_LOC)))
     #print("All pnt files from source dir were also found in the given dataframe: ", check_export(SMP_LOC, smp))
 
-    #print_test_df(smp)
+    print_test_df(smp)
     print("Finished export, transformation and printing example features of data.")
 
-# Middleterm TODO: labelling and windowing data -> do this on a pandas frame
-# Types of dataframes we will need: smp, temp, labelled and unlabelled, different window sizes
+# TODO: structure this more nicely. remove methods (other file!) which are not useful anymore
+# TODO: make it possible to call a method from here in order to get pandas dataframe! (feeds in the constants from above, constants stay default)
+# Middleterm TODO: include temp in pandas dataframe
+# Middleterm TODO; include temperature
+# Longterm TODO: make this user friendly - use this with commandline
 
-# Longterm TODO: make everything faster by using profile.samples() -> you get immediately a pandas dataframe,
-# which can be written to npz arrays
 if __name__ == "__main__":
     main()
