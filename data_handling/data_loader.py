@@ -1,5 +1,5 @@
-from data_preprocessing import export_pnt, npz_to_pd, idx_to_int
-from data_parameters import SMP_LOC, EXP_LOC, PARAMS
+from data_handling.data_preprocessing import export_pnt, npz_to_pd, idx_to_int
+from data_handling.data_parameters import SMP_LOC, EXP_LOC, PARAMS
 from pathlib import Path
 import numpy as np
 import argparse

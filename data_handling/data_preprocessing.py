@@ -1,5 +1,5 @@
 # Data Preprocessing is done here
-from data_parameters import SMP_LOC, T_LOC, EXP_LOC, LABELS, PARAMS
+from data_handling.data_parameters import SMP_LOC, T_LOC, EXP_LOC, LABELS, PARAMS
 
 # external imports
 import numpy as np
