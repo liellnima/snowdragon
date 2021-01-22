@@ -324,7 +324,7 @@ def rolling_window(df, window_size, rolling_cols, window_type="gaussian", window
     poisson_df = pd.DataFrame(df[["distance", "mean_force"]])
     poisson_df.columns = ["distance", "force"]
     poisson_all_cols = ["distance", "median_force", "lambda", "f0", "delta", "L"]
-    
+
     # roll over columns with different window sizes
     for window in window_size:
         # Roll window over 1mm summarizes statistics
@@ -360,7 +360,7 @@ def remove_negatives(df, col="force", threshold=-1):
         col (String): column which negative values should get replaced. Default: "force"
         threshold (int): Below which threshold the values should not just get assigned with 0?
     """
-    df_removed = df
+    df_removed = df.copy(deep=True)
     # in case the values are just slightly below zero, replace them with 0
     df_removed[(df_removed[col] < 0) & (df_removed[col] > threshold)] = 0
     # if nothing is below a certain threshold, return result
@@ -442,17 +442,25 @@ def preprocess_profile(profile, target_dir, export_as="csv", sum_mm=1, gradient=
 
     # 4. Remove all values below 0, replace them with average value around
     if any(df["force"] < 0):
-        df = remove_negatives(df)
+        df_rem = remove_negatives(df)
 
     # 5. summarize data (precision: 1mm)
     df_mm = summarize_rows(df, mm_window=sum_mm)
-    df_mm.info()
+
     # 6. rolling window in order to know distribution of next and past values (+ poisson shot model)
     final_df = rolling_window(df_mm, **kwargs)
 
     # 7.include gradient if wished
     if gradient:
-        final_df["gradient"] = np.gradient(final_df["mean_force"])
+        try:
+            final_df["gradient"] = np.gradient(final_df["mean_force"])
+        except ValueError as e:
+            if len(e.args) > 0 and e.args[0] == "Shape of array too small to calculate a numerical gradient, at least (edge_order + 1) elements are required.":
+                print("Array was too small, replaced gradient with 0.")
+                final_df["gradient"] = 0
+            else:
+                raise e
+
 
     # 8. add cols, index DataFrame and convert dtypes
     final_df["smp_idx"] = idx_to_int(profile.name)
