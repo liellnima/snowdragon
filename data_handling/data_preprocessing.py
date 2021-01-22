@@ -8,14 +8,11 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 import pandas as pd
 import os
 import glob
-import csv
 import time # only used in main
 import re
-import xarray
 from pathlib import Path # for os independent path handling
 from snowmicropyn import Profile, loewe2012, windowing
-from scipy import signal
-#from smpfunc import preprocess
+
 
 # exports pnt files (our smp profiles!) to csv files in a target directory
 def export_pnt (pnt_dir, target_dir, export_as="npz", overwrite=False, **kwargs):
@@ -46,102 +43,6 @@ def export_pnt (pnt_dir, target_dir, export_as="npz", overwrite=False, **kwargs)
             preprocess_profile(smp_profile, target_dir, export_as=export_as, **kwargs)
 
     print("Finished exporting all pnt file as {} files in {}.".format(export_as, target_dir))
-
-# TODO remove method
-# unites the csv data into one csv and adds smp index to data
-# and saves everything in pd.DataFrame that can be reloaded from the npz data
-def get_smp_data(csv_dir, csv_filename="smp_all.csv", npz_filename=None, skip_unify=False, skip_npz=False):
-    """ Gets unlabelled smp data. Indexes the data. Writes the complete data into one csv.
-    csv files are subsequently transformed to pandas frame. Return the pd.DataFrame and stores it as npz.
-
-    Parameters:
-        csv_dir (Path): folder location of smp profiles as csv files
-        csv_filename (String): Name for file, where all the smp data will be or is written to. File extension must be csv!
-        npz_filename (String): File where npz data will be or is saved. If none (default) same name as csv_filename but with npz extension.
-        skip_unify (Boolean): Default False. Set to True if csv_filename has already unified data in it.
-        skip_npz (Bollean): Default False. Set to True if npz_filename has already stored data in it.
-    """
-    # check if something has been exported in smp_csv
-    if len(os.listdir(csv_dir)) == 0:
-        print("Your target directory is empty. Consider using pnt_to_csv first.")
-
-    if not skip_unify:
-        # unify all csv files into one and index the data with their SMP tag
-        unify_and_index(csv_dir, csv_filename)
-
-    if not skip_npz:
-        # save csv file as npz
-        save_csv_as_npz(csv_filename, npz_filename)
-
-    # convert the npz to a pandas DataFrame and return it
-    return npz_to_pd(npz_filename)
-
-
-# TODO remove
-def unify_and_index(csv_dir, csv_filename):
-    """ Gets unlabelled smp data. Indexes the data. Writes the complete data into one csv.
-    Parameters:
-        csv_dir (Path): folder location of smp profiles as csv files
-        csv_filename (String): Name for file, where all the smp data is written to. File extension must be csv!
-    """
-    # dictionary to resolve smp indexing
-    smp_idx_resolver = {}
-
-    # a list to save them all
-    smp_all_rows = []
-    # matching csv files recursively (recursively just to be safe)
-    match_csv = csv_dir.as_posix() + "/**/*.csv"
-    # use generator to reduce ram usage
-    file_generator = glob.iglob(match_csv, recursive=True)
-
-    # column names in csv files
-    col_names = ["distance", "force", "smp_idx"]
-
-    # we will write all data in one csv file. file is cleared automatically if already existant
-    with open(csv_filename, "w+") as smp_all:
-        # writer for writing rows in our file
-        writer = csv.writer(smp_all)
-        # yields each matching csv file
-        for file in file_generator:
-            # get smp datapoint name and convert it to int
-            current_smp_idx = idx_to_int(file.split("/")[-1].split(".")[0])
-            # open csv file and write each row to  smp_all_rows
-            with open(Path(file)) as csv_file:
-                # skip the first two lines of the file (comments)
-                next(csv_file)
-                next(csv_file)
-                # read the rows of the current smp file (read as dictionaries!)
-                current_smp_rows = csv.DictReader(csv_file, fieldnames=col_names)
-                # each dictionary row is appended to the shared row list
-                for row in current_smp_rows:
-                     # write the row into the csv file
-                     writer.writerow([row["distance"], row["force"], row["smp_idx"]])
-
-    print("\nExported united csv files to {}.".format(csv_filename))
-
-# TODO remove
-def save_csv_as_npz(csv_filename, npz_filename):
-    """ Exports a smp csv file produced by get_smp_data as npz.
-    Paramters:
-        csv_filename (String): The csv file with all smp profiles. Must have columns "distance", "force" and "smp_idx"
-        npz_filename (String): Name of output npz file
-    """
-    # read each column as pd.DataFrame
-    print("Progress 0/3: Start reading csv cols as pd.DataFrames")
-    distance = pd.read_csv(csv_filename, usecols=[0], dtype=np.float32, sep=",", header=None, engine="c", low_memory=True)
-    print("Progress 1/3: Read distance")
-    force = pd.read_csv(csv_filename, usecols=[1], dtype=np.float32, sep=",", header=None, engine="c", low_memory=True)
-    print("Progress 2/3: Read force")
-    smp_idx = pd.read_csv(csv_filename, usecols=[2], dtype=np.int32, sep=",", header=None, engine="c", low_memory=True)
-    print("Progress 3/3: Read index")
-
-    # save columns as npz
-    if npz_filename is None:
-        npz_filename = csv_filename.split(".")[0] + ".npz"
-
-    # save npz
-    np.savez_compressed(npz_filename, distance=distance.values[:, 0], force=force.values[:, 0], smp_idx=smp_idx.values[:, 0])
-    print("\nExported csv as numpy arrays to {}.".format(npz_filename))
 
 def idx_to_int(string_idx):
     """ Converts a string that indexes the smp profile to an int.
@@ -274,6 +175,7 @@ def summarize_rows(df, mm_window=1):
     # returns summarized dataframe
     return pd.DataFrame(np.column_stack([distance, mean_force, var_force, min_force, max_force, label]),
                         columns=["distance", "mean_force", "var_force", "min_force", "max_force", "label"])
+
 
 def rolling_window(df, window_size, rolling_cols, window_type="gaussian", window_type_std=1, poisson_cols=None):
     """ Applies one or several rolling windows to a dataframe. Concatenates the different results to a new dataframe.
@@ -492,12 +394,17 @@ def main():
     # export, unite and label smp data
     start = time.time()
     # export data from pnt to csv or npz
-    export_pnt(pnt_dir=SMP_LOC, target_dir=EXP_LOC, export_as="npz", overwrite=False, **PARAMS)
+    #export_pnt(pnt_dir=SMP_LOC, target_dir=EXP_LOC, export_as="npz", overwrite=False, **PARAMS)
 
     # OTHER OPTIONS
     # unite csv data in one csv file, index it, convert it to pandas (and save it as npz)
     #smp = get_smp_data(csv_dir=EXP_LOC, csv_filename="test04.csv", npz_filename="smp_test04.npz", skip_unify=False, skip_npz=False)
+    import sys
 
+    modulename = 'signal'
+    if modulename not in sys.modules:
+        print('You have not imported the {} module'.format(modulename))
+    print(idx_to_int("S31H0369"))
     # FIRST time to use npz_to_pd:
     #smp_first = npz_to_pd(EXP_LOC, is_dir=True)
     # than: export smp as united npz
@@ -506,23 +413,19 @@ def main():
 
     # AFTER FIRST time and during first time:
     # load pd directly from this npz
-    smp = npz_to_pd("smp_lambda_delta_gradient.npz", is_dir=False)
+    #smp = npz_to_pd("smp_lambda_delta_gradient.npz", is_dir=False)
 
     end = time.time()
     print("Elapsed time for export and dataframe creation: ", end-start)
 
-    print(smp.head())
-    smp.info()
+    #print(smp.head())
+    #smp.info()
 
     print("Number of files in export folder: ", len(os.listdir(EXP_LOC)))
     #print("All pnt files from source dir were also found in the given dataframe: ", check_export(SMP_LOC, smp))
 
     #print_test_df(smp) # this function has migrated to data_loader
     print("Finished export, transformation and printing example features of data.")
-# TODO remve smp folders
-# TODO: structure this more nicely. remove methods (other file!) which are not useful anymore
-# TODO: make it possible to call a method from here in order to get pandas dataframe! (feeds in the constants from above, constants stay default)
-# Longterm TODO: make this user friendly - use this with commandline
 
 if __name__ == "__main__":
     main()

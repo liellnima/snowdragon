@@ -68,6 +68,8 @@ def load_data(npz_file, test=False):
     else:
         return npz_to_pd(npz_file, is_dir=False)
 
+#TODO: make this user friendly - use this with commandline
+
 def main():
     preprocess_data(data_dir=SMP_LOC, export_dir=EXP_LOC, united_npz_name="smp_lambda_delta_gradient.npz", overwrite=False, **PARAMS)
     smp = load_data(npz_file="smp_lambda_delta_gradient.npz", test=True)
