@@ -12,7 +12,8 @@ import time
 import re
 import xarray
 from pathlib import Path # for os independent path handling
-from snowmicropyn import Profile
+from snowmicropyn import Profile, loewe2012, windowing
+from scipy import signal
 #from smpfunc import preprocess
 
 # Set folder location of smp data (pnt format)
@@ -20,15 +21,15 @@ SMP_LOC = Path("/home/julia/Documents/University/BA/Data/Arctic/")
 # Set file location of temperature data
 T_LOC = Path("/home/julia/Documents/University/BA/Data/Arctic/MOSAiC_ICE_Temperature.csv")
 # Set folder name were export files get saved
-EXP_LOC = Path("smp_csv_test")
+EXP_LOC = Path("smp_csv_test04")
 # labels for the different grain type markers
 LABELS = {"not_labelled": 0, "surface": 1, "ground": 2, "dh": 3, "dhid": 4, "mfdh": 5, "rgwp": 6,
           "df": 7, "if": 8, "ifwp": 9, "sh": 10, "drift_end": 11, "snow-ice": 12}
 # arguments for Preprocessing
-PARAMS = {"sum_mm": 1, "window_size": [4,12], "window_type": "gaussian",
-          "window_type_std": 1, "rolling_cols": ["mean_force", "var_force", "min_force", "max_force"]}
+PARAMS = {"sum_mm": 1, "gradient": True, "window_size": [4,12], "window_type": "gaussian",
+          "window_type_std": 1, "rolling_cols": ["mean_force", "var_force", "min_force", "max_force"],
+          "poisson_cols": ["median_force", "lambda", "delta"]}
 
-# TODO export as npz and not csv
 # exports pnt files (our smp profiles!) to csv files in a target directory
 def export_pnt (pnt_dir, target_dir, export_as="npz", overwrite=False, **kwargs):
     """ Exports all pnt files from a dir and its subdirs as csv files into a new dir.
@@ -303,8 +304,7 @@ def summarize_rows(df, mm_window=1):
     return pd.DataFrame(np.column_stack([distance, mean_force, var_force, min_force, max_force, label]),
                         columns=["distance", "mean_force", "var_force", "min_force", "max_force", "label"])
 
-
-def rolling_window(df, window_size, rolling_cols, window_type="gaussian", window_type_std=1):
+def rolling_window(df, window_size, rolling_cols, window_type="gaussian", window_type_std=1, poisson_cols=None):
     """ Applies one or several rolling windows to a dataframe. Concatenates the different results to a new dataframe.
     Parameters:
         df (pd.DataFrame): Original dataframe over whom we roll.
@@ -313,27 +313,87 @@ def rolling_window(df, window_size, rolling_cols, window_type="gaussian", window
         window_type (String): E.g. Gaussian (default). None is a normal window. Accepts any window types listed here:
             https://docs.scipy.org/doc/scipy/reference/signal.windows.html#module-scipy.signal.windows
         window_type_std (int): std used for window type
+        poisson_cols (list): list with names what should be retrieved from the poisson shot model. Default None (nothing included).
+            List can include: "distance", "median_force", "lambda", "f0", "delta", "L"
 
     Returns:
         pd.DataFrame: concatenated dataframes (original and new rolled ones)
     """
-    # TODO check if the specification here is necessary
-    # rolling_cols = ["mean_force", "var_force", "min_force", "max_force"]
     all_dfs = [df]
+    # for the poisson shot model calculations: df can only have cols force and distance
+    poisson_df = pd.DataFrame(df[["distance", "mean_force"]])
+    poisson_df.columns = ["distance", "force"]
+    poisson_all_cols = ["distance", "median_force", "lambda", "f0", "delta", "L"]
+    
     # roll over columns with different window sizes
     for window in window_size:
-        # TODO catch exception
+        # Roll window over 1mm summarizes statistics
         try:
-            df_rolled = df[rolling_cols].rolling(window, win_type=window_type).mean(std=window_type_std)
+            # window has the current distance point as center
+            # for the first data points, only a few future datapoints will be used (min_periods=1 -> no na values)
+            df_rolled = df[rolling_cols].rolling(window, win_type=window_type, center=True, min_periods=1).mean(std=window_type_std)
         except KeyError:
             print("The dataframe given does not have the columns indicated in rolling_cols.")
         # rename columns of rolled dataframe for distinction
         df_rolled.columns = [col + "_" + str(window) for col in rolling_cols]
         all_dfs.append(df_rolled)
 
+        # Roll window for a poisson shot model to get lambda and delta
+        if poisson_cols is not None:
+            try:
+                # calculate lambda and delta and media of poisson shot model
+                poisson_rolled = loewe2012.calc(poisson_df, window=window, overlap=(((window - 1) / window) * 100 + 0.0001)) # add epsilon to round up
+                poisson_rolled.columns = poisson_all_cols
+                poisson_rolled = poisson_rolled[poisson_cols]
+            except KeyError:
+                print("You can only use a (sub)list of the following features for poisson_cols: distance, median_force, lambda, f0, delta, L")
+            # add the poisson data to the all_dfs list and rename columns for distinction
+            poisson_rolled.columns = [col + "_" + str(window) for col in poisson_cols]
+            all_dfs.append(poisson_rolled)
+
     return pd.concat(all_dfs, axis=1)
 
-def preprocess_profile(profile, target_dir, export_as="csv", sum_mm=1, **kwargs):
+def remove_negatives(df, col="force", threshold=-1):
+    """ Remove negative values of a column from dataframe. The values are replaced with the mean of the next and last positive value.
+    Parameters:
+        df (pd.DataFrame): dataframe
+        col (String): column which negative values should get replaced. Default: "force"
+        threshold (int): Below which threshold the values should not just get assigned with 0?
+    """
+    df_removed = df
+    # in case the values are just slightly below zero, replace them with 0
+    df_removed[(df_removed[col] < 0) & (df_removed[col] > threshold)] = 0
+    # if nothing is below a certain threshold, return result
+    if not any(df_removed[col] < threshold):
+        return df_removed
+
+    # in all other cases replace the negative value with the mean of its next two neighbouring positive values
+    index = df_removed.index
+    values_neg = df_removed[df_removed[col] < 0]
+    indices_neg = index[df_removed[col] < 0]
+    # for each negative value
+    for value, index in zip(values_neg, indices_neg):
+        # find the next positive value
+        next_pos_idx = index
+        # as long as index+1 is still in the list, add 1
+        while (next_pos_idx in indices_neg) and (next_pos_idx < len(df_removed) - 1):
+            next_pos_idx = next_pos_idx + 1
+        next_pos_value = df_removed[col].iloc[next_pos_idx] if (next_pos_idx != len(df_removed)) else 0
+
+        # find the last positive value
+        last_pos_idx = index
+        # as long as index-1 is still in the list, sub 1
+        while (last_pos_idx in indices_neg) and (last_pos_idx > 0):
+            last_pos_idx = last_pos_idx - 1
+        last_pos_value = df_removed[col].iloc[last_pos_idx] if (last_pos_idx != 0) else 0
+
+        # replace current value with mean of both
+        df_removed.loc[index, col] = (next_pos_value + last_pos_value) / 2
+
+    return df_removed
+
+
+def preprocess_profile(profile, target_dir, export_as="csv", sum_mm=1, gradient=False, **kwargs):
     """ Preprocesses a smp profile. Jobs done:
     Indexing, labelling, select data between surface and ground (and relativizes this data).
     Summarizing data in a certain mm window (reduces precision/num of rows).
@@ -345,11 +405,13 @@ def preprocess_profile(profile, target_dir, export_as="csv", sum_mm=1, **kwargs)
         target_dir (Path): in which directory the data should be saved
         export_as (String): how the data should be exported. Either as "csv" possible or "npz"
         sum_mm: arg for summarize_rows function - indicates how many mm should be packed together
+        gradient (Boolean): arg to decide whether gradient of each datapoint should be calculated
         **kwargs:
             window_size (list): arg for rolling_window function - List of window sizes that should be applied. e.g. [4]
             rolling_cols (list): arg for rolling_window function - List of columns over which should be rolled
             window_type (String): arg for rolling_window function - E.g. Gaussian (default). None is a normal window.
             window_type_std (int): arg for rolling_window function - std used for window type
+            poisson_cols (list): arg for rolling_window function - List of features that should be taken from poisson shot model
     """
 
     # check if this is a labelled profile
@@ -378,13 +440,21 @@ def preprocess_profile(profile, target_dir, export_as="csv", sum_mm=1, **kwargs)
     # 3. relativize, such that the first distance value is 0
     relativize(df)
 
-    # 4. summarize data (precision: 1mm)
-    df_1mm = summarize_rows(df, mm_window=sum_mm)
+    # 4. Remove all values below 0, replace them with average value around
+    if any(df["force"] < 0):
+        df = remove_negatives(df)
 
-    # 5. rolling window in order to know distribution of next and past values
-    final_df = rolling_window(df_1mm, **kwargs)
+    # 5. summarize data (precision: 1mm)
+    df_mm = summarize_rows(df, mm_window=sum_mm)
+    df_mm.info()
+    # 6. rolling window in order to know distribution of next and past values (+ poisson shot model)
+    final_df = rolling_window(df_mm, **kwargs)
 
-    # 6. index DataFrame and convert dtypes
+    # 7.include gradient if wished
+    if gradient:
+        final_df["gradient"] = np.gradient(final_df["mean_force"])
+
+    # 8. add cols, index DataFrame and convert dtypes
     final_df["smp_idx"] = idx_to_int(profile.name)
 
     for col in final_df:
@@ -436,25 +506,27 @@ def main():
     print("Starting to export and/or convert data")
 
     # get temp data
-    tmp = get_temperature(temp=T_LOC)
-    print(tmp.head())
+    # tmp = get_temperature(temp=T_LOC)
+    # print(tmp.head())
 
     # export, unite and label smp data
     start = time.time()
-    # export data from pnt to csv
-    export_pnt(pnt_dir=SMP_LOC, target_dir=EXP_LOC, export_as="npz", overwrite=False, **PARAMS)
+    # export data from pnt to csv or npz
+    export_pnt(pnt_dir=SMP_LOC, target_dir=EXP_LOC, export_as="npz", overwrite=True, **PARAMS)
 
     # OTHER OPTIONS
-    # unite data in one csv file, index it, convert it to pandas (and save it as npz)
-        # smp = get_smp_data(csv_dir=EXP_LOC, csv_filename="test02.csv", npz_filename="smp_all.npz", skip_unify=True, skip_npz=True)
-    # first time to use npz_to_pd:
+    # unite csv data in one csv file, index it, convert it to pandas (and save it as npz)
+    #smp = get_smp_data(csv_dir=EXP_LOC, csv_filename="test04.csv", npz_filename="smp_test04.npz", skip_unify=False, skip_npz=False)
+
+    # FIRST time to use npz_to_pd:
     #smp_first = npz_to_pd(EXP_LOC, is_dir=True)
     # than: export smp as united npz
     #dict = smp_first.to_dict(orient="list")
     #np.savez_compressed("smp_all_final.npz", **dict)
 
-    # and load pd directly from this npz
-    smp = npz_to_pd("smp_all_final.npz", is_dir=False)
+    # AFTER FIRST time and during first time:
+    # load pd directly from this npz
+    #smp = npz_to_pd("smp_all_final.npz", is_dir=False)
 
     end = time.time()
     print("Elapsed time for export and dataframe creation: ", end-start)
@@ -466,12 +538,9 @@ def main():
 
     print_test_df(smp)
     print("Finished export, transformation and printing example features of data.")
-
-# TODO:
+# TODO remve smp folders
 # TODO: structure this more nicely. remove methods (other file!) which are not useful anymore
 # TODO: make it possible to call a method from here in order to get pandas dataframe! (feeds in the constants from above, constants stay default)
-# Middleterm TODO: include temp in pandas dataframe
-# Middleterm TODO; include temperature
 # Longterm TODO: make this user friendly - use this with commandline
 
 if __name__ == "__main__":
