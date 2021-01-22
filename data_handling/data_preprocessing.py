@@ -13,6 +13,10 @@ import re
 from pathlib import Path # for os independent path handling
 from snowmicropyn import Profile, loewe2012, windowing
 
+# make paths from imported data locations (str)
+SMP_LOC = Path(SMP_LOC)
+EXP_LOC = Path(EXP_LOC)
+T_LOC = Path(T_LOC)
 
 # exports pnt files (our smp profiles!) to csv files in a target directory
 def export_pnt (pnt_dir, target_dir, export_as="npz", overwrite=False, **kwargs):
@@ -177,7 +181,7 @@ def summarize_rows(df, mm_window=1):
                         columns=["distance", "mean_force", "var_force", "min_force", "max_force", "label"])
 
 
-def rolling_window(df, window_size, rolling_cols, window_type="gaussian", window_type_std=1, poisson_cols=None):
+def rolling_window(df, window_size, rolling_cols, window_type="gaussian", window_type_std=1, poisson_cols=None, **kwargs):
     """ Applies one or several rolling windows to a dataframe. Concatenates the different results to a new dataframe.
     Parameters:
         df (pd.DataFrame): Original dataframe over whom we roll.
@@ -186,9 +190,9 @@ def rolling_window(df, window_size, rolling_cols, window_type="gaussian", window
         window_type (String): E.g. Gaussian (default). None is a normal window. Accepts any window types listed here:
             https://docs.scipy.org/doc/scipy/reference/signal.windows.html#module-scipy.signal.windows
         window_type_std (int): std used for window type
-        poisson_cols (list): list with names what should be retrieved from the poisson shot model. Default None (nothing included).
+        poisson_cols (list): List with names what should be retrieved from the poisson shot model. Default None (nothing included).
             List can include: "distance", "median_force", "lambda", "f0", "delta", "L"
-
+        **kwargs: are catched in case more arguments are given on the commandline (see data_loader)
     Returns:
         pd.DataFrame: concatenated dataframes (original and new rolled ones)
     """
