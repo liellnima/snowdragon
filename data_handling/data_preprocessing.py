@@ -1,4 +1,5 @@
 # Data Preprocessing is done here
+from data_parameters import SMP_LOC, T_LOC, EXP_LOC, LABELS, PARAMS
 
 # external imports
 import numpy as np
@@ -8,27 +9,13 @@ import pandas as pd
 import os
 import glob
 import csv
-import time
+import time # only used in main
 import re
 import xarray
 from pathlib import Path # for os independent path handling
 from snowmicropyn import Profile, loewe2012, windowing
 from scipy import signal
 #from smpfunc import preprocess
-
-# Set folder location of smp data (pnt format)
-SMP_LOC = Path("/home/julia/Documents/University/BA/Data/Arctic/")
-# Set file location of temperature data
-T_LOC = Path("/home/julia/Documents/University/BA/Data/Arctic/MOSAiC_ICE_Temperature.csv")
-# Set folder name were export files get saved
-EXP_LOC = Path("smp_csv_test04")
-# labels for the different grain type markers
-LABELS = {"not_labelled": 0, "surface": 1, "ground": 2, "dh": 3, "dhid": 4, "mfdh": 5, "rgwp": 6,
-          "df": 7, "if": 8, "ifwp": 9, "sh": 10, "drift_end": 11, "snow-ice": 12}
-# arguments for Preprocessing
-PARAMS = {"sum_mm": 1, "gradient": True, "window_size": [4,12], "window_type": "gaussian",
-          "window_type_std": 1, "rolling_cols": ["mean_force", "var_force", "min_force", "max_force"],
-          "poisson_cols": ["median_force", "lambda", "delta"]}
 
 # exports pnt files (our smp profiles!) to csv files in a target directory
 def export_pnt (pnt_dir, target_dir, export_as="npz", overwrite=False, **kwargs):
@@ -235,22 +222,6 @@ def check_export(pnt_dir, smp_df, break_imm=True):
     # and return False
     return False
 
-def print_test_df(smp):
-    """ Printing some features and information of smp DataFrame.
-    Paramters:
-        smp (pd.DataFrame): dataframe from which the information is retrieved
-    """
-    print("Overview of smp dataframe: \n", smp.head())
-    print("Info about smp dataframe:\n")
-    smp.info()
-    print("Dataypes of columns: \n", smp.dtypes)
-    print("Datapoints per SMP File: \n", smp["smp_idx"].value_counts())
-    print("First row: \n", smp.iloc[0])
-    print("Force at first row: \n", smp[["mean_force", "var_force", "min_force", "max_force"]].iloc[0])
-    print("Amount of datapoints with a force > 40: ", len(smp[smp["max_force"] > 40]))
-    print("Was S31H0117 found in the dataframe? ", any(smp.smp_idx == idx_to_int("S31H0117")))
-    print("Only S31H0117 data: \n", smp[smp["smp_idx"] == idx_to_int("S31H0117")].head())
-
 
 def label_pd(df, profile):
     """ Labels the given pandas dataframe, according to the markers saved in profile.
@@ -404,7 +375,7 @@ def preprocess_profile(profile, target_dir, export_as="csv", sum_mm=1, gradient=
         profile (Profile): the profile which is preprocessed
         target_dir (Path): in which directory the data should be saved
         export_as (String): how the data should be exported. Either as "csv" possible or "npz"
-        sum_mm: arg for summarize_rows function - indicates how many mm should be packed together
+        sum_mm (num): arg for summarize_rows function - indicates how many mm should be packed together
         gradient (Boolean): arg to decide whether gradient of each datapoint should be calculated
         **kwargs:
             window_size (list): arg for rolling_window function - List of window sizes that should be applied. e.g. [4]
@@ -412,6 +383,7 @@ def preprocess_profile(profile, target_dir, export_as="csv", sum_mm=1, gradient=
             window_type (String): arg for rolling_window function - E.g. Gaussian (default). None is a normal window.
             window_type_std (int): arg for rolling_window function - std used for window type
             poisson_cols (list): arg for rolling_window function - List of features that should be taken from poisson shot model
+                List can include: "distance", "median_force", "lambda", "f0", "delta", "L"
     """
 
     # check if this is a labelled profile
@@ -520,7 +492,7 @@ def main():
     # export, unite and label smp data
     start = time.time()
     # export data from pnt to csv or npz
-    export_pnt(pnt_dir=SMP_LOC, target_dir=EXP_LOC, export_as="npz", overwrite=True, **PARAMS)
+    export_pnt(pnt_dir=SMP_LOC, target_dir=EXP_LOC, export_as="npz", overwrite=False, **PARAMS)
 
     # OTHER OPTIONS
     # unite csv data in one csv file, index it, convert it to pandas (and save it as npz)
@@ -530,21 +502,22 @@ def main():
     #smp_first = npz_to_pd(EXP_LOC, is_dir=True)
     # than: export smp as united npz
     #dict = smp_first.to_dict(orient="list")
-    #np.savez_compressed("smp_all_final.npz", **dict)
+    #np.savez_compressed("smp_lambda_delta_gradient.npz", **dict)
 
     # AFTER FIRST time and during first time:
     # load pd directly from this npz
-    #smp = npz_to_pd("smp_all_final.npz", is_dir=False)
+    smp = npz_to_pd("smp_lambda_delta_gradient.npz", is_dir=False)
 
     end = time.time()
     print("Elapsed time for export and dataframe creation: ", end-start)
 
     print(smp.head())
+    smp.info()
 
     print("Number of files in export folder: ", len(os.listdir(EXP_LOC)))
     #print("All pnt files from source dir were also found in the given dataframe: ", check_export(SMP_LOC, smp))
 
-    print_test_df(smp)
+    #print_test_df(smp) # this function has migrated to data_loader
     print("Finished export, transformation and printing example features of data.")
 # TODO remve smp folders
 # TODO: structure this more nicely. remove methods (other file!) which are not useful anymore
