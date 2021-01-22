@@ -5,7 +5,7 @@ SMP_LOC = Path("/home/julia/Documents/University/BA/Data/Arctic/")
 # Set file location of temperature data
 T_LOC = Path("/home/julia/Documents/University/BA/Data/Arctic/MOSAiC_ICE_Temperature.csv")
 # Set folder name were export files get saved
-EXP_LOC = Path("smp_csv_test04")
+EXP_LOC = Path("smp_profiles")
 # labels for the different grain type markers
 LABELS = {"not_labelled": 0, "surface": 1, "ground": 2, "dh": 3, "dhid": 4, "mfdh": 5, "rgwp": 6,
           "df": 7, "if": 8, "ifwp": 9, "sh": 10, "drift_end": 11, "snow-ice": 12}
