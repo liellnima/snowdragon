@@ -11,10 +11,15 @@ import matplotlib.ticker as ticker
 import matplotlib.pyplot as plt
 
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import balanced_accuracy_score
+from sklearn.metrics import balanced_accuracy_score, multilabel_confusion_matrix, ConfusionMatrixDisplay
 from sklearn.cluster import KMeans
 from sklearn.mixture import GaussianMixture
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.svm import SVC, LinearSVC
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.naive_bayes import GaussianNB
+
+# from sklearn.multioutput import MultiOutputClassifier
 
 
 
@@ -105,9 +110,8 @@ def kmeans(x_train, y_train):
         y_train_pred[mask] = snow_label_i
 
     # training metrics
-    km_acc = balanced_accuracy_score(y_true = y_train, y_pred=y_train_pred)
+    return balanced_accuracy_score(y_true = y_train, y_pred=y_train_pred)
 
-    return km_acc
 
 # TODO: a lot. optimize!!! a lot!
 def gaussian_mix(x_train, y_train):
@@ -132,9 +136,20 @@ def gaussian_mix(x_train, y_train):
         snow_label_i = np.argmax(np.bincount(y_train[mask]))
         y_train_pred[mask] = snow_label_i
 
-    gm_acc = balanced_accuracy_score(y_true = y_train, y_pred=y_train_pred)
+    return balanced_accuracy_score(y_true = y_train, y_pred=y_train_pred)
 
-    return gm_acc
+
+def random_forest(x_train, y_train):
+    """
+    """
+    rf = RandomForestClassifier(n_estimators=100,
+                                criterion = "entropy",
+                                bootstrap = True,
+                                max_samples = 0.6,     # 60 % of the training data (None: all)
+                                max_features = "sqrt", # uses sqrt(num_features) features
+                                random_state = 42)
+    rf_pred = rf.fit(x_train, y_train).predict(x_train)
+    return balanced_accuracy_score(y_true = y_train, y_pred=rf_pred)
 
 def main():
     # load dataframe with smp data
@@ -158,22 +173,35 @@ def main():
     # mixture model clustering
     #gm_acc = gaussian_mix(x_train, y_train)
 
-    # random forests
-    rf = RandomForestClassifier(n_estimators=100,
-                                criterion = "entropy",
-                                bootstrap = True,
-                                max_samples = 0.6,     # 60 % of the training data (None: all)
-                                max_features = "sqrt", # uses sqrt(num_features) features
-                                random_state = 42)
-    rf_pred = rf.fit(x_train, y_train).predict(x_train)
-    print(balanced_accuracy_score(y_true = y_train, y_pred=rf_pred))
+    # random forests (works)
+    # rf_acc = random_forest(x_train, y_train)
 
-    # support vector machines
+    print(np.unique(y_train, return_counts=True))
 
-    # polynomial classifier
+    # support vector machines, C is not the right paramter -> only small changes in acc
+    svl = LinearSVC(multi_class="ovr", C=0.99, random_state=42)
+    svl_pred = svl.fit(x_train, y_train).predict(x_train)
+    print(np.unique(svl_pred, return_counts=True))
+    print((svl_pred == y_train).sum())
+    print(balanced_accuracy_score(y_true = y_train, y_pred=svl_pred))
 
+    # works with very high gamma (overfitting) -> "auto" yields 0.75, still good and no overfitting
+    # svm = SVC(decision_function_shape='ovr', kernel="rbf", gamma=5, random_state=24)
+    # svm_pred = svm.fit(x_train, y_train).predict(x_train)
+    # print(np.unique(svm_pred, return_counts=True))
+    # print((svm_pred == y_train).sum())
+    # print(balanced_accuracy_score(y_true = y_train, y_pred=svm_pred))
+    #print(multilabel_confusion_matrix(y_train, svm_pred))
 
-
+    # # knn (works with weights=distance)
+    # knn = KNeighborsClassifier(n_neighbors=20, weights="distance")
+    # knn_pred = knn.fit(x_train, y_train).predict(x_train)
+    # print(balanced_accuracy_score(y_true = y_train, y_pred=knn_pred))
+    #
+    # # naive bayes classifier
+    # gnb = GaussianNB()
+    # gnb_pred = gnb.fit(x_train, y_train).predict(x_train)
+    # print(balanced_accuracy_score(y_true = y_train, y_pred=gnb_pred))
 
 
 if __name__ == "__main__":
