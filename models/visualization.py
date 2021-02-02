@@ -8,7 +8,12 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.ticker as ticker
 import matplotlib.pyplot as plt
+import pingouin as pg
 
+from scipy import stats
+from sklearn.feature_selection import SelectKBest
+from sklearn.feature_selection import f_classif
+from sklearn.decomposition import PCA
 
 ANTI_LABELS = {0: "not_labelled",  1: "surface", 2: "ground", 3: "dh", 4: "dhid", 5: "mfdh", 6: "rgwp",
           7: "df", 8: "if", 9: "ifwp", 10:"sh", 11: "drift_end", 12: "snow-ice"}
@@ -83,13 +88,29 @@ def corr_heatmap(smp):
     Paramters:
         smp (df.Dataframe): SMP preprocessed data
     """
-    smp_corr = smp.corr()
+    smp_corr = smp_filtered.corr()
+    stats.pointbiserialr(["label"])
     mask = np.triu(np.ones_like(smp_corr, dtype=np.bool))
     mask = mask[1:, :-1]
     corr = smp_corr.iloc[1:, :-1].copy()
     sns.heatmap(corr, mask=mask, annot=True, fmt=".2f")
-    plt.title("Correlation Heat Map of SMP Features")
+    plt.title("Correlation Heat Map of SMP Features with Label {}".format(ANTI_LABELS[label]))
     plt.show()
+
+def anova(smp):
+    """ Prints ANOVA F-scores for features.
+    Paramters:
+        smp (df.Dataframe): SMP preprocessed data
+    """
+    np.set_printoptions(precision=3)
+    smp_filtered = smp[smp["label"] != 0]
+    features = smp_filtered.drop("label", axis=1)
+    target = smp_filtered["label"]
+    # feature extraction
+    test = SelectKBest(score_func=f_classif, k="all")
+    fit = test.fit(features, target)
+    results = pd.DataFrame({"Feature" : features.columns, "ANOVA-F-value" : fit.scores_, "P-value" : fit.pvalues_})
+    print(results.sort_values(by=["ANOVA-F-value"], ascending=False).to_markdown())
 
 def pairwise_features(smp, features, samples=None, kde=False):
     """ Produces a plot that shows the relation between all the feature given in the features list.
@@ -141,17 +162,19 @@ def visualize_original_data(smp):
     """
     smp_profile_name = "S31H0368" #"S31H0607"
     # HOW BALANCED IS THE LABELLED DATASET?
-    plot_balancing(smp)
+    #plot_balancing(smp)
     # SHOW THE DATADISTRIBUTION OF ALL FEATURES
-    pairwise_features(smp, features=["label", "distance", "var_force", "mean_force", "delta_4", "lambda_4", "gradient"], samples=200)
+    #pairwise_features(smp, features=["label", "distance", "var_force", "mean_force", "delta_4", "lambda_4", "gradient"], samples=200)
     # SHOW HEATMAP OF ALL FEATURES (with what are the labels correlated the most?)
-    corr_heatmap(smp)
+    #corr_heatmap(smp, label=0)
+    # Correlation does not help for categorical + continuous data - use ANOVA instead
+    anova(smp)
     # SHOW ONE SMP PROFILE WITHOUT LABELS
-    smp_unlabelled(smp, smp_name=smp_profile_name)
+    #smp_unlabelled(smp, smp_name=smp_profile_name)
     # SHOW ONE SMP PROFILE WITH LABELS
-    smp_labelled(smp, smp_name=smp_profile_name)
+    #smp_labelled(smp, smp_name=smp_profile_name)
     # PLOT ALL FEATURES AS LINES IN ONE PROFILE
-    smp_features(smp, smp_name=smp_profile_name, features=["mean_force", "var_force", "delta_4", "delta_12", "gradient"])
+    #smp_features(smp, smp_name=smp_profile_name, features=["mean_force", "var_force", "delta_4", "delta_12", "gradient"])
 
 def main():
     # load dataframe with smp data

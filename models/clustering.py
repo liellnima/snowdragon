@@ -11,6 +11,8 @@ import matplotlib.ticker as ticker
 import matplotlib.pyplot as plt
 
 from sklearn.model_selection import train_test_split
+# TODO just import the metrics you need or everything
+from sklearn import metrics
 from sklearn.metrics import balanced_accuracy_score, multilabel_confusion_matrix, ConfusionMatrixDisplay
 from sklearn.cluster import KMeans
 from sklearn.mixture import GaussianMixture
@@ -140,7 +142,12 @@ def gaussian_mix(x_train, y_train):
 
 
 def random_forest(x_train, y_train):
-    """
+    """ Random Forest.
+    Parameters:
+        x_train: Input data for training
+        y_train: Target data for training
+    Returns:
+        float: balanced_accuracy_score of training (for the moment)
     """
     rf = RandomForestClassifier(n_estimators=100,
                                 criterion = "entropy",
@@ -151,11 +158,44 @@ def random_forest(x_train, y_train):
     rf_pred = rf.fit(x_train, y_train).predict(x_train)
     return balanced_accuracy_score(y_true = y_train, y_pred=rf_pred)
 
+def svm(x_train, y_train, gamma="auto"):
+    """ Support Vector Machine with Radial Basis functions as kernel.
+    Parameters:
+        x_train: Input data for training
+        y_train: Target data for training
+        gamma (num or Str): gamma value for svm
+    Returns:
+        float: balanced_accuracy_score of training (for the moment)
+    """
+    svm = SVC(decision_function_shape='ovr', kernel="rbf", gamma=gamma, random_state=24)
+    svm_pred = svm.fit(x_train, y_train).predict(x_train)
+    print(np.unique(svm_pred, return_counts=True))
+    print((svm_pred == y_train).sum())
+    print(multilabel_confusion_matrix(y_train, svm_pred))
+    return balanced_accuracy_score(y_true = y_train, y_pred=svm_pred)
+
+def knn(x_train, y_train, n_neighbors):
+    """ Support Vector Machine with Radial Basis functions as kernel.
+    Parameters:
+        x_train: Input data for training
+        y_train: Target data for training
+        n_neighbors: Number of neighbors to consider
+    Returns:
+        float: balanced_accuracy_score of training (for the moment)
+    """
+    knn = KNeighborsClassifier(n_neighbors=n_neighbors, weights="distance")
+    knn_pred = knn.fit(x_train, y_train).predict(x_train)
+    return balanced_accuracy_score(y_true = y_train, y_pred=knn_pred)
+
 def main():
     # load dataframe with smp data
     smp = load_data("smp_lambda_delta_gradient.npz")
     #visualize_original_data(smp)
     x_train, x_test, y_train, y_test = my_train_test_split(smp)
+
+    # prepare data for cross Validation
+    # TODO: update for anns -> time series must stay intact
+    cv = ShuffleSplit(n_splits=10, test_size=0.3, random_state=42)
 
     # what I am ignoring at the moment:
     # TODO: balancing the dataset (...oversampling? VAE? What is the best to do here?)
@@ -166,42 +206,39 @@ def main():
 
     x_train = x_train.drop(["smp_idx"], axis=1)
     x_test = x_test.drop(["smp_idx"], axis=1)
-
-    # kmeans clustering
-    #kmeans_acc = kmeans(x_train, y_train)
-
-    # mixture model clustering
-    #gm_acc = gaussian_mix(x_train, y_train)
-
-    # random forests (works)
-    # rf_acc = random_forest(x_train, y_train)
-
     print(np.unique(y_train, return_counts=True))
 
-    # support vector machines, C is not the right paramter -> only small changes in acc
-    svl = LinearSVC(multi_class="ovr", C=0.99, random_state=42)
-    svl_pred = svl.fit(x_train, y_train).predict(x_train)
-    print(np.unique(svl_pred, return_counts=True))
-    print((svl_pred == y_train).sum())
-    print(balanced_accuracy_score(y_true = y_train, y_pred=svl_pred))
+    # kmeans clustering (does not work)
+    kmeans_acc = kmeans(x_train, y_train, cv)
+
+    # mixture model clustering (does not work)
+    gm_acc = gaussian_mix(x_train, y_train, cv)
+
+    # random forests (works)
+    rf_acc = random_forest(x_train, y_train, cv)
 
     # works with very high gamma (overfitting) -> "auto" yields 0.75, still good and no overfitting
-    # svm = SVC(decision_function_shape='ovr', kernel="rbf", gamma=5, random_state=24)
-    # svm_pred = svm.fit(x_train, y_train).predict(x_train)
-    # print(np.unique(svm_pred, return_counts=True))
-    # print((svm_pred == y_train).sum())
-    # print(balanced_accuracy_score(y_true = y_train, y_pred=svm_pred))
-    #print(multilabel_confusion_matrix(y_train, svm_pred))
+    svm_acc = svm(x_train, y_train, cv, gamma=5)
 
-    # # knn (works with weights=distance)
-    # knn = KNeighborsClassifier(n_neighbors=20, weights="distance")
-    # knn_pred = knn.fit(x_train, y_train).predict(x_train)
-    # print(balanced_accuracy_score(y_true = y_train, y_pred=knn_pred))
-    #
-    # # naive bayes classifier
-    # gnb = GaussianNB()
-    # gnb_pred = gnb.fit(x_train, y_train).predict(x_train)
-    # print(balanced_accuracy_score(y_true = y_train, y_pred=gnb_pred))
+    # knn (works with weights=distance)
+    knn_acc = knn(x_train, y_train, cv, n_neighbors=20)
+
+    print(tabulate([["Kmeans", kmeans_acc], ["Gaussian Mixture", gm_acc], ["Random Forest", rf_acc], ["Support Vector Machine", svm_acc], ["K Nearest Neighbors", knn_acc]],
+                    header=["Model", "Training Accuracy"], tablefmt="orgtbl"))
+
+    # ONLY FOR CURIOUSITY (will be deleted)
+    # linear support vector machines -> does not work but makes sense
+    svl = LinearSVC(multi_class="ovr", C=0.99, random_state=42)
+    svl_pred = svl.fit(x_train, y_train).predict(x_train)
+    # print(np.unique(svl_pred, return_counts=True))
+    # print((svl_pred == y_train).sum())
+    print("Linear SVM Training Accuracy", balanced_accuracy_score(y_true = y_train, y_pred=svl_pred))
+
+    # # naive bayes classifier -> does not work but makes sense
+    gnb = GaussianNB()
+    gnb_pred = gnb.fit(x_train, y_train).predict(x_train)
+    print("Naive Bayes Classifier", balanced_accuracy_score(y_true = y_train, y_pred=gnb_pred))
+
 
 
 if __name__ == "__main__":

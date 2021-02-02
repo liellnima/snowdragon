@@ -92,8 +92,6 @@ def load_data(npz_name, test_print=False, **kwargs):
     else:
         return npz_to_pd(npz_name, is_dir=False)
 
-#TODO: make this user friendly - use this with commandline
-
 def main():
     args = parser.parse_args()
     params = vars(args)
