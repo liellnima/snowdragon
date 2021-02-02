@@ -167,8 +167,10 @@ def summarize_rows(df, mm_window=1):
     """
     # number of rows we summarize (1mm = 242 rows)
     window_size = mm_window * 242
-    # TODO do not cut off last part!
     window_stepper = range(0, len(df)-window_size, window_size)
+    # get range of lost data points
+    lost_data = (window_stepper[-1] + window_size, len(df))
+
     # get stats for window
     mean_force = [df["force"].iloc[i:(i+window_size)].mean() for i in window_stepper]
     var_force = [df["force"].iloc[i:(i+window_size)].var() for i in window_stepper]
@@ -176,6 +178,20 @@ def summarize_rows(df, mm_window=1):
     max_force = [df["force"].iloc[i:(i+window_size)].max() for i in window_stepper]
     distance = [df["distance"].iloc[i+window_size] for i in window_stepper]
     label = [df["label"].iloc[i:(i+window_size)].value_counts().idxmax() for i in window_stepper]
+
+    # TODO check why this crashes
+    # add last data points to all statistics
+    mean_force.append(df["force"].iloc[lost_data[0] : lost_data[1]].mean())
+    var_force.append(df["force"].iloc[lost_data[0] : lost_data[1]].var())
+    min_force.append(df["force"].iloc[lost_data[0] : lost_data[1]].min())
+    max_force.append(df["force"].iloc[lost_data[0] : lost_data[1]].max())
+    # append correct next distance
+    distance.append(distance[-1] + window_size)
+    # append correct last label
+    label.append(df["label"].iloc[lost_data[0] : lost_data[1]].value_counts().idxmax())
+
+    print((pd.DataFrame(np.column_stack([distance, mean_force, var_force, min_force, max_force, label]),
+                        columns=["distance", "mean_force", "var_force", "min_force", "max_force", "label"])).shape)
     # returns summarized dataframe
     return pd.DataFrame(np.column_stack([distance, mean_force, var_force, min_force, max_force, label]),
                         columns=["distance", "mean_force", "var_force", "min_force", "max_force", "label"])
@@ -398,17 +414,20 @@ def main():
     # export, unite and label smp data
     start = time.time()
     # export data from pnt to csv or npz
-    #export_pnt(pnt_dir=SMP_LOC, target_dir=EXP_LOC, export_as="npz", overwrite=False, **PARAMS)
+    export_pnt(pnt_dir=SMP_LOC, target_dir=EXP_LOC, export_as="npz", overwrite=True, **PARAMS)
 
     # OTHER OPTIONS
     # unite csv data in one csv file, index it, convert it to pandas (and save it as npz)
     #smp = get_smp_data(csv_dir=EXP_LOC, csv_filename="test04.csv", npz_filename="smp_test04.npz", skip_unify=False, skip_npz=False)
-    import sys
 
-    modulename = 'signal'
-    if modulename not in sys.modules:
-        print('You have not imported the {} module'.format(modulename))
-    print(idx_to_int("S31H0369"))
+    # TESTING MODULES
+    # import sys
+    #
+    # modulename = 'signal'
+    # if modulename not in sys.modules:
+    #     print('You have not imported the {} module'.format(modulename))
+    # print(idx_to_int("S31H0369"))
+
     # FIRST time to use npz_to_pd:
     #smp_first = npz_to_pd(EXP_LOC, is_dir=True)
     # than: export smp as united npz
