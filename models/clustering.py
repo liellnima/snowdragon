@@ -9,10 +9,12 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.ticker as ticker
 import matplotlib.pyplot as plt
+from tabulate import tabulate
 
-from sklearn.model_selection import train_test_split
+# Other metrics: https://stats.stackexchange.com/questions/390725/suitable-performance-metric-for-an-unbalanced-multi-class-classification-problem
 # TODO just import the metrics you need or everything
 from sklearn import metrics
+from sklearn.model_selection import train_test_split, StratifiedKFold, cross_val_score
 from sklearn.metrics import balanced_accuracy_score, multilabel_confusion_matrix, ConfusionMatrixDisplay
 from sklearn.cluster import KMeans
 from sklearn.mixture import GaussianMixture
@@ -20,12 +22,33 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC, LinearSVC
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.naive_bayes import GaussianNB
+# for over and undersampling
+from imblearn.ensemble import EasyEnsembleClassifier
 
 # from sklearn.multioutput import MultiOutputClassifier
 
+# TODO plot confusion matrix beautifully (multilabel_confusion_matrix)
 
+# TODO plot ROC AUC curve beautifullt (roc_curve(y_true, y_pred))
 
-def kmeans():
+def calculate_metrics(y_true, y_pred):
+    """ Calculate wished metrics between predicted and actual target values. Metrics calculated at the moment:
+    Balanced accuracy, weighted recall, weighted precision, log loss, ROC
+    Parameters:
+        y_true (1d array-like): observed (true) target values
+        y_pred (1d array-like): predicted target values
+    Returns:
+        dict: with results
+    """
+    results = {}
+    results["Balanced Accuracy"] = balanced_accuracy_score(y_true, y_pred)
+    results["Recall"] = recall_score(y_true, y_pred, average="weighted")
+    results["Precision"] = precision_score(y_true, y_pred, average="weighted")
+    results["ROC AUC"] = roc_auc_score(y_true, y_pred, average="weighted", multi_class="ovr") # TODO check if ovo makes more sense
+    results["Log Loss"] = log_loss(y_true, y_pred)
+    return results
+
+def kmeans_old():
 
     # k-means clustering for one sample
     km = KMeans(n_clusters=5, init="random", n_init=10, random_state=42)
@@ -89,11 +112,12 @@ def my_train_test_split(smp, test_size=0.2, train_size=0.8):
 # TODO I have to weight the labels! Assigning the most frequent label is not helpful!
 # TODO: Ellbogen Methode um herauszufinden ob andere Cluster Zahlen eventuell mehr Sinn machen
 # TODO: hyperparameters?
-def kmeans(x_train, y_train):
+def kmeans(x_train, y_train, cv):
     """ Semisupervised kmeans algorithm. Assigns most frequent snow label to cluster.
     Parameters:
         x_train: Input data for training
         y_train: Target data for training
+        cv (list of tuples): cross validation indices
     Returns:
         float: balanced_accuracy_score of training (for the moment)
     """
@@ -116,11 +140,12 @@ def kmeans(x_train, y_train):
 
 
 # TODO: a lot. optimize!!! a lot!
-def gaussian_mix(x_train, y_train):
+def gaussian_mix(x_train, y_train, cv):
     """ Semisupervised Gaussian Mixture Algorithm. Assigns most frequent snow label to gaussians.
     Parameters:
         x_train: Input data for training
         y_train: Target data for training
+        cv (list of tuples): cross validation indices
     Returns:
         float: balanced_accuracy_score of training (for the moment)
     """
@@ -141,11 +166,12 @@ def gaussian_mix(x_train, y_train):
     return balanced_accuracy_score(y_true = y_train, y_pred=y_train_pred)
 
 
-def random_forest(x_train, y_train):
+def random_forest(x_train, y_train, cv):
     """ Random Forest.
     Parameters:
         x_train: Input data for training
         y_train: Target data for training
+        cv (list of tuples): cross validation indices
     Returns:
         float: balanced_accuracy_score of training (for the moment)
     """
@@ -154,48 +180,111 @@ def random_forest(x_train, y_train):
                                 bootstrap = True,
                                 max_samples = 0.6,     # 60 % of the training data (None: all)
                                 max_features = "sqrt", # uses sqrt(num_features) features
+                                class_weight = "balanced", # balanced_subsample computes weights based on bootstrap sample
                                 random_state = 42)
     rf_pred = rf.fit(x_train, y_train).predict(x_train)
+
+    scores = cross_val_score(rf, x_train, y_train, cv=cv, scoring="balanced_accuracy")
+    print(scores)
     return balanced_accuracy_score(y_true = y_train, y_pred=rf_pred)
 
-def svm(x_train, y_train, gamma="auto"):
+def svm(x_train, y_train, cv, gamma="auto"):
     """ Support Vector Machine with Radial Basis functions as kernel.
     Parameters:
         x_train: Input data for training
         y_train: Target data for training
+        cv (list of tuples): cross validation indices
         gamma (num or Str): gamma value for svm
     Returns:
         float: balanced_accuracy_score of training (for the moment)
     """
-    svm = SVC(decision_function_shape='ovr', kernel="rbf", gamma=gamma, random_state=24)
+    svm = SVC(decision_function_shape = "ovr",
+              kernel = "rbf",
+              gamma = gamma,
+              class_weight = "balanced",
+              random_state = 24)
     svm_pred = svm.fit(x_train, y_train).predict(x_train)
-    print(np.unique(svm_pred, return_counts=True))
-    print((svm_pred == y_train).sum())
-    print(multilabel_confusion_matrix(y_train, svm_pred))
     return balanced_accuracy_score(y_true = y_train, y_pred=svm_pred)
 
-def knn(x_train, y_train, n_neighbors):
+# specifically for imbalanced data
+def AdaBoost(x_train, y_train, cv):
+    """Bags AdaBoost learners which are trained on balanced bootstrap samples.
+    Parameters:
+        x_train: Input data for training
+        y_train: Target data for training
+        cv (list of tuples): cross validation indices
+    Returns:
+        float: balanced_accuracy_score of training (for the moment)
+    """
+    eec = EasyEnsembleClassifier(n_estimators=100,
+                                 sampling_strategy="all",
+                                 random_state=42)
+    eec_pred = eec.fit(x_train, y_train).predict(x_train)
+    return balanced_accuracy_score(y_true = y_train, y_pred=eec_pred)
+
+# imbalanced data does not hurt knns
+def knn(x_train, y_train, cv, n_neighbors):
     """ Support Vector Machine with Radial Basis functions as kernel.
     Parameters:
         x_train: Input data for training
         y_train: Target data for training
+        cv (list of tuples): cross validation indices
         n_neighbors: Number of neighbors to consider
     Returns:
         float: balanced_accuracy_score of training (for the moment)
     """
-    knn = KNeighborsClassifier(n_neighbors=n_neighbors, weights="distance")
+    knn = KNeighborsClassifier(n_neighbors = n_neighbors,
+                               weights = "distance")
     knn_pred = knn.fit(x_train, y_train).predict(x_train)
     return balanced_accuracy_score(y_true = y_train, y_pred=knn_pred)
+
+def cv_manual(data, k):
+    """ Performs a custom k-fold crossvalidation. Roughly 1/k % of the data is used a testing data,
+    the rest is training data. This happens k times - each data chunk has been used as testing data once.
+
+    Paramters:
+        data (pd.DataFrame): data on which crossvalidation should be performed
+        k (int): number of folds for cross validation
+    Returns:
+        list: iteratble list of length k with tuples of np 1-d arrays (train_indices, test_indices)
+    """
+    # assign each profile a number between 1 and 10
+    cv = []
+    k = 10
+    profiles = list(data["smp_idx"].unique()) # list of all smp profiles of data
+    k_idx = np.resize(np.arange(1, k+1), 69) # k indices for the smp profiles
+    np.random.shuffle(k_idx)
+
+    # for each fold k, the corresponding smp profiles are used as test data
+    for k in range(1, k+1):
+        # indices for the current fold
+        curr_fold_idx = np.argwhere(k_idx == k)
+        # get the corresponding smp_idx
+        curr_smps = [profiles[i[0]] for i in curr_fold_idx]
+        # put the indices corresponding to the current smps into the cv data
+        mask = data["smp_idx"].isin(curr_smps)
+        valid_indices = data[mask].index.values
+        train_indices = data[~mask].index.values
+        cv.append((train_indices, valid_indices))
+
+    return cv
 
 def main():
     # load dataframe with smp data
     smp = load_data("smp_lambda_delta_gradient.npz")
+
     #visualize_original_data(smp)
     x_train, x_test, y_train, y_test = my_train_test_split(smp)
+    # reset internal panda index
+    x_train.reset_index()
+    x_test.reset_index()
+    y_train.reset_index()
+    y_test.reset_index()
 
-    # prepare data for cross Validation
-    # TODO: update for anns -> time series must stay intact
-    cv = ShuffleSplit(n_splits=10, test_size=0.3, random_state=42)
+    # Note: if we want to use StratifiedKFold, we can just hand over an integer to the functions
+    k = 10
+    # yields a list of tuples with training and test indices
+    cv = cv_manual(x_train, k)
 
     # what I am ignoring at the moment:
     # TODO: balancing the dataset (...oversampling? VAE? What is the best to do here?)
@@ -208,11 +297,11 @@ def main():
     x_test = x_test.drop(["smp_idx"], axis=1)
     print(np.unique(y_train, return_counts=True))
 
-    # kmeans clustering (does not work)
-    kmeans_acc = kmeans(x_train, y_train, cv)
-
-    # mixture model clustering (does not work)
-    gm_acc = gaussian_mix(x_train, y_train, cv)
+    # # kmeans clustering (does not work)
+    # kmeans_acc = kmeans(x_train, y_train, cv)
+    #
+    # # mixture model clustering (does not work)
+    # gm_acc = gaussian_mix(x_train, y_train, cv)
 
     # random forests (works)
     rf_acc = random_forest(x_train, y_train, cv)
@@ -223,8 +312,11 @@ def main():
     # knn (works with weights=distance)
     knn_acc = knn(x_train, y_train, cv, n_neighbors=20)
 
-    print(tabulate([["Kmeans", kmeans_acc], ["Gaussian Mixture", gm_acc], ["Random Forest", rf_acc], ["Support Vector Machine", svm_acc], ["K Nearest Neighbors", knn_acc]],
-                    header=["Model", "Training Accuracy"], tablefmt="orgtbl"))
+    # adaboost
+    ada_acc = AdaBoost(x_train, y_train, cv)
+
+    print(tabulate([["Kmeans", kmeans_acc], ["Gaussian Mixture", gm_acc], ["Random Forest", rf_acc], ["Support Vector Machine", svm_acc], ["K Nearest Neighbors", knn_acc], ["Easy Ensemble", ada_acc]],
+                    headers=["Model", "Training Accuracy"], tablefmt="orgtbl"))
 
     # ONLY FOR CURIOUSITY (will be deleted)
     # linear support vector machines -> does not work but makes sense

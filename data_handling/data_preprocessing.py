@@ -168,8 +168,6 @@ def summarize_rows(df, mm_window=1):
     # number of rows we summarize (1mm = 242 rows)
     window_size = mm_window * 242
     window_stepper = range(0, len(df)-window_size, window_size)
-    # get range of lost data points
-    lost_data = (window_stepper[-1] + window_size, len(df))
 
     # get stats for window
     mean_force = [df["force"].iloc[i:(i+window_size)].mean() for i in window_stepper]
@@ -179,15 +177,21 @@ def summarize_rows(df, mm_window=1):
     distance = [df["distance"].iloc[i+window_size] for i in window_stepper]
     label = [df["label"].iloc[i:(i+window_size)].value_counts().idxmax() for i in window_stepper]
 
-    # add last data points to all statistics
-    mean_force.append(df["force"].iloc[lost_data[0] : lost_data[1]].mean())
-    var_force.append(df["force"].iloc[lost_data[0] : lost_data[1]].var())
-    min_force.append(df["force"].iloc[lost_data[0] : lost_data[1]].min())
-    max_force.append(df["force"].iloc[lost_data[0] : lost_data[1]].max())
-    # append correct next distance
-    distance.append(distance[-1] + 1)
-    # append correct last label
-    label.append(df["label"].iloc[lost_data[0] : lost_data[1]].value_counts().idxmax())
+    # add the last data points which are cut off by the window stepper
+    if len(window_stepper) > 0:
+        # get range of lost data points
+        lost_data = (window_stepper[-1] + window_size, len(df))
+
+        # add last data points to all statistics
+        mean_force.append(df["force"].iloc[lost_data[0] : lost_data[1]].mean())
+        var_force.append(df["force"].iloc[lost_data[0] : lost_data[1]].var())
+        min_force.append(df["force"].iloc[lost_data[0] : lost_data[1]].min())
+        max_force.append(df["force"].iloc[lost_data[0] : lost_data[1]].max())
+        # append correct next distance
+        distance.append(distance[-1] + 1)
+        # append correct last label
+        label.append(df["label"].iloc[lost_data[0] : lost_data[1]].value_counts().idxmax())
+
     # returns summarized dataframe
     return pd.DataFrame(np.column_stack([distance, mean_force, var_force, min_force, max_force, label]),
                         columns=["distance", "mean_force", "var_force", "min_force", "max_force", "label"])
@@ -391,6 +395,12 @@ def npz_to_pd(npz_file, is_dir):
         for file in file_generator:
             # load npz file
             smp_npz = np.load(file)
+
+            # INTERIM: (to delete) check whether there is a drift_end and if yes print smp_idx
+            if "drift_end" in smp_npz["label"]:
+                # how many datapoints are drift end points? which smp index
+                print("The SMP Profile {} contains drift_end labels.".format(smp_npz["smp_idx"].iloc[0]))
+
             # creata dict and save all dicts
             smp_dict = {item: smp_npz[item] for item in smp_npz.files}
             all_dicts.append(smp_dict)
@@ -410,7 +420,7 @@ def main():
     # export, unite and label smp data
     start = time.time()
     # export data from pnt to csv or npz
-    export_pnt(pnt_dir=SMP_LOC, target_dir=EXP_LOC, export_as="npz", overwrite=True, **PARAMS)
+    #export_pnt(pnt_dir=SMP_LOC, target_dir=EXP_LOC, export_as="npz", overwrite=False, **PARAMS)
 
     # OTHER OPTIONS
     # unite csv data in one csv file, index it, convert it to pandas (and save it as npz)
@@ -425,7 +435,7 @@ def main():
     # print(idx_to_int("S31H0369"))
 
     # FIRST time to use npz_to_pd:
-    #smp_first = npz_to_pd(EXP_LOC, is_dir=True)
+    smp_first = npz_to_pd(EXP_LOC, is_dir=True)
     # than: export smp as united npz
     #dict = smp_first.to_dict(orient="list")
     #np.savez_compressed("smp_lambda_delta_gradient.npz", **dict)
