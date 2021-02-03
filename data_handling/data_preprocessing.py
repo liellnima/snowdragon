@@ -179,19 +179,15 @@ def summarize_rows(df, mm_window=1):
     distance = [df["distance"].iloc[i+window_size] for i in window_stepper]
     label = [df["label"].iloc[i:(i+window_size)].value_counts().idxmax() for i in window_stepper]
 
-    # TODO check why this crashes
     # add last data points to all statistics
     mean_force.append(df["force"].iloc[lost_data[0] : lost_data[1]].mean())
     var_force.append(df["force"].iloc[lost_data[0] : lost_data[1]].var())
     min_force.append(df["force"].iloc[lost_data[0] : lost_data[1]].min())
     max_force.append(df["force"].iloc[lost_data[0] : lost_data[1]].max())
     # append correct next distance
-    distance.append(distance[-1] + window_size)
+    distance.append(distance[-1] + 1)
     # append correct last label
     label.append(df["label"].iloc[lost_data[0] : lost_data[1]].value_counts().idxmax())
-
-    print((pd.DataFrame(np.column_stack([distance, mean_force, var_force, min_force, max_force, label]),
-                        columns=["distance", "mean_force", "var_force", "min_force", "max_force", "label"])).shape)
     # returns summarized dataframe
     return pd.DataFrame(np.column_stack([distance, mean_force, var_force, min_force, max_force, label]),
                         columns=["distance", "mean_force", "var_force", "min_force", "max_force", "label"])
