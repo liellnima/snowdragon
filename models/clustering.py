@@ -3,6 +3,7 @@ from data_handling.data_loader import load_data
 from data_handling.data_preprocessing import idx_to_int
 from data_handling.data_parameters import LABELS
 from models.visualization import visualize_original_data # TODO or something like this
+from models.metrics import METRICS
 
 import numpy as np
 import pandas as pd
@@ -14,8 +15,9 @@ from tabulate import tabulate
 # Other metrics: https://stats.stackexchange.com/questions/390725/suitable-performance-metric-for-an-unbalanced-multi-class-classification-problem
 # TODO just import the metrics you need or everything
 from sklearn import metrics
-from sklearn.model_selection import train_test_split, StratifiedKFold, cross_val_score
-from sklearn.metrics import balanced_accuracy_score, multilabel_confusion_matrix, ConfusionMatrixDisplay
+from sklearn.metrics import make_scorer, balanced_accuracy_score, recall_score, precision_score, roc_auc_score, log_loss
+
+from sklearn.model_selection import train_test_split, StratifiedKFold, cross_validate, cross_val_score
 from sklearn.cluster import KMeans
 from sklearn.mixture import GaussianMixture
 from sklearn.ensemble import RandomForestClassifier
@@ -31,22 +33,7 @@ from imblearn.ensemble import EasyEnsembleClassifier
 
 # TODO plot ROC AUC curve beautifullt (roc_curve(y_true, y_pred))
 
-def calculate_metrics(y_true, y_pred):
-    """ Calculate wished metrics between predicted and actual target values. Metrics calculated at the moment:
-    Balanced accuracy, weighted recall, weighted precision, log loss, ROC
-    Parameters:
-        y_true (1d array-like): observed (true) target values
-        y_pred (1d array-like): predicted target values
-    Returns:
-        dict: with results
-    """
-    results = {}
-    results["Balanced Accuracy"] = balanced_accuracy_score(y_true, y_pred)
-    results["Recall"] = recall_score(y_true, y_pred, average="weighted")
-    results["Precision"] = precision_score(y_true, y_pred, average="weighted")
-    results["ROC AUC"] = roc_auc_score(y_true, y_pred, average="weighted", multi_class="ovr") # TODO check if ovo makes more sense
-    results["Log Loss"] = log_loss(y_true, y_pred)
-    return results
+
 
 def kmeans_old():
 
@@ -104,7 +91,8 @@ def my_train_test_split(smp, test_size=0.2, train_size=0.8):
     x_test = test.drop(["label"], axis=1)
     y_train = train["label"]
     y_test = test["label"]
-
+    print("Labels in training data:\n", y_train.value_counts())
+    print("Labels in testing data:\n", y_test.value_counts())
     return x_train, x_test, y_train, y_test
 
 # TODO Training and Validation!
@@ -165,6 +153,28 @@ def gaussian_mix(x_train, y_train, cv):
 
     return balanced_accuracy_score(y_true = y_train, y_pred=y_train_pred)
 
+def calculate_metrics(model, X, y_true, cv, return_train_score=True):
+    """ Calculate wished metrics between predicted and actual target values. Metrics calculated at the moment:
+    Balanced accuracy, weighted recall, weighted precision, log loss, ROC
+    Parameters:
+        y_true (1d array-like): observed (true) target values
+        y_pred (1d array-like): predicted target values
+    Returns:
+        dict: with results
+    """
+    metrics = {"balanced_accuracy": make_scorer(balanced_accuracy_score),
+               "recall": make_scorer(recall_score, average="weighted"),
+               "precision": make_scorer(precision_score, average="weighted"),
+               #"roc_auc": make_scorer(roc_auc_score, average="weighted", multi_class="ovr")} # TODO check if ovo makes more sense
+               "log_loss": make_scorer(log_loss, greater_is_better=False)}
+    scores = cross_validate(model, X, y_true, cv=cv, scoring=METRICS, return_train_score=return_train_score)
+    # results = {}
+    # results["Balanced Accuracy"] = balanced_accuracy_score(y_true, y_pred)
+    # results["Recall"] = recall_score(y_true, y_pred, average="weighted")
+    # results["Precision"] = precision_score(y_true, y_pred, average="weighted")
+    # results["ROC AUC"] = roc_auc_score(y_true, y_pred, average="weighted", multi_class="ovr")
+    # results["Log Loss"] = log_loss(y_true, y_pred)
+    return scores
 
 def random_forest(x_train, y_train, cv):
     """ Random Forest.
@@ -175,18 +185,19 @@ def random_forest(x_train, y_train, cv):
     Returns:
         float: balanced_accuracy_score of training (for the moment)
     """
-    rf = RandomForestClassifier(n_estimators=100,
+    rf = RandomForestClassifier(n_estimators=10,
                                 criterion = "entropy",
                                 bootstrap = True,
                                 max_samples = 0.6,     # 60 % of the training data (None: all)
                                 max_features = "sqrt", # uses sqrt(num_features) features
                                 class_weight = "balanced", # balanced_subsample computes weights based on bootstrap sample
                                 random_state = 42)
-    rf_pred = rf.fit(x_train, y_train).predict(x_train)
-
-    scores = cross_val_score(rf, x_train, y_train, cv=cv, scoring="balanced_accuracy")
+    # for training accuracy
+    scores = calculate_metrics(model=rf, X=x_train, y_true=y_train, cv=cv)
+    #scores = cross_val_score(rf, x_train, y_train, cv=cv, scoring=make_scorer(balanced_accuracy_score))
+    #scores = cross_validate(rf, x_train, y_train, cv=cv, scoring=make_scorer(balanced_accuracy_score), return_train_score=True)
     print(scores)
-    return balanced_accuracy_score(y_true = y_train, y_pred=rf_pred)
+    return scores
 
 def svm(x_train, y_train, cv, gamma="auto"):
     """ Support Vector Machine with Radial Basis functions as kernel.
@@ -250,9 +261,9 @@ def cv_manual(data, k):
     """
     # assign each profile a number between 1 and 10
     cv = []
-    k = 10
     profiles = list(data["smp_idx"].unique()) # list of all smp profiles of data
     k_idx = np.resize(np.arange(1, k+1), 69) # k indices for the smp profiles
+    np.random.seed(42)
     np.random.shuffle(k_idx)
 
     # for each fold k, the corresponding smp profiles are used as test data
@@ -276,13 +287,14 @@ def main():
     #visualize_original_data(smp)
     x_train, x_test, y_train, y_test = my_train_test_split(smp)
     # reset internal panda index
-    x_train.reset_index()
-    x_test.reset_index()
-    y_train.reset_index()
-    y_test.reset_index()
+    x_train.reset_index(drop=True, inplace=True)
+    x_test.reset_index(drop=True, inplace=True)
+    y_train.reset_index(drop=True, inplace=True)
+    y_test.reset_index(drop=True, inplace=True)
 
-    # Note: if we want to use StratifiedKFold, we can just hand over an integer to the functions
     k = 10
+    # Note: if we want to use StratifiedKFold, we can just hand over an integer to the functions
+    cv_stratified = StratifiedKFold(n_splits=k, shuffle=True, random_state=42).split(x_train, y_train)
     # yields a list of tuples with training and test indices
     cv = cv_manual(x_train, k)
 
@@ -304,8 +316,8 @@ def main():
     # gm_acc = gaussian_mix(x_train, y_train, cv)
 
     # random forests (works)
-    rf_acc = random_forest(x_train, y_train, cv)
-
+    rf_acc = random_forest(x_train, y_train, cv_stratified)
+    exit(0)
     # works with very high gamma (overfitting) -> "auto" yields 0.75, still good and no overfitting
     svm_acc = svm(x_train, y_train, cv, gamma=5)
 
