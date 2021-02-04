@@ -16,10 +16,11 @@ from sklearn.feature_selection import f_classif
 from sklearn.decomposition import PCA
 
 ANTI_LABELS = {0: "not_labelled",  1: "surface", 2: "ground", 3: "dh", 4: "dhid", 5: "mfdh", 6: "rgwp",
-          7: "df", 8: "if", 9: "ifwp", 10:"sh", 11: "drift_end", 12: "snow-ice"}
+          7: "df", 8: "if", 9: "ifwp", 10:"sh", 11: "drift_end", 12: "snow-ice", 13: "dhwp", 14: "mfcl", 15: "mfsl", 16: "mfcr", 17: "pp"}
 
 COLORS = {0: "lightsteelblue", 1: "chocolate", 2: "darkslategrey", 3: "lightseagreen", 4: "mediumaquamarine", 5: "midnightblue",
-          6: "tomato", 7: "mediumvioletred", 8: "firebrick", 9: "lightgreen", 10: "orange", 11: "black", 12: "paleturquoise"}
+          6: "tomato", 7: "mediumvioletred", 8: "firebrick", 9: "lightgreen", 10: "orange", 11: "black", 12: "paleturquoise",
+          13: "gold", 14: "orchid", 15: "fuchsia", 16: "brown", 17: "lila"}
 
 
 def smp_unlabelled(smp, smp_name):

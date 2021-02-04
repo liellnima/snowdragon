@@ -420,7 +420,7 @@ def main():
     # export, unite and label smp data
     start = time.time()
     # export data from pnt to csv or npz
-    #export_pnt(pnt_dir=SMP_LOC, target_dir=EXP_LOC, export_as="npz", overwrite=False, **PARAMS)
+    export_pnt(pnt_dir=SMP_LOC, target_dir=EXP_LOC, export_as="npz", overwrite=True, **PARAMS)
 
     # OTHER OPTIONS
     # unite csv data in one csv file, index it, convert it to pandas (and save it as npz)
@@ -437,8 +437,8 @@ def main():
     # FIRST time to use npz_to_pd:
     smp_first = npz_to_pd(EXP_LOC, is_dir=True)
     # than: export smp as united npz
-    #dict = smp_first.to_dict(orient="list")
-    #np.savez_compressed("smp_lambda_delta_gradient.npz", **dict)
+    dict = smp_first.to_dict(orient="list")
+    np.savez_compressed("smp_all_02.npz", **dict)
 
     # AFTER FIRST time and during first time:
     # load pd directly from this npz
