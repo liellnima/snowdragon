@@ -4,6 +4,7 @@ from data_handling.data_preprocessing import idx_to_int
 from data_handling.data_parameters import LABELS
 from models.visualization import visualize_original_data # TODO or something like this
 from models.metrics import METRICS
+import models.metrics as my_metrics
 
 import numpy as np
 import pandas as pd
@@ -11,6 +12,7 @@ import seaborn as sns
 import matplotlib.ticker as ticker
 import matplotlib.pyplot as plt
 from tabulate import tabulate
+import time
 
 # Other metrics: https://stats.stackexchange.com/questions/390725/suitable-performance-metric-for-an-unbalanced-multi-class-classification-problem
 # TODO just import the metrics you need or everything
@@ -95,14 +97,123 @@ def my_train_test_split(smp, test_size=0.2, train_size=0.8):
     print("Labels in testing data:\n", y_test.value_counts())
     return x_train, x_test, y_train, y_test
 
+
+def calculate_metrics_raw(y_trues, y_preds, name=None, annot="train"):
+    """ Calculates metrics when already the list of the observed and predicted target values is given. E.g. from a manual cross validation.
+    Paramters:
+        y_pred (list): List with predicted target values
+        y_true (list): List with true or observed target values
+        name (String): Name of the model evaluated
+        annot (String): indicates if we speak about train or test or validation data
+    Returns:
+        dict: dictionary with different scores
+    """
+    funcs = [my_metrics.balanced_accuracy, my_metrics.recall, my_metrics.precision]
+    funcs_names = ["balanced_accuracy", "recall", "precision"]
+    annot = annot + "_"
+    scores = {}
+    if scores is not None:
+        scores["model"] = name
+    # iterate through a list of metric functions and add the lists of results to scores
+    for func, name in zip(funcs, funcs_names):
+        scores[annot + name] = np.asarray([func(y_true, y_pred) for y_true, y_pred in zip(y_trues, y_preds)])
+
+    return scores
+
+def assign_clusters(targets, clusters, cluster_num):
+    """ Assigns snow labels to previously calculated clusters.
+    Parameters:
+        targets: the int labels of our smp data - the target
+        clusters: the cluster assignments from some unsupervised clustering algorithm
+        cluster_num: the number of clusters
+    Returns:
+        list: with predicted snow labels for our data
+    """
+    pred_snow_labels = clusters
+    for i in range(cluster_num):
+        # filter for data with current cluster assignment
+        mask = clusters == i
+        # if there is something in this cluster
+        if len(np.bincount(targets[mask])) > 0:
+            # find out which snow grain label occurs most frequently
+            snow_label = np.argmax(np.bincount(targets[mask]))
+            # and assign it to all the data point belonging to the current cluster
+            pred_snow_labels[mask] = snow_label
+    # return the predicted snow labels
+    return pred_snow_labels
+
+# TODO make metrics parameter possible
+# TODO fix the bug, that training and test scores are identical!!!
+def semisupervised_cv(model, unlabelled_data, x_train, y_train, cluster_num, cv, name=None):
+    """ Crossvalidation for cluster-predict semisupervised approach.
+    Parameters:
+        model: model on which we fit our data
+        unlabelled_data: complete unlabelled data (only features of interest)
+        x_train: the input/features data where labels are available
+        y_train: the target data for x_train containing the snow labels
+        cv (list): list of tuples (train_indices, test_indices) for cv splitting
+        name (String): name of the model, default None
+    Returns:
+        dict: with scores for different metrics
+    """
+    all_train_y_pred = []
+    all_train_y_true = []
+    all_valid_y_pred = []
+    all_valid_y_true = []
+    all_fit_time = []
+    all_score_time = []
+
+    # cross validation
+    for k in cv:
+        # assignments
+        train_target = y_train.iloc[k[0]]
+        train_input  = x_train.iloc[k[0]]
+        valid_target = y_train.iloc[k[1]]
+        valid_input  = x_train.iloc[k[1]]
+
+        # fitting
+        fit_time = time.time()
+        # concat unlabelled and labelled data and fit it
+        fit_model = model.fit(pd.concat([unlabelled_data, train_input]))
+        # shortcut:
+        # fit_km = km.fit(train_input)
+        all_fit_time.append(time.time() - fit_time)
+
+        # predicting
+        train_clusters = fit_model.predict(train_input)
+        score_time = time.time()
+        valid_clusters = fit_model.predict(valid_input)
+        all_score_time.append(time.time() - score_time)
+
+        # assign labels to clusters
+        train_y_pred = assign_clusters(train_target, train_clusters, cluster_num)
+        valid_y_pred = assign_clusters(valid_target, valid_clusters, cluster_num)
+        all_train_y_pred.append(train_y_pred)
+        all_valid_y_pred.append(valid_y_pred)
+
+        # save true labels
+        all_train_y_true.append(train_target)
+        all_valid_y_true.append(valid_target)
+
+    train_scores = calculate_metrics_raw(all_train_y_true, all_train_y_pred, name=name, annot="train")
+    test_scores = calculate_metrics_raw(all_valid_y_true, all_valid_y_pred, name=name, annot="test")
+
+    scores = {**train_scores, **test_scores}
+    scores["fit_time"] = np.asarray(all_fit_time)
+    scores["score_time"] = np.asarray(all_score_time)
+
+    return scores
+
+# https://towardsdatascience.com/cluster-then-predict-for-classification-tasks-142fdfdc87d6
 # TODO Training and Validation!
 # TODO make this more general!
 # TODO I have to weight the labels! Assigning the most frequent label is not helpful!
 # TODO: Ellbogen Methode um herauszufinden ob andere Cluster Zahlen eventuell mehr Sinn machen
 # TODO: hyperparameters?
-def kmeans(x_train, y_train, cv):
+def kmeans(unlabelled_data, x_train, y_train, cv):
     """ Semisupervised kmeans algorithm. Assigns most frequent snow label to cluster.
     Parameters:
+        unlabelled_data: Data on which the clustering should take place
         x_train: Input data for training
         y_train: Target data for training
         cv (list of tuples): cross validation indices
@@ -111,26 +222,16 @@ def kmeans(x_train, y_train, cv):
     """
     # K-MEANS CLUSTERING
     cluster_num = len(LABELS)-3
+    cluster_num = 5
     km = KMeans(n_clusters=cluster_num, init="random", n_init=cluster_num, random_state=42)
-    # is fit_predict correct here?
-    cluster_labels = km.fit_predict(x_train)
-
-    # assign labels to clusters via y_train
-    y_train_pred = cluster_labels
-    for i in range(cluster_num):
-        # mask where the cluster_labels are i
-        mask = cluster_labels == i
-        snow_label_i = np.argmax(np.bincount(y_train[mask]))
-        y_train_pred[mask] = snow_label_i
-
-    # training metrics
-    return balanced_accuracy_score(y_true = y_train, y_pred=y_train_pred)
+    return semisupervised_cv(km, unlabelled_data, x_train, y_train, cluster_num, cv, name="Kmeans")
 
 
 # TODO: a lot. optimize!!! a lot!
-def gaussian_mix(x_train, y_train, cv):
+def gaussian_mix(unlabelled_data, x_train, y_train, cv):
     """ Semisupervised Gaussian Mixture Algorithm. Assigns most frequent snow label to gaussians.
     Parameters:
+        unlabelled_data: Data on which the clustering should take place
         x_train: Input data for training
         y_train: Target data for training
         cv (list of tuples): cross validation indices
@@ -140,42 +241,35 @@ def gaussian_mix(x_train, y_train, cv):
     # mixture model clustering
     n_gaussians = 10
     gm = GaussianMixture(n_components=n_gaussians, init_params="random", covariance_type="tied", random_state=42)
-    gm_pred = gm.fit_predict(x_train)
-    print(np.bincount(gm_pred))
 
-    # assign labels to clusters via y_train
-    y_train_pred = gm_pred
-    for i in range(n_gaussians):
-        # mask where the cluster_labels are i
-        mask = gm_pred == i
-        snow_label_i = np.argmax(np.bincount(y_train[mask]))
-        y_train_pred[mask] = snow_label_i
+    return semisupervised_cv(gm, unlabelled_data, x_train, y_train, n_gaussians, cv, name="GaussianMixture")
 
-    return balanced_accuracy_score(y_true = y_train, y_pred=y_train_pred)
-
-def calculate_metrics(model, X, y_true, cv, return_train_score=True):
-    """ Calculate wished metrics between predicted and actual target values. Metrics calculated at the moment:
-    Balanced accuracy, weighted recall, weighted precision, log loss, ROC
+def calculate_metrics_cv(model, X, y_true, cv, name=None, return_train_score=True):
+    """ Calculate wished metrics one a cross-validation split for a certain data set and model
+    Metrics calculated at the moment: Balanced accuracy, weighted recall, weighted precision
     Parameters:
-        y_true (1d array-like): observed (true) target values
-        y_pred (1d array-like): predicted target values
+        model: the model to fit from scikit learn
+        X (nd array-like): the training data
+        y_true (1d array-like): observed (true) target values for training data X
+        cv (list): a k-fold list with (training, test) tuples containing the indices for training and test data
+        name (String): name of the model, if an entry for the scores list is wished (Default None)
+        return_train_score (bool): if the training scores should be saved as well
     Returns:
         dict: with results
     """
+    # TODO get roc_auc and log_loss running
+    # TODO use METRICS instead (and make it a parameter!)
     metrics = {"balanced_accuracy": make_scorer(balanced_accuracy_score),
                "recall": make_scorer(recall_score, average="weighted"),
-               "precision": make_scorer(precision_score, average="weighted"),
+               "precision": make_scorer(precision_score, average="weighted")}
                #"roc_auc": make_scorer(roc_auc_score, average="weighted", multi_class="ovr")} # TODO check if ovo makes more sense
-               "log_loss": make_scorer(log_loss, greater_is_better=False)}
+               #"log_loss": make_scorer(log_loss, greater_is_better=False)}
     scores = cross_validate(model, X, y_true, cv=cv, scoring=METRICS, return_train_score=return_train_score)
-    # results = {}
-    # results["Balanced Accuracy"] = balanced_accuracy_score(y_true, y_pred)
-    # results["Recall"] = recall_score(y_true, y_pred, average="weighted")
-    # results["Precision"] = precision_score(y_true, y_pred, average="weighted")
-    # results["ROC AUC"] = roc_auc_score(y_true, y_pred, average="weighted", multi_class="ovr")
-    # results["Log Loss"] = log_loss(y_true, y_pred)
+    if name is not None:
+        scores["model"] = name
     return scores
 
+# TODO make name a parameter and return_train_score as well
 def random_forest(x_train, y_train, cv):
     """ Random Forest.
     Parameters:
@@ -192,12 +286,7 @@ def random_forest(x_train, y_train, cv):
                                 max_features = "sqrt", # uses sqrt(num_features) features
                                 class_weight = "balanced", # balanced_subsample computes weights based on bootstrap sample
                                 random_state = 42)
-    # for training accuracy
-    scores = calculate_metrics(model=rf, X=x_train, y_true=y_train, cv=cv)
-    #scores = cross_val_score(rf, x_train, y_train, cv=cv, scoring=make_scorer(balanced_accuracy_score))
-    #scores = cross_validate(rf, x_train, y_train, cv=cv, scoring=make_scorer(balanced_accuracy_score), return_train_score=True)
-    print(scores)
-    return scores
+    return calculate_metrics_cv(model=rf, X=x_train, y_true=y_train, cv=cv, name="RandomForest")
 
 def svm(x_train, y_train, cv, gamma="auto"):
     """ Support Vector Machine with Radial Basis functions as kernel.
@@ -214,8 +303,7 @@ def svm(x_train, y_train, cv, gamma="auto"):
               gamma = gamma,
               class_weight = "balanced",
               random_state = 24)
-    svm_pred = svm.fit(x_train, y_train).predict(x_train)
-    return balanced_accuracy_score(y_true = y_train, y_pred=svm_pred)
+    return calculate_metrics_cv(model=svm, X=x_train, y_true=y_train, cv=cv, name="SupportVectorMachine")
 
 # specifically for imbalanced data
 def AdaBoost(x_train, y_train, cv):
@@ -230,8 +318,7 @@ def AdaBoost(x_train, y_train, cv):
     eec = EasyEnsembleClassifier(n_estimators=100,
                                  sampling_strategy="all",
                                  random_state=42)
-    eec_pred = eec.fit(x_train, y_train).predict(x_train)
-    return balanced_accuracy_score(y_true = y_train, y_pred=eec_pred)
+    return calculate_metrics_cv(model=eec, X=x_train, y_true=y_train, cv=cv, name="AdaBoost")
 
 # imbalanced data does not hurt knns
 def knn(x_train, y_train, cv, n_neighbors):
@@ -246,9 +333,13 @@ def knn(x_train, y_train, cv, n_neighbors):
     """
     knn = KNeighborsClassifier(n_neighbors = n_neighbors,
                                weights = "distance")
-    knn_pred = knn.fit(x_train, y_train).predict(x_train)
-    return balanced_accuracy_score(y_true = y_train, y_pred=knn_pred)
+    return calculate_metrics_cv(model=knn, X=x_train, y_true=y_train, cv=cv, name="KNearestNeighbours")
 
+# TODO: make this kind of stratified:
+    # make the data a set of time-series data
+    # one-hot-encode this data with labels (0 or 1: does this label occur in the timeseries?)
+    # use scikit learn StratifiedKFold on this data set!
+    # transfer this split to the smp_idx (which smp timeseries is used in which fold?)
 def cv_manual(data, k):
     """ Performs a custom k-fold crossvalidation. Roughly 1/k % of the data is used a testing data,
     the rest is training data. This happens k times - each data chunk has been used as testing data once.
@@ -257,7 +348,7 @@ def cv_manual(data, k):
         data (pd.DataFrame): data on which crossvalidation should be performed
         k (int): number of folds for cross validation
     Returns:
-        list: iteratble list of length k with tuples of np 1-d arrays (train_indices, test_indices)
+        list: iteratable list of length k with tuples of np 1-d arrays (train_indices, test_indices)
     """
     # assign each profile a number between 1 and 10
     cv = []
@@ -280,11 +371,45 @@ def cv_manual(data, k):
 
     return cv
 
-def main():
-    # load dataframe with smp data
-    smp = load_data("smp_lambda_delta_gradient.npz")
+def sum_up_labels(smp, labels, name, label_idx):
+    """ Sums up the datapoints belonging to one of the classes in labels to one class.
+    Parameters:
+        smp (pd.DataFrame): a dataframe with the smp profiles
+        labels (list): a list of Strings with the labels which should be united
+        name (String): name of the new unified class
+        label_idx (int): the number identifying which label it is
+    Returns:
+        pd.DataFrame: the updated smp
+    """
+    int_labels = [LABELS[label] for label in labels]
+    smp.loc[smp["label"].isin(int_labels), "label"] = label_idx
+    # add a new key value pair to labels (and antilabels and colors?)
+    # TODO update: add this also to antilabels and colors
+    LABELS[name] = label_idx
+    return smp
 
+def mean_kfolds(scores):
+    """ Produces the mean of scores resulting from scikit learn cross_validation function.
+    Parameters:
+        scores (dict): Dictionary of key - list pairs, where each list contains the results from the crossvalidation
+    Returns:
+        dict: same keys as dict scores, but the values are averaged now
+    """
+    return {key: scores[key].mean() if key != "model" else scores[key] for key, value in scores.items()}
+
+def main():
+    # 1. Load dataframe with smp data
+    smp = load_data("smp_lambda_delta_gradient.npz")
+    # TODO: fix this: CURRENTLY crushes for smp_lambda_delta_gradient
+    unlabelled_smp = smp[(smp["label"] == 0)]
+    unlabelled_smp = unlabelled_smp.drop(["label", "smp_idx"], axis=1)
+    unlabelled_smp = unlabelled_smp.dropna()
+    # 2. Visualize the original data
     #visualize_original_data(smp)
+    # 3. Sum up certain classes if necessary (alternative: do something to balance the dataset)
+    smp = sum_up_labels(smp, ["df", "drift_end", "ifwp", "if", "sh"], name="rare", label_idx=18)
+
+    # 4. Split up the data into training and test data
     x_train, x_test, y_train, y_test = my_train_test_split(smp)
     # reset internal panda index
     x_train.reset_index(drop=True, inplace=True)
@@ -292,56 +417,64 @@ def main():
     y_train.reset_index(drop=True, inplace=True)
     y_test.reset_index(drop=True, inplace=True)
 
+    # 5. Normalize and standardize the data
+    # TODO
+
+    # 6. Make crossvalidation split
     k = 10
     # Note: if we want to use StratifiedKFold, we can just hand over an integer to the functions
     cv_stratified = StratifiedKFold(n_splits=k, shuffle=True, random_state=42).split(x_train, y_train)
     # yields a list of tuples with training and test indices
-    cv = cv_manual(x_train, k)
-
-    # what I am ignoring at the moment:
-    # TODO: balancing the dataset (...oversampling? VAE? What is the best to do here?)
-    # TODO: correct cross-validation (needs to be done manual for ANNs)
-    # TODO: Preprocessing: Standardization? Normalization?
-    # TODO: correct metrics
-    # TODO: visualization
+    cv = cv_manual(x_train, k) # in progress
 
     x_train = x_train.drop(["smp_idx"], axis=1)
     x_test = x_test.drop(["smp_idx"], axis=1)
     print(np.unique(y_train, return_counts=True))
 
-    # # kmeans clustering (does not work)
-    # kmeans_acc = kmeans(x_train, y_train, cv)
-    #
-    # # mixture model clustering (does not work)
-    # gm_acc = gaussian_mix(x_train, y_train, cv)
+    # 7. Call the models
+    all_scores = []
+    # A kmeans clustering (does not work)
+    kmeans_acc = kmeans(unlabelled_smp, x_train, y_train, cv_stratified)
+    print(kmeans_acc)
+    all_scores.append(mean_kfolds(kmeans_acc))
 
-    # random forests (works)
-    rf_acc = random_forest(x_train, y_train, cv_stratified)
+    # TODO fix this problem!!! results NANs!!!
+    # # B mixture model clustering (does not work)
+    gm_acc = gaussian_mix(unlabelled_smp, x_train, y_train, cv_stratified)
+    all_scores.append(mean_kfolds(gm_acc))
+
+    header = all_scores[0].keys()
+    rows = [model_scores.values() for model_scores in all_scores]
+    print(tabulate(rows, header))
     exit(0)
+    # C random forests (works)
+    rf_acc = random_forest(x_train, y_train, cv_stratified)
+    all_scores.append(mean_kfolds(rf_acc))
+
+    # D Support Vector Machines
     # works with very high gamma (overfitting) -> "auto" yields 0.75, still good and no overfitting
     svm_acc = svm(x_train, y_train, cv, gamma=5)
+    all_scores.append(mean_kfolds(svm_acc))
 
-    # knn (works with weights=distance)
+    # E knn (works with weights=distance)
     knn_acc = knn(x_train, y_train, cv, n_neighbors=20)
+    all_scores.append(mean_kfolds(knn_acc))
 
-    # adaboost
+    # F adaboost
     ada_acc = AdaBoost(x_train, y_train, cv)
+    all_scores.append(mean_kfolds(ada_acc))
 
-    print(tabulate([["Kmeans", kmeans_acc], ["Gaussian Mixture", gm_acc], ["Random Forest", rf_acc], ["Support Vector Machine", svm_acc], ["K Nearest Neighbors", knn_acc], ["Easy Ensemble", ada_acc]],
-                    headers=["Model", "Training Accuracy"], tablefmt="orgtbl"))
+    # G LSTM
 
-    # ONLY FOR CURIOUSITY (will be deleted)
-    # linear support vector machines -> does not work but makes sense
-    svl = LinearSVC(multi_class="ovr", C=0.99, random_state=42)
-    svl_pred = svl.fit(x_train, y_train).predict(x_train)
-    # print(np.unique(svl_pred, return_counts=True))
-    # print((svl_pred == y_train).sum())
-    print("Linear SVM Training Accuracy", balanced_accuracy_score(y_true = y_train, y_pred=svl_pred))
+    # H Encoder-Decoder
 
-    # # naive bayes classifier -> does not work but makes sense
-    gnb = GaussianNB()
-    gnb_pred = gnb.fit(x_train, y_train).predict(x_train)
-    print("Naive Bayes Classifier", balanced_accuracy_score(y_true = y_train, y_pred=gnb_pred))
+    # 8. Visualize the results
+    header = all_scores[0].keys()
+    rows = [model_scores.values() for model_scores in all_scores]
+    print(tabulate(rows, header))
+
+    # print(tabulate([["Kmeans", kmeans_acc], ["Gaussian Mixture", gm_acc], ["Random Forest", rf_acc], ["Support Vector Machine", svm_acc], ["K Nearest Neighbors", knn_acc], ["Easy Ensemble", ada_acc]],
+    #                 headers=["Model", "Training Accuracy"], tablefmt="orgtbl"))
 
 
 

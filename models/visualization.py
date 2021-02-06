@@ -138,7 +138,6 @@ def plot_balancing(smp):
     # take only labelled data and exclude surface and ground
     labelled_smp = smp[(smp["label"] != 0) & (smp["label"] != 1) & (smp["label"] != 2)]
     # I can currently not find snow-ice because I am cutting of the last datapoints, if they are less than 1mm
-    # TODO: do not cut off last part during summarizing rows -> to get snow-ice I have to fix this!
     print("Can I find the snow-ice label?", smp[smp["label"] == 12])
 
     ax = sns.countplot(x="label", data=labelled_smp, order=labelled_smp["label"].value_counts().index)
@@ -169,7 +168,9 @@ def visualize_original_data(smp):
     # SHOW HEATMAP OF ALL FEATURES (with what are the labels correlated the most?)
     #corr_heatmap(smp, label=0)
     # Correlation does not help for categorical + continuous data - use ANOVA instead
+    # FEATURE "EXTRACTION"
     anova(smp)
+    # TODO: RANDOM FOREST FEATURE EXTRACTION
     # SHOW ONE SMP PROFILE WITHOUT LABELS
     #smp_unlabelled(smp, smp_name=smp_profile_name)
     # SHOW ONE SMP PROFILE WITH LABELS
