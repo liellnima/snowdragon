@@ -211,6 +211,7 @@ def semisupervised_cv(model, unlabelled_data, x_train, y_train, cluster_num, cv,
 # https://towardsdatascience.com/cluster-then-predict-for-classification-tasks-142fdfdc87d6
 # TODO: silhouette coefficient to determine optimal number of clusters: best value: 1, worst value -1
 # parameters: silhouette, true/false, in this case the parameter cluster_num is used as maximum value
+# TODO update docu
 def kmeans(unlabelled_data, x_train, y_train, cv, num_clusters=30, find_num_clusters="both", plot=True):
     """ Semisupervised kmeans algorithm. Assigns most frequent snow label to cluster.
     Parameters:
@@ -279,14 +280,18 @@ def kmeans(unlabelled_data, x_train, y_train, cv, num_clusters=30, find_num_clus
 
     return semisupervised_cv(km, unlabelled_data, x_train, y_train, num_clusters, cv, name="Kmeans")
 
+# TODO update docu
 # TODO compare if bayesian gaussian mixture models are better than using BIC manually (the lower the better)
-def gaussian_mix(unlabelled_data, x_train, y_train, cv, cov_type="tied", num_components=20, find_num_components=True, plot=True):
+def gaussian_mix(unlabelled_data, x_train, y_train, cv, cov_type="tied", num_components=15, find_num_components="both", plot=True):
     """ Semisupervised Gaussian Mixture Algorithm. Assigns most frequent snow label to gaussians.
     Parameters:
         unlabelled_data: Data on which the clustering should take place
         x_train: Input data for training
         y_train: Target data for training
         cv (list of tuples): cross validation indices
+        find_num_components (str): either "bic" for Silhouette Coefficient or "acc" for balanced accuracy or "both".
+            In case of "both" the optimal number of cluster is choosen according to results of acc
+            Default: None - in this case only the kmeans model with num_clusters cluster is run
     Returns:
         float: balanced_accuracy_score of training (for the moment)
     """
@@ -297,29 +302,44 @@ def gaussian_mix(unlabelled_data, x_train, y_train, cv, cov_type="tied", num_com
 
         for n_gaussians in range(1, max_components+1):
             print("N Components: ", n_gaussians)
-            gm = GaussianMixture(n_components=n_gaussians, init_params="random", covariance_type=cov_type, random_state=42)
+            gm = GaussianMixture(n_components=n_gaussians, init_params="random", max_iter=150, covariance_type=cov_type, random_state=42)
             gm.fit(x_train)
             # calculate bic score
-            all_bic_scores.append(gm.bic(x_train))
+            if find_num_components == "bic" or find_num_components == "both":
+                all_bic_scores.append(gm.bic(x_train))
             # calculate balanced accuracy
-            # clusters = gm.predict(x_train)
-            # y_pred = assign_clusters(y_train, clusters, n_gaussians)
-            # bal_acc_scores.append(balanced_accuracy_score(y_train, y_pred))
+            if find_num_components == "acc" or find_num_components == "both":
+                clusters = gm.predict(x_train)
+                y_pred = assign_clusters(y_train, clusters, n_gaussians)
+                bal_acc_scores.append(balanced_accuracy_score(y_train, y_pred))
+
+        # optimal number of distributions is the one with the lowest bayesian information criterion or highest accuracy
+        if find_num_components == "bic" or find_num_components == "both":
+            bic_components_num_optimal = min(range(len(all_bic_scores)), key=lambda i: all_bic_scores[i]) + 1
+            # in case of "both" this will be overwritten by the balanced_acc maximum
+            n_components = bic_components_num_optimal
+        # argmax of bal_acc scores
+        if find_num_components == "acc" or find_num_components == "both":
+            acc_components_num_optimal = max(range(len(bal_acc_scores)), key=lambda i: bal_acc_scores[i]) + 1
+            n_components = acc_components_num_optimal
 
         if plot:
-            plt.plot(range(1, max_components+1), all_bic_scores, label="BIC")
-            # plt.plot(range(1, max_components+1), bal_acc_scores, label="Balanced Acc")
-            plt.title("Bayesian Information Criterion for Gaussian Mixture Model, {}".format(cov_type))
-            plt.xlabel("Number of Gaussian Distributions")
-            plt.ylabel("BIC")
-            plt.show()
-        # optimal number of distributions is the one with the lowest bayesian information criterion
-        n_components_optimal = min(range(len(all_bic_scores)), key=lambda i: all_bic_scores[i]) + 1
-        print(n_components_optimal)
-        n_components = n_components_optimal
+            if find_num_components == "bic" or find_num_components == "both":
+                plt.plot(range(1, max_components+1), all_bic_scores)
+                plt.axvline(bic_components_num_optimal, color="red", linestyle="--")
+                plt.title("Bayesian Information Criterion for Gaussian Mixture Model, {}".format(cov_type))
+                plt.xlabel("Number of Gaussian Distributions")
+                plt.ylabel("BIC")
+                plt.show()
+            if find_num_components == "acc" or find_num_components == "both":
+                plt.plot(range(1, max_components+1), bal_acc_scores)
+                plt.axvline(acc_components_num_optimal, color="red", linestyle="--")
+                plt.title("Balanced Accuracy for Gaussian Mixture Model, {}".format(cov_type))
+                plt.xlabel("Number of Gaussian Distributions")
+                plt.ylabel("Balanced Accuracy")
+                plt.show()
 
-    gm = GaussianMixture(n_components=n_components, init_params="random", covariance_type=cov_type, random_state=42)
-
+    gm = GaussianMixture(n_components=n_components, init_params="random", max_iter=150, covariance_type=cov_type, random_state=42)
     return semisupervised_cv(gm, unlabelled_data, x_train, y_train, n_gaussians, cv, name="GaussianMixture_{}".format(cov_type))
 
 def calculate_metrics_cv(model, X, y_true, cv, name=None, return_train_score=True):
@@ -514,13 +534,12 @@ def main():
     all_scores = []
 
     # A kmeans clustering (does not work)
-    kmeans_acc = kmeans(unlabelled_smp, x_train, y_train, cv_stratified, num_clusters=30, find_num_clusters="both", plot=True)
-    all_scores.append(mean_kfolds(kmeans_acc))
-    print(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
-    exit(0)
+    # kmeans_acc = kmeans(unlabelled_smp, x_train, y_train, cv_stratified, num_clusters=30, find_num_clusters="both", plot=True)
+    # all_scores.append(mean_kfolds(kmeans_acc))
+    # print(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
+    # exit(0)
 
-    # TODO fix this problem!!! results NANs!!!
-    # B mixture model clustering (does not work)
+    # B mixture model clustering
     gm_acc_1 = gaussian_mix(unlabelled_smp, x_train, y_train, cv_stratified, cov_type="tied")
     all_scores.append(mean_kfolds(gm_acc_1))
     gm_acc_2 = gaussian_mix(unlabelled_smp, x_train, y_train, cv_stratified, cov_type="spherical")
@@ -531,7 +550,7 @@ def main():
     all_scores.append(mean_kfolds(gm_acc_4))
 
     print(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
-    with open('GaussianMixtureModels_cov_types.txt', 'w') as f:
+    with open('plots/tables/GaussianMixtureModels_cov_types.txt', 'w') as f:
         f.write(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
     exit(0)
     # C random forests (works)
