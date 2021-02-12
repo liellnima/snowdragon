@@ -22,4 +22,4 @@ METRICS = {"balanced_accuracy": make_scorer(balanced_accuracy),
            "recall": make_scorer(recall),
            "precision": make_scorer(precision)}
            #"roc_auc": make_scorer(roc_auc),
-           #"log_loss": make_scorer(log_loss, greater_is_better=False)}
+          # "log_loss": make_scorer(log_loss, greater_is_better=False)}
