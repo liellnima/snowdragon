@@ -155,6 +155,34 @@ def plot_balancing(smp):
     ax.set_ylim(0,len(labelled_smp))
     plt.show()
 
+def bog_plot(smp):
+    labelled_smp = smp[(smp["label"] != 0)]
+    distance_between_smp = 0.5
+    day_id = 1
+    smp_indices = labelled_smp["smp_idx"].unique()
+    # apply logarithm to force
+    #labelled_smp.loc[:, "mean_force"] = labelled_smp.loc[:, "mean_force"].apply(lambda x: np.log10(x))
+
+    for i, curr_smp_idx in zip(range(len(smp_indices)), smp_indices):
+        smp_profile = labelled_smp[labelled_smp["smp_idx"] == curr_smp_idx]
+        Y = smp_profile["mean_force"]
+        z = smp_profile["distance"]
+        #contour_levels = np.arange( 0, 3, 0.5)
+        #contour_levels[-1] = 3
+        #contour_levels = np.arange( 0, 2, 0.025)
+        x1 = i * distance_between_smp
+        x2 = (i+1) * distance_between_smp
+        plt.contourf([x1, x2], z, np.array([Y,Y]).transpose(), cmap='jet')
+
+    plt.xlabel('Transect position (m)')
+    plt.ylabel('Depth (mm)')
+    plt.gca().invert_yaxis()
+    plt.tight_layout()
+    cbar = plt.colorbar()
+    cbar.set_label('Mean force (N)', rotation=90)
+    plt.grid()
+    plt.show()
+
 def visualize_original_data(smp):
     """ Visualizing some things of the original data
     Parameters:
@@ -169,7 +197,7 @@ def visualize_original_data(smp):
     #corr_heatmap(smp, label=0)
     # Correlation does not help for categorical + continuous data - use ANOVA instead
     # FEATURE "EXTRACTION"
-    anova(smp)
+    #anova(smp)
     # TODO: RANDOM FOREST FEATURE EXTRACTION
     # SHOW ONE SMP PROFILE WITHOUT LABELS
     #smp_unlabelled(smp, smp_name=smp_profile_name)
@@ -177,6 +205,9 @@ def visualize_original_data(smp):
     #smp_labelled(smp, smp_name=smp_profile_name)
     # PLOT ALL FEATURES AS LINES IN ONE PROFILE
     #smp_features(smp, smp_name=smp_profile_name, features=["mean_force", "var_force", "delta_4", "delta_12", "gradient"])
+
+    # PLOT BOGPLOT
+    bog_plot(smp)
 
 def main():
     # load dataframe with smp data
