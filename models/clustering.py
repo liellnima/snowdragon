@@ -13,6 +13,8 @@ import matplotlib.ticker as ticker
 import matplotlib.pyplot as plt
 from tabulate import tabulate
 import time
+import warnings
+from types import GeneratorType
 
 # Other metrics: https://stats.stackexchange.com/questions/390725/suitable-performance-metric-for-an-unbalanced-multi-class-classification-problem
 # TODO just import the metrics you need or everything
@@ -143,7 +145,6 @@ def assign_clusters(targets, clusters, cluster_num):
     return pred_snow_labels
 
 # TODO make metrics parameter possible
-# TODO fix the bug, that training and test scores are identical!!!
 def semisupervised_cv(model, unlabelled_data, x_train, y_train, cluster_num, cv, name=None):
     """ Crossvalidation for cluster-predict semisupervised approach.
     Parameters:
@@ -151,11 +152,14 @@ def semisupervised_cv(model, unlabelled_data, x_train, y_train, cluster_num, cv,
         unlabelled_data: complete unlabelled data (only features of interest)
         x_train: the input/features data where labels are available
         y_train: the target data for x_train containing the snow labels
-        cv (list): list of tuples (train_indices, test_indices) for cv splitting
+        cv (list): list of tuples (train_indices, test_indices) for cv splitting (in case of reuse: must be a list, not a generator!)
         name (String): name of the model, default None
     Returns:
         dict: with scores for different metrics
     """
+    # print warning if cv is a generator:
+    if isinstance(cv, GeneratorType):
+        warnings.warn("\nYour cross validation split cv is a generator. Consider handing over a list instead, if you want to reuse the generator.")
     all_train_y_pred = []
     all_train_y_true = []
     all_valid_y_pred = []
@@ -201,7 +205,6 @@ def semisupervised_cv(model, unlabelled_data, x_train, y_train, cluster_num, cv,
     scores = {**train_scores, **test_scores}
     scores["fit_time"] = np.asarray(all_fit_time)
     scores["score_time"] = np.asarray(all_score_time)
-
     return scores
 
 # https://towardsdatascience.com/cluster-then-predict-for-classification-tasks-142fdfdc87d6
@@ -421,9 +424,10 @@ def main():
     # TODO
 
     # 6. Make crossvalidation split
-    k = 10
+    k = 3
     # Note: if we want to use StratifiedKFold, we can just hand over an integer to the functions
     cv_stratified = StratifiedKFold(n_splits=k, shuffle=True, random_state=42).split(x_train, y_train)
+    cv_stratified = list(cv_stratified)
     # yields a list of tuples with training and test indices
     cv = cv_manual(x_train, k) # in progress
 
@@ -433,23 +437,22 @@ def main():
 
     # 7. Call the models
     all_scores = []
+
     # A kmeans clustering (does not work)
     kmeans_acc = kmeans(unlabelled_smp, x_train, y_train, cv_stratified)
-    print(kmeans_acc)
     all_scores.append(mean_kfolds(kmeans_acc))
 
     # TODO fix this problem!!! results NANs!!!
-    # # B mixture model clustering (does not work)
+    # B mixture model clustering (does not work)
     gm_acc = gaussian_mix(unlabelled_smp, x_train, y_train, cv_stratified)
     all_scores.append(mean_kfolds(gm_acc))
 
-    header = all_scores[0].keys()
-    rows = [model_scores.values() for model_scores in all_scores]
-    print(tabulate(rows, header))
+    print(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
     exit(0)
     # C random forests (works)
-    rf_acc = random_forest(x_train, y_train, cv_stratified)
-    all_scores.append(mean_kfolds(rf_acc))
+    # rf_acc = random_forest(x_train, y_train, cv_stratified)
+    # all_scores.append(mean_kfolds(rf_acc))
+    #
 
     # D Support Vector Machines
     # works with very high gamma (overfitting) -> "auto" yields 0.75, still good and no overfitting
@@ -469,12 +472,7 @@ def main():
     # H Encoder-Decoder
 
     # 8. Visualize the results
-    header = all_scores[0].keys()
-    rows = [model_scores.values() for model_scores in all_scores]
-    print(tabulate(rows, header))
-
-    # print(tabulate([["Kmeans", kmeans_acc], ["Gaussian Mixture", gm_acc], ["Random Forest", rf_acc], ["Support Vector Machine", svm_acc], ["K Nearest Neighbors", knn_acc], ["Easy Ensemble", ada_acc]],
-    #                 headers=["Model", "Training Accuracy"], tablefmt="orgtbl"))
+    print(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
 
 
 
