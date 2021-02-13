@@ -23,11 +23,11 @@ from sklearn.metrics import make_scorer, balanced_accuracy_score, recall_score, 
 
 from sklearn.model_selection import train_test_split, StratifiedKFold, cross_validate, cross_val_score
 from sklearn.cluster import KMeans
-from sklearn.mixture import GaussianMixture
+from sklearn.mixture import GaussianMixture, BayesianGaussianMixture
+from sklearn.semi_supervised import SelfTrainingClassifier, LabelSpreading
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.svm import SVC, LinearSVC
+from sklearn.svm import SVC
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.naive_bayes import GaussianNB
 # for over and undersampling
 from imblearn.ensemble import EasyEnsembleClassifier
 
@@ -153,8 +153,9 @@ def semisupervised_cv(model, unlabelled_data, x_train, y_train, cluster_num, cv,
         unlabelled_data: complete unlabelled data (only features of interest)
         x_train: the input/features data where labels are available
         y_train: the target data for x_train containing the snow labels
+        cluster_num (int): can be number of components, number of clusters or similar
         cv (list): list of tuples (train_indices, test_indices) for cv splitting (in case of reuse: must be a list, not a generator!)
-        name (String): name of the model, default None
+        name (str): name of the model, default None
     Returns:
         dict: with scores for different metrics
     """
@@ -209,9 +210,6 @@ def semisupervised_cv(model, unlabelled_data, x_train, y_train, cluster_num, cv,
     return scores
 
 # https://towardsdatascience.com/cluster-then-predict-for-classification-tasks-142fdfdc87d6
-# TODO: silhouette coefficient to determine optimal number of clusters: best value: 1, worst value -1
-# parameters: silhouette, true/false, in this case the parameter cluster_num is used as maximum value
-# TODO update docu
 def kmeans(unlabelled_data, x_train, y_train, cv, num_clusters=30, find_num_clusters="both", plot=True):
     """ Semisupervised kmeans algorithm. Assigns most frequent snow label to cluster.
     Parameters:
@@ -219,11 +217,13 @@ def kmeans(unlabelled_data, x_train, y_train, cv, num_clusters=30, find_num_clus
         x_train: Input data for training
         y_train: Target data for training
         cv (list of tuples): cross validation indices
+        num_clusters (int): number of clusters for kmeans, or maximum number of clusters
         find_num_clusters (str): either "sil" for Silhouette Coefficient or "acc" for balanced accuracy or "both".
             In case of "both" the optimal number of cluster is choosen according to results of acc
             Default: None - in this case only the kmeans model with num_clusters cluster is run
+        plot (bool): whether silhouette coefficient or balanced accuracy should be plot
     Returns:
-        float: balanced_accuracy_score of training (for the moment)
+        dict: results from cross validation
     """
     num_clusters=5
     if find_num_clusters is not None:
@@ -280,8 +280,8 @@ def kmeans(unlabelled_data, x_train, y_train, cv, num_clusters=30, find_num_clus
 
     return semisupervised_cv(km, unlabelled_data, x_train, y_train, num_clusters, cv, name="Kmeans")
 
-# TODO update docu
 # TODO compare if bayesian gaussian mixture models are better than using BIC manually (the lower the better)
+# TODO save plots
 def gaussian_mix(unlabelled_data, x_train, y_train, cv, cov_type="tied", num_components=15, find_num_components="both", plot=True):
     """ Semisupervised Gaussian Mixture Algorithm. Assigns most frequent snow label to gaussians.
     Parameters:
@@ -289,11 +289,14 @@ def gaussian_mix(unlabelled_data, x_train, y_train, cv, cov_type="tied", num_com
         x_train: Input data for training
         y_train: Target data for training
         cv (list of tuples): cross validation indices
-        find_num_components (str): either "bic" for Silhouette Coefficient or "acc" for balanced accuracy or "both".
+        cov_type (str): type of covariance used for gaussian mixture model - one of: "tied", "diag", "spherical", "full"
+        num_components (int): number of distributions (maximally) used for the model
+        find_num_components (str): either "bic" for Bayesian Information Criterion or "acc" for balanced accuracy or "both".
             In case of "both" the optimal number of cluster is choosen according to results of acc
             Default: None - in this case only the kmeans model with num_clusters cluster is run
+        plot (bool): whether the bic and balanced accuracy should be plot
     Returns:
-        float: balanced_accuracy_score of training (for the moment)
+        dict: results of crossvalidation
     """
     if find_num_components:
         max_components = num_components
@@ -341,6 +344,35 @@ def gaussian_mix(unlabelled_data, x_train, y_train, cv, cov_type="tied", num_com
 
     gm = GaussianMixture(n_components=n_components, init_params="random", max_iter=150, covariance_type=cov_type, random_state=42)
     return semisupervised_cv(gm, unlabelled_data, x_train, y_train, n_gaussians, cv, name="GaussianMixture_{}".format(cov_type))
+
+def bayesian_gaussian_mix(unlabelled_data, x_train, y_train, cv, cov_type="tied", num_components=15):
+    """ Semisupervised Variational Bayesian estimation of a Gaussian Mixture Algorithm. Assigns most frequent snow label to gaussians.
+    Find automatically the right number of
+    Parameters:
+        unlabelled_data: Data on which the clustering should take place
+        x_train: Input data for training
+        y_train: Target data for training
+        cv (list of tuples): cross validation indices
+        cov_type (str): type of covariance used for gaussian mixture model - one of: "tied", "diag", "spherical", "full"
+        num_components (int): number of distributions maximally used for the model
+        plot (bool): whether the bic and balanced accuracy should be plot
+    Returns:
+        dict: results of crossvalidation
+    """
+    bgm = GaussianMixture(n_components=num_components, init_params="random", max_iter=150, covariance_type=cov_type, random_state=42)
+
+    return semisupervised_cv(bgm, unlabelled_data, x_train, y_train, num_components, cv, name="BayesianGaussianMixture_{}".format(cov_type))
+
+def self_training(unlabelled_data, x_train, y_train, cv):
+    """ Self training
+    """
+    return "blubb"
+
+def label_spreading(unlabelled_data, x_train, y_train, cv):
+    """ Label spreading
+    """
+    return "blubb"
+
 
 def calculate_metrics_cv(model, X, y_true, cv, name=None, return_train_score=True):
     """ Calculate wished metrics one a cross-validation split for a certain data set and model
@@ -498,10 +530,17 @@ def mean_kfolds(scores):
 def main():
     # 1. Load dataframe with smp data
     smp = load_data("smp_lambda_delta_gradient.npz")
+
+    # prepare dataset of unlabelled data
     # TODO: fix this: CURRENTLY crushes for smp_lambda_delta_gradient
     unlabelled_smp = smp[(smp["label"] == 0)]
-    unlabelled_smp = unlabelled_smp.drop(["label", "smp_idx"], axis=1)
-    unlabelled_smp = unlabelled_smp.dropna()
+    # set unlabelled_smp label to -1
+    unlabelled_smp.loc["label"] = -1
+    unlabelled_smp_x = unlabelled_smp.drop(["label", "smp_idx"], axis=1)
+    unlabelled_smp_x = unlabelled_smp_x.dropna()
+    unlabelled_smp_y = pd.Series(np.repeat(-1, len(unlabelled_smp_x)))
+
+    # TODO: maybe visualize some things only after normalization and standardization?
     # 2. Visualize the original data
     #visualize_original_data(smp)
     # 3. Sum up certain classes if necessary (alternative: do something to balance the dataset)
@@ -534,32 +573,49 @@ def main():
     all_scores = []
 
     # A kmeans clustering (does not work)
-    # kmeans_acc = kmeans(unlabelled_smp, x_train, y_train, cv_stratified, num_clusters=30, find_num_clusters="both", plot=True)
+    # kmeans_acc = kmeans(unlabelled_smp_x, x_train, y_train, cv_stratified, num_clusters=30, find_num_clusters="both", plot=True)
     # all_scores.append(mean_kfolds(kmeans_acc))
     # print(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
     # exit(0)
 
-    # B mixture model clustering
-    gm_acc_1 = gaussian_mix(unlabelled_smp, x_train, y_train, cv_stratified, cov_type="tied")
-    all_scores.append(mean_kfolds(gm_acc_1))
-    gm_acc_2 = gaussian_mix(unlabelled_smp, x_train, y_train, cv_stratified, cov_type="spherical")
-    all_scores.append(mean_kfolds(gm_acc_2))
-    gm_acc_3 = gaussian_mix(unlabelled_smp, x_train, y_train, cv_stratified, cov_type="full")
-    all_scores.append(mean_kfolds(gm_acc_3))
-    gm_acc_4 = gaussian_mix(unlabelled_smp, x_train, y_train, cv_stratified, cov_type="diag")
-    all_scores.append(mean_kfolds(gm_acc_4))
+    # B mixture model clustering ("diag" works best at the moment)
+    # gm_acc_diag = gaussian_mix(unlabelled_smp_x, x_train, y_train, cv_stratified, cov_type="diag")
+    # all_scores.append(mean_kfolds(gm_acc_diag))
+    # bgm_acc_diag = bayesian_gaussian_mix(unlabelled_smp_x, x_train, y_train, cv_stratified, cov_type="diag")
+    # all_scores.append(mean_kfolds(bgm_acc_diag))
+
+    # C + D -> different data preparation necessary
+    # include unlabelled data points in x_train and y_train
+    x_train_all = pd.concat([x_train, unlabelled_smp_x])
+    y_train_all = pd.concat([y_train, unlabelled_smp_y])
+
+    # D label spreading model
+    ls_model = LabelSpreading(kernel="knn", alpha=0.2, n_jobs=-1).fit(x_train_all, y_train_all)
+    y_pred = ls_model.predict(x_train_all)
+    ls_bal_acc = balanced_accuracy_score(y_pred, y_train_all)
+    print("Label Spreading Model, Training Accuracy: ", ls_bal_acc)
+    exit(0)
+
+    # TODO it makes sense to use the best hyperparameter tuned models here!
+    # C self training model
+    svm = SVC(probability=True, gamma="auto")
+    st_model = SelfTrainingClassifier(svm, verbose=True).fit(x_train_all, y_train_all)
+    print("Hello3")
+    y_pred = st_model.predict(x_train_all)
+    st_bal_acc = balanced_accuracy_score(y_pred, y_train_all)
+    print("Self Training Classifier, Training Accuracy: ", st_bal_acc)
+
 
     print(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
-    with open('plots/tables/GaussianMixtureModels_cov_types.txt', 'w') as f:
-        f.write(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
-    exit(0)
+
+
     # C random forests (works)
     rf_acc = random_forest(x_train, y_train, cv_stratified)
     all_scores.append(mean_kfolds(rf_acc))
 
     # D Support Vector Machines
     # works with very high gamma (overfitting) -> "auto" yields 0.75, still good and no overfitting
-    svm_acc = svm(x_train, y_train, cv, gamma=5)
+    svm_acc = svm(x_train, y_train, cv, gamma="auto")
     all_scores.append(mean_kfolds(svm_acc))
 
     # E knn (works with weights=distance)
@@ -576,6 +632,8 @@ def main():
 
     # 8. Visualize the results
     print(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
+    with open('plots/tables/models_classification_gamma.txt', 'w') as f:
+        f.write(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
 
 
 
