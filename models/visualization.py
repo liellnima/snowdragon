@@ -84,24 +84,56 @@ def smp_features(smp, smp_name, features):
     plt.title("{} SMP Profile Distance (1mm layers) and Different Features".format(smp_name))
     plt.show()
 
-def corr_heatmap(smp):
+# Longterm TODO: more beautiful heatmaps: https://towardsdatascience.com/better-heatmaps-and-correlation-matrix-plots-in-python-41445d0f2bec
+def corr_heatmap(smp, labels=None):
     """ Plots a correlation heatmap of all features.
     Paramters:
         smp (df.Dataframe): SMP preprocessed data
+        labels (list): Default None - usual complete correlation heatmap is calculated.
+            Else put in the labels for which the correlation heatmap should be calculated
     """
-    smp_corr = smp_filtered.corr()
-    stats.pointbiserialr(["label"])
-    mask = np.triu(np.ones_like(smp_corr, dtype=np.bool))
-    mask = mask[1:, :-1]
-    corr = smp_corr.iloc[1:, :-1].copy()
-    sns.heatmap(corr, mask=mask, annot=True, fmt=".2f")
-    plt.title("Correlation Heat Map of SMP Features with Label {}".format(ANTI_LABELS[label]))
-    plt.show()
+    if labels is None:
+        smp_filtered = smp.drop("label", axis=1)
+        smp_corr = smp_filtered.corr()
+        mask = np.triu(np.ones_like(smp_corr, dtype=np.bool))
+        mask = mask[1:, :-1]
+        corr = smp_corr.iloc[1:, :-1].copy()
+        sns.heatmap(corr, mask=mask, annot=True, fmt=".2f")
+        plt.title("Correlation Heatmap of SMP Features")
+        plt.show()
+    else:
+        col_names = []
+        # this makes only sense for labelled data
+        smp_labelled = smp[(smp["label"] != 0) & (smp["label"] != 1) & (smp["label"] != 2)]
+        smp_labelled = smp_labelled.drop("smp_idx", axis=1)
+        for label in labels:
+            # make the label integer if it not already
+            if not isinstance(label, int): label = LABELS[label]
+            # add the label to smp_labelled
+            col_name = ANTI_LABELS[label]
+            col_names.append(col_name)
+            smp_labelled[col_name] = (smp_labelled["label"] == label) * 1
+        # drop label columns
+        smp_labelled = smp_labelled.drop("label", axis=1)
+        # calculate the correlation heatmap
+        smp_corr = smp_labelled.corr()
+        # consider only the correlations between labels and features
+        corr = smp_corr.iloc[-len(labels):, :].copy()
+        corr = corr.drop(col_names, axis=1)
+        # plot the resulting heatmap
+        sns.heatmap(corr, annot=True, fmt=".2f", vmin=-1, vmax=1, center=0)
+        plt.xticks(rotation=45)
+        plt.xlabel("Features of SMP Data")
+        plt.ylabel("Snow Grain Types")
+        plt.title("Correlation Heat Map of SMP Features with Different Labels")
+        plt.show()
 
-def anova(smp):
+
+def anova(smp, file_name=None):
     """ Prints ANOVA F-scores for features.
     Paramters:
         smp (df.Dataframe): SMP preprocessed data
+        file_name (str): in case the results should be saved in a file, indicate the path here
     """
     np.set_printoptions(precision=3)
     smp_filtered = smp[smp["label"] != 0]
@@ -111,6 +143,11 @@ def anova(smp):
     test = SelectKBest(score_func=f_classif, k="all")
     fit = test.fit(features, target)
     results = pd.DataFrame({"Feature" : features.columns, "ANOVA-F-value" : fit.scores_, "P-value" : fit.pvalues_})
+
+    if file_name is not None:
+        with open(file_name, "w") as f:
+            f.write(results.sort_values(by=["ANOVA-F-value"], ascending=False).to_markdown())
+
     print(results.sort_values(by=["ANOVA-F-value"], ascending=False).to_markdown())
 
 def pairwise_features(smp, features, samples=None, kde=False):
@@ -194,10 +231,10 @@ def visualize_original_data(smp):
     # SHOW THE DATADISTRIBUTION OF ALL FEATURES
     #pairwise_features(smp, features=["label", "distance", "var_force", "mean_force", "delta_4", "lambda_4", "gradient"], samples=200)
     # SHOW HEATMAP OF ALL FEATURES (with what are the labels correlated the most?)
-    #corr_heatmap(smp, label=0)
+    corr_heatmap(smp, labels=[3, 4, 5, 6, 7, 8, 9, 10])
     # Correlation does not help for categorical + continuous data - use ANOVA instead
     # FEATURE "EXTRACTION"
-    #anova(smp)
+    #anova(smp, "plots/tables/ANOVA_results.txt")
     # TODO: RANDOM FOREST FEATURE EXTRACTION
     # SHOW ONE SMP PROFILE WITHOUT LABELS
     #smp_unlabelled(smp, smp_name=smp_profile_name)
@@ -207,11 +244,13 @@ def visualize_original_data(smp):
     #smp_features(smp, smp_name=smp_profile_name, features=["mean_force", "var_force", "delta_4", "delta_12", "gradient"])
 
     # PLOT BOGPLOT
-    bog_plot(smp)
+    #bog_plot(smp)
 
 def main():
     # load dataframe with smp data
     smp = load_data("smp_lambda_delta_gradient.npz")
+    # TODO: maybe normalize data already here
+
     # visualize the original data
     visualize_original_data(smp)
 
