@@ -35,7 +35,7 @@ from imblearn.ensemble import EasyEnsembleClassifier
 
 # TODO plot confusion matrix beautifully (multilabel_confusion_matrix)
 
-# TODO plot ROC AUC curve beautifullt (roc_curve(y_true, y_pred))
+# TODO plot ROC AUC curve beautifully (roc_curve(y_true, y_pred))
 
 
 
@@ -99,12 +99,47 @@ def my_train_test_split(smp, test_size=0.2, train_size=0.8):
     print("Labels in testing data:\n", y_test.value_counts())
     return x_train, x_test, y_train, y_test
 
+def majority_class_baseline(x_train, y_train, cv):
+    y_preds_train = []
+    y_trues_train = []
+    y_preds_valid = []
+    y_trues_valid = []
+    all_fit_time = []
+    all_score_time = []
+
+    for k in cv:
+        # current target values for this fold (training and validation)
+        fit_time = time.time()
+        fold_y_train = y_train[k[1]]
+        all_fit_time.append(time.time() - fit_time)
+        fold_y_valid = y_train[k[0]]
+        # append true labels for current fold (both for training and validation data)
+        y_trues_train.append(fold_y_train)
+        y_trues_valid.append(fold_y_valid)
+        # majority class in this fold of training data (will be also the majority class for the validation set!)
+        score_time = time.time()
+        maj_class = fold_y_train.mode()
+        y_pred = pd.Series(np.repeat(maj_class, len(fold_y_valid))) # predicted labels of validation data
+        all_score_time.append(time.time() - score_time)
+
+        y_preds_valid.append(y_pred)
+        y_preds_train.append(pd.Series(np.repeat(maj_class, len(fold_y_train)))) # predicted labels of training data
+
+
+    train_scores = calculate_metrics_raw(y_trues_train, y_preds_train, name="MajorityClassBaseline", annot="train")
+    test_scores = calculate_metrics_raw(y_trues_valid, y_preds_valid, name="MajorityClassBaseline", annot="test")
+
+    scores = {**train_scores, **test_scores}
+    scores["fit_time"] = np.asarray(all_fit_time)
+    scores["score_time"] = np.asarray(all_score_time)
+
+    return scores
 
 def calculate_metrics_raw(y_trues, y_preds, name=None, annot="train"):
     """ Calculates metrics when already the list of the observed and predicted target values is given. E.g. from a manual cross validation.
     Paramters:
-        y_pred (list): List with predicted target values
-        y_true (list): List with true or observed target values
+        y_preds (list): List of lists (crossvalidation!) with predicted target values
+        y_trues (list): List of listst (crossvalidation!) with true or observed target values
         name (String): Name of the model evaluated
         annot (String): indicates if we speak about train or test or validation data
     Returns:
@@ -112,9 +147,9 @@ def calculate_metrics_raw(y_trues, y_preds, name=None, annot="train"):
     """
     funcs = [my_metrics.balanced_accuracy, my_metrics.recall, my_metrics.precision]
     funcs_names = ["balanced_accuracy", "recall", "precision"]
-    annot = annot + "_"
+    if annot is not None: annot = annot + "_"
     scores = {}
-    if scores is not None:
+    if name is not None:
         scores["model"] = name
     # iterate through a list of metric functions and add the lists of results to scores
     for func, name in zip(funcs, funcs_names):
@@ -210,7 +245,7 @@ def semisupervised_cv(model, unlabelled_data, x_train, y_train, cluster_num, cv,
     return scores
 
 # https://towardsdatascience.com/cluster-then-predict-for-classification-tasks-142fdfdc87d6
-def kmeans(unlabelled_data, x_train, y_train, cv, num_clusters=30, find_num_clusters="both", plot=True):
+def kmeans(unlabelled_data, x_train, y_train, cv, num_clusters=5, find_num_clusters="both", plot=True):
     """ Semisupervised kmeans algorithm. Assigns most frequent snow label to cluster.
     Parameters:
         unlabelled_data: Data on which the clustering should take place
@@ -225,7 +260,6 @@ def kmeans(unlabelled_data, x_train, y_train, cv, num_clusters=30, find_num_clus
     Returns:
         dict: results from cross validation
     """
-    num_clusters=5
     if find_num_clusters is not None:
         max_cluster = num_clusters
         all_sil_scores = []
@@ -572,67 +606,74 @@ def main():
     # 7. Call the models
     all_scores = []
 
-    # A kmeans clustering (does not work)
-    # kmeans_acc = kmeans(unlabelled_smp_x, x_train, y_train, cv_stratified, num_clusters=30, find_num_clusters="both", plot=True)
+    # # A Baseline - majority class predicition
+    # baseline_acc = majority_class_baseline(x_train, y_train, cv_stratified)
+    # all_scores.append(mean_kfolds(baseline_acc))
+    #
+    # # B kmeans clustering (does not work)
+    # kmeans_acc = kmeans(unlabelled_smp_x, x_train, y_train, cv_stratified, num_clusters=30, find_num_clusters="both", plot=False)
     # all_scores.append(mean_kfolds(kmeans_acc))
-    # print(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
-    # exit(0)
-
-    # B mixture model clustering ("diag" works best at the moment)
-    # gm_acc_diag = gaussian_mix(unlabelled_smp_x, x_train, y_train, cv_stratified, cov_type="diag")
+    # # print(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
+    # # exit(0)
+    #
+    # # C mixture model clustering ("diag" works best at the moment)
+    # gm_acc_diag = gaussian_mix(unlabelled_smp_x, x_train, y_train, cv_stratified, cov_type="diag", plot=False)
     # all_scores.append(mean_kfolds(gm_acc_diag))
     # bgm_acc_diag = bayesian_gaussian_mix(unlabelled_smp_x, x_train, y_train, cv_stratified, cov_type="diag")
     # all_scores.append(mean_kfolds(bgm_acc_diag))
 
-    # C + D -> different data preparation necessary
-    # include unlabelled data points in x_train and y_train
-    x_train_all = pd.concat([x_train, unlabelled_smp_x])
-    y_train_all = pd.concat([y_train, unlabelled_smp_y])
+    # # ARE TAKING TOO MUCH TIME
+    # # D + E -> different data preparation necessary
+    # # include unlabelled data points in x_train and y_train
+    # x_train_all = pd.concat([x_train, unlabelled_smp_x])
+    # y_train_all = pd.concat([y_train, unlabelled_smp_y])
+    #
+    # # D label spreading model
+    # ls_model = LabelSpreading(kernel="knn", alpha=0.2, n_jobs=-1).fit(x_train_all, y_train_all)
+    # y_pred = ls_model.predict(x_train_all)
+    # ls_bal_acc = balanced_accuracy_score(y_pred, y_train_all)
+    # print("Label Spreading Model, Training Accuracy: ", ls_bal_acc)
+    # exit(0)
+    #
+    # # TODO it makes sense to use the best hyperparameter tuned models here!
+    # # E self training model
+    # svm = SVC(probability=True, gamma="auto")
+    # st_model = SelfTrainingClassifier(svm, verbose=True).fit(x_train_all, y_train_all)
+    # print("Hello3")
+    # y_pred = st_model.predict(x_train_all)
+    # st_bal_acc = balanced_accuracy_score(y_pred, y_train_all)
+    # print("Self Training Classifier, Training Accuracy: ", st_bal_acc)
+    #
+    #
+    # print(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
 
-    # D label spreading model
-    ls_model = LabelSpreading(kernel="knn", alpha=0.2, n_jobs=-1).fit(x_train_all, y_train_all)
-    y_pred = ls_model.predict(x_train_all)
-    ls_bal_acc = balanced_accuracy_score(y_pred, y_train_all)
-    print("Label Spreading Model, Training Accuracy: ", ls_bal_acc)
-    exit(0)
 
-    # TODO it makes sense to use the best hyperparameter tuned models here!
-    # C self training model
-    svm = SVC(probability=True, gamma="auto")
-    st_model = SelfTrainingClassifier(svm, verbose=True).fit(x_train_all, y_train_all)
-    print("Hello3")
-    y_pred = st_model.predict(x_train_all)
-    st_bal_acc = balanced_accuracy_score(y_pred, y_train_all)
-    print("Self Training Classifier, Training Accuracy: ", st_bal_acc)
-
-
-    print(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
-
-
-    # C random forests (works)
+    # F random forests (works)
     rf_acc = random_forest(x_train, y_train, cv_stratified)
     all_scores.append(mean_kfolds(rf_acc))
+    print(all_scores)
+    exit(0)
 
-    # D Support Vector Machines
+    # G Support Vector Machines
     # works with very high gamma (overfitting) -> "auto" yields 0.75, still good and no overfitting
     svm_acc = svm(x_train, y_train, cv, gamma="auto")
     all_scores.append(mean_kfolds(svm_acc))
 
-    # E knn (works with weights=distance)
+    # H knn (works with weights=distance)
     knn_acc = knn(x_train, y_train, cv, n_neighbors=20)
     all_scores.append(mean_kfolds(knn_acc))
 
-    # F adaboost
+    # I adaboost
     ada_acc = AdaBoost(x_train, y_train, cv)
     all_scores.append(mean_kfolds(ada_acc))
 
-    # G LSTM
+    # J LSTM
 
-    # H Encoder-Decoder
+    # K Encoder-Decoder
 
     # 8. Visualize the results
     print(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
-    with open('plots/tables/models_classification_gamma.txt', 'w') as f:
+    with open('plots/tables/models_with_baseline.txt', 'w') as f:
         f.write(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
 
 
