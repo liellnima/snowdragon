@@ -3,7 +3,7 @@ from data_handling.data_loader import load_data
 from data_handling.data_preprocessing import idx_to_int
 from data_handling.data_parameters import LABELS
 from models.visualization import visualize_original_data # TODO or something like this
-from models.metrics import METRICS
+from models.metrics import SCORERS, METRICS, METRICS_PROB
 import models.metrics as my_metrics
 
 import numpy as np
@@ -21,7 +21,7 @@ from types import GeneratorType
 from sklearn import metrics
 from sklearn.metrics import make_scorer, balanced_accuracy_score, recall_score, precision_score, roc_auc_score, log_loss
 
-from sklearn.model_selection import train_test_split, StratifiedKFold, cross_validate, cross_val_score
+from sklearn.model_selection import train_test_split, StratifiedKFold, cross_validate, cross_val_score, cross_val_predict
 from sklearn.cluster import KMeans
 from sklearn.mixture import GaussianMixture, BayesianGaussianMixture
 from sklearn.semi_supervised import SelfTrainingClassifier, LabelSpreading
@@ -135,6 +135,7 @@ def majority_class_baseline(x_train, y_train, cv):
 
     return scores
 
+# TODO add Metrics as parameter
 def calculate_metrics_raw(y_trues, y_preds, name=None, annot="train"):
     """ Calculates metrics when already the list of the observed and predicted target values is given. E.g. from a manual cross validation.
     Paramters:
@@ -180,7 +181,8 @@ def assign_clusters(targets, clusters, cluster_num):
     # return the predicted snow labels
     return pred_snow_labels
 
-# TODO make metrics parameter possible
+# TODO make metrics/scorer parameter possible
+# TODO make semi_supervised roc_auc and log_loss possible! (not for kmeans of course!)
 def semisupervised_cv(model, unlabelled_data, x_train, y_train, cluster_num, cv, name=None):
     """ Crossvalidation for cluster-predict semisupervised approach.
     Parameters:
@@ -244,6 +246,7 @@ def semisupervised_cv(model, unlabelled_data, x_train, y_train, cluster_num, cv,
     scores["score_time"] = np.asarray(all_score_time)
     return scores
 
+# ATTENTION: log_loss and roc_auc or other probability based metrics cannot be calculated for kmeans (not well defined!)
 # https://towardsdatascience.com/cluster-then-predict-for-classification-tasks-142fdfdc87d6
 def kmeans(unlabelled_data, x_train, y_train, cv, num_clusters=5, find_num_clusters="both", plot=True):
     """ Semisupervised kmeans algorithm. Assigns most frequent snow label to cluster.
@@ -408,49 +411,7 @@ def label_spreading(unlabelled_data, x_train, y_train, cv):
     return "blubb"
 
 
-def calculate_metrics_cv(model, X, y_true, cv, name=None, return_train_score=True):
-    """ Calculate wished metrics one a cross-validation split for a certain data set and model
-    Metrics calculated at the moment: Balanced accuracy, weighted recall, weighted precision
-    Parameters:
-        model: the model to fit from scikit learn
-        X (nd array-like): the training data
-        y_true (1d array-like): observed (true) target values for training data X
-        cv (list): a k-fold list with (training, test) tuples containing the indices for training and test data
-        name (String): name of the model, if an entry for the scores list is wished (Default None)
-        return_train_score (bool): if the training scores should be saved as well
-    Returns:
-        dict: with results
-    """
-    # TODO get roc_auc and log_loss running
-    # TODO use METRICS instead (and make it a parameter!)
-    metrics = {"balanced_accuracy": make_scorer(balanced_accuracy_score),
-               "recall": make_scorer(recall_score, average="weighted"),
-               "precision": make_scorer(precision_score, average="weighted")}
-               #"roc_auc": make_scorer(roc_auc_score, average="weighted", multi_class="ovr")} # TODO check if ovo makes more sense
-               #"log_loss": make_scorer(log_loss, greater_is_better=False)}
-    scores = cross_validate(model, X, y_true, cv=cv, scoring=METRICS, return_train_score=return_train_score)
-    if name is not None:
-        scores["model"] = name
-    return scores
 
-# TODO make name a parameter and return_train_score as well
-def random_forest(x_train, y_train, cv):
-    """ Random Forest.
-    Parameters:
-        x_train: Input data for training
-        y_train: Target data for training
-        cv (list of tuples): cross validation indices
-    Returns:
-        float: balanced_accuracy_score of training (for the moment)
-    """
-    rf = RandomForestClassifier(n_estimators=10,
-                                criterion = "entropy",
-                                bootstrap = True,
-                                max_samples = 0.6,     # 60 % of the training data (None: all)
-                                max_features = "sqrt", # uses sqrt(num_features) features
-                                class_weight = "balanced", # balanced_subsample computes weights based on bootstrap sample
-                                random_state = 42)
-    return calculate_metrics_cv(model=rf, X=x_train, y_true=y_train, cv=cv, name="RandomForest")
 
 def svm(x_train, y_train, cv, gamma="auto"):
     """ Support Vector Machine with Radial Basis functions as kernel.
@@ -561,6 +522,95 @@ def mean_kfolds(scores):
     """
     return {key: scores[key].mean() if key != "model" else scores[key] for key, value in scores.items()}
 
+def prob_based_cross_validate(model, X, y_true, cv, scoring, return_train_score=True):
+    """ some explanation
+    """
+    all_fit_time = []
+    all_score_time = []
+    # dictionary were scores are saved
+    train_scores = {key: [] for key in scoring.keys()}
+    valid_scores = {key: [] for key in scoring.keys()}
+
+    # go through the different folds
+    for k in cv:
+        # prepare training and validation data
+        x_train = X.iloc[k[0]]
+        y_train = y_true.iloc[k[0]]
+        x_valid = X.iloc[k[1]]
+        y_valid = y_true.iloc[k[1]]
+
+        fit_time = time.time()
+        model_fit = model.fit(x_train, y_train)
+        all_fit_time.append(time.time() - fit_time)
+
+        y_pred_train = model_fit.predict_proba(x_train)
+        score_time = time.time()
+        y_pred_valid = model_fit.predict_proba(x_valid)
+        all_score_time.append(time.time() - score_time)
+
+        # calculate the wished scores
+        for key, metric in scoring.items():
+            train_score = metric(y_true=y_train, y_pred=y_pred_train)
+            valid_score = metric(y_true=y_valid, y_pred=y_pred_valid)
+            train_scores[key].append(train_score)
+            valid_scores[key].append(valid_score)
+
+    # annotate train and validation dataset and transform lists to np.arrays
+    train_scores = {("train_"+k): np.asarray(v) for k,v in train_scores.items()}
+    valid_scores = {("test_"+k): np.asarray(v) for k,v in valid_scores.items()}
+
+    # put scores together
+    scores = {**train_scores, **valid_scores}
+    scores["fit_time"] = np.asarray(all_fit_time)
+    scores["score_time"] = np.asarray(all_score_time)
+
+    return scores
+
+# TODO make METRICS and SCORERS a parameter
+def calculate_metrics_cv(model, X, y_true, cv, name=None, return_train_score=True):
+    """ Calculate wished metrics one a cross-validation split for a certain data set and model
+    Metrics calculated at the moment: Balanced accuracy, weighted recall, weighted precision
+    Parameters:
+        model: the model to fit from scikit learn
+        X (nd array-like): the training data
+        y_true (1d array-like): observed (true) target values for training data X
+        cv (list): a k-fold list with (training, test) tuples containing the indices for training and test data
+        name (String): name of the model, if an entry for the scores list is wished (Default None)
+        return_train_score (bool): if the training scores should be saved as well
+    Returns:
+        dict: with results
+    """
+    scores = cross_validate(model, X, y_true, cv=cv, scoring=SCORERS, return_train_score=return_train_score, n_jobs=-1)
+    # in case model is not done suitable for probability prediction
+    if hasattr(model, "probability"):
+        model.probability = True
+    prob_based_scores = prob_based_cross_validate(model, X, y_true, cv=cv, scoring=METRICS_PROB, return_train_score=return_train_score)
+    all_scores = {**scores, **prob_based_scores}
+
+    if name is not None:
+        all_scores["model"] = name
+    return all_scores
+
+# TODO make name a parameter and return_train_score as well
+def random_forest(x_train, y_train, cv):
+    """ Random Forest.
+    Parameters:
+        x_train: Input data for training
+        y_train: Target data for training
+        cv (list of tuples): cross validation indices
+    Returns:
+        float: balanced_accuracy_score of training (for the moment)
+    """
+    rf = RandomForestClassifier(n_estimators=10,
+                                criterion = "entropy",
+                                bootstrap = True,
+                                max_samples = 0.6,     # 60 % of the training data (None: all)
+                                max_features = "sqrt", # uses sqrt(num_features) features
+                                class_weight = "balanced", # balanced_subsample computes weights based on bootstrap sample
+                                random_state = 42)
+    return calculate_metrics_cv(model=rf, X=x_train, y_true=y_train, cv=cv, name="RandomForest")
+
+
 def main():
     # 1. Load dataframe with smp data
     smp = load_data("smp_lambda_delta_gradient.npz")
@@ -606,21 +656,29 @@ def main():
     # 7. Call the models
     all_scores = []
 
-    # # A Baseline - majority class predicition
-    # baseline_acc = majority_class_baseline(x_train, y_train, cv_stratified)
-    # all_scores.append(mean_kfolds(baseline_acc))
+    # A Baseline - majority class predicition
+    print("Starting Baseline Model...")
+    baseline_acc = majority_class_baseline(x_train, y_train, cv_stratified)
+    all_scores.append(mean_kfolds(baseline_acc))
+    print("...finished Baseline Model.")
+
+    # B kmeans clustering (does not work)
+    print("Starting K-Means Model...")
+    kmeans_acc = kmeans(unlabelled_smp_x, x_train, y_train, cv_stratified, num_clusters=30, find_num_clusters="both", plot=False)
+    all_scores.append(mean_kfolds(kmeans_acc))
+    print("...finished K-Means Model.")
+    # print(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
+    # exit(0)
     #
-    # # B kmeans clustering (does not work)
-    # kmeans_acc = kmeans(unlabelled_smp_x, x_train, y_train, cv_stratified, num_clusters=30, find_num_clusters="both", plot=False)
-    # all_scores.append(mean_kfolds(kmeans_acc))
-    # # print(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
-    # # exit(0)
-    #
-    # # C mixture model clustering ("diag" works best at the moment)
-    # gm_acc_diag = gaussian_mix(unlabelled_smp_x, x_train, y_train, cv_stratified, cov_type="diag", plot=False)
-    # all_scores.append(mean_kfolds(gm_acc_diag))
-    # bgm_acc_diag = bayesian_gaussian_mix(unlabelled_smp_x, x_train, y_train, cv_stratified, cov_type="diag")
-    # all_scores.append(mean_kfolds(bgm_acc_diag))
+    # C mixture model clustering ("diag" works best at the moment)
+    print("Starting Gaussian Mixture Model...")
+    gm_acc_diag = gaussian_mix(unlabelled_smp_x, x_train, y_train, cv_stratified, cov_type="diag", plot=False)
+    all_scores.append(mean_kfolds(gm_acc_diag))
+    print("...finished Gaussian Mixture Model.")
+    print("Starting Baysian Gaussian Mixture Model...")
+    bgm_acc_diag = bayesian_gaussian_mix(unlabelled_smp_x, x_train, y_train, cv_stratified, cov_type="diag")
+    all_scores.append(mean_kfolds(bgm_acc_diag))
+    print("...finished Bayesian Gaussian Mixture Model.")
 
     # # ARE TAKING TOO MUCH TIME
     # # D + E -> different data preparation necessary
@@ -649,23 +707,29 @@ def main():
 
 
     # F random forests (works)
+    print("Starting Random Forest Model ...")
     rf_acc = random_forest(x_train, y_train, cv_stratified)
     all_scores.append(mean_kfolds(rf_acc))
-    print(all_scores)
-    exit(0)
+    print("...finished Random Forest Model.")
 
     # G Support Vector Machines
     # works with very high gamma (overfitting) -> "auto" yields 0.75, still good and no overfitting
+    print("Starting Support Vector Machine...")
     svm_acc = svm(x_train, y_train, cv, gamma="auto")
     all_scores.append(mean_kfolds(svm_acc))
+    print("...finished Support Vector Machine.")
 
     # H knn (works with weights=distance)
+    print("Starting K-Nearest Neighbours Model...")
     knn_acc = knn(x_train, y_train, cv, n_neighbors=20)
     all_scores.append(mean_kfolds(knn_acc))
+    print("...finished K-Nearest Neighbours Model.")
 
     # I adaboost
+    print("Starting AdaBoost Model...")
     ada_acc = AdaBoost(x_train, y_train, cv)
     all_scores.append(mean_kfolds(ada_acc))
+    print("...finished AdaBoost Model.")
 
     # J LSTM
 
