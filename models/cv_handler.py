@@ -1,7 +1,34 @@
-from models.metrics import SCORERS, METRICS, METRICS_PROB
+from models.metrics import SCORERS, METRICS, METRICS_PROB, calculate_metrics_raw
 
 import time
+import warnings
 import numpy as np
+import pandas as pd
+from types import GeneratorType
+from sklearn.model_selection import cross_validate
+
+# TODO I have to weight the labels! Assigning the most frequent label is not helpful! But that won't help either...
+def assign_clusters(targets, clusters, cluster_num):
+    """ Assigns snow labels to previously calculated clusters. This is a helper function for semisupervised models
+    Parameters:
+        targets: the int labels of our smp data - the target
+        clusters: the cluster assignments from some unsupervised clustering algorithm
+        cluster_num: the number of clusters
+    Returns:
+        list: with predicted snow labels for our data
+    """
+    pred_snow_labels = clusters
+    for i in range(cluster_num):
+        # filter for data with current cluster assignment
+        mask = clusters == i
+        # if there is something in this cluster
+        if len(np.bincount(targets[mask])) > 0:
+            # find out which snow grain label occurs most frequently
+            snow_label = np.argmax(np.bincount(targets[mask]))
+            # and assign it to all the data point belonging to the current cluster
+            pred_snow_labels[mask] = snow_label
+    # return the predicted snow labels
+    return pred_snow_labels
 
 # TODO make METRICS and SCORERS a parameter
 def calculate_metrics_cv(model, X, y_true, cv, name=None, return_train_score=True):

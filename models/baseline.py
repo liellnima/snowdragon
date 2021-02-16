@@ -1,9 +1,18 @@
+from models.metrics import calculate_metrics_raw
 
 import time
 import numpy as np
+import pandas as pd
 
-# TODO docu
 def majority_class_baseline(x_train, y_train, cv):
+    """ A model which always predicts the majority class of the data it was fit on to.
+    Parameters:
+        x_train: Data samples and features on which the model should train.
+        y_train: The corresponding labels to x_train
+        cv (list): The training-validation split (indices of data in a list of tuples)
+    Returns:
+        dict: scores describing the performance of the model. Probability based measures cannot be calculated
+    """
     y_preds_train = []
     y_trues_train = []
     y_preds_valid = []

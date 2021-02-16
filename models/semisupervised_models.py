@@ -1,27 +1,10 @@
+from models.cv_handler import semisupervised_cv, assign_clusters
 
-
-# TODO I have to weight the labels! Assigning the most frequent label is not helpful! But that won't help either...
-def assign_clusters(targets, clusters, cluster_num):
-    """ Assigns snow labels to previously calculated clusters.
-    Parameters:
-        targets: the int labels of our smp data - the target
-        clusters: the cluster assignments from some unsupervised clustering algorithm
-        cluster_num: the number of clusters
-    Returns:
-        list: with predicted snow labels for our data
-    """
-    pred_snow_labels = clusters
-    for i in range(cluster_num):
-        # filter for data with current cluster assignment
-        mask = clusters == i
-        # if there is something in this cluster
-        if len(np.bincount(targets[mask])) > 0:
-            # find out which snow grain label occurs most frequently
-            snow_label = np.argmax(np.bincount(targets[mask]))
-            # and assign it to all the data point belonging to the current cluster
-            pred_snow_labels[mask] = snow_label
-    # return the predicted snow labels
-    return pred_snow_labels
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.cluster import KMeans
+from sklearn.mixture import GaussianMixture, BayesianGaussianMixture
+from sklearn.metrics import silhouette_score, balanced_accuracy_score
 
 # ATTENTION: log_loss and roc_auc or other probability based metrics cannot be calculated for kmeans (not well defined!)
 # https://towardsdatascience.com/cluster-then-predict-for-classification-tasks-142fdfdc87d6
@@ -50,7 +33,7 @@ def kmeans(unlabelled_data, x_train, y_train, cv, num_clusters=5, find_num_clust
             km = KMeans(n_clusters=cluster_num, init="random", n_init=cluster_num, random_state=42).fit(x_train)
             # calculate sil scores
             if find_num_clusters == "sil" or find_num_clusters == "both":
-                sil_scores = metrics.silhouette_score(x_train, km.labels_, metric="euclidean")
+                sil_scores = silhouette_score(x_train, km.labels_, metric="euclidean")
                 all_sil_scores.append(sil_scores)
             # calculate balanced accuracy
             if find_num_clusters == "acc" or find_num_clusters == "both":
@@ -93,8 +76,6 @@ def kmeans(unlabelled_data, x_train, y_train, cv, num_clusters=5, find_num_clust
     km = KMeans(n_clusters=num_clusters, init="random", n_init=num_clusters, random_state=42)
 
     return semisupervised_cv(km, unlabelled_data, x_train, y_train, num_clusters, cv, name="Kmeans")
-
-
 
 # TODO save plots
 def gaussian_mix(unlabelled_data, x_train, y_train, cv, cov_type="tied", num_components=15, find_num_components="both", plot=True):

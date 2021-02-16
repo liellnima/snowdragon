@@ -1,38 +1,24 @@
 # import from other snowdragon modules
 from data_handling.data_loader import load_data
-from data_handling.data_preprocessing import idx_to_int
 from data_handling.data_parameters import LABELS
 from models.visualization import visualize_original_data # TODO or something like this
-
-import models.metrics as my_metrics # TODO do I need this? delete!
-
-from models.supervised_models import random_forest, svm, knn, ada_boost
+from models.cv_handler import cv_manual, mean_kfolds
+from models.supervised_models import svm, random_forest, ada_boost, knn
+from models.semisupervised_models import kmeans, gaussian_mix, bayesian_gaussian_mix
+from models.baseline import majority_class_baseline
 
 import numpy as np
 import pandas as pd
-import seaborn as sns
-import matplotlib.ticker as ticker
-import matplotlib.pyplot as plt
 from tabulate import tabulate
-import time
-import warnings
-from types import GeneratorType
 
 # Other metrics: https://stats.stackexchange.com/questions/390725/suitable-performance-metric-for-an-unbalanced-multi-class-classification-problem
-# TODO just import the metrics you need or everything
-from sklearn import metrics
-from sklearn.metrics import make_scorer, balanced_accuracy_score, recall_score, precision_score, roc_auc_score, log_loss
-from sklearn.model_selection import train_test_split, StratifiedKFold, cross_validate, cross_val_score, cross_val_predict
-
-from sklearn.cluster import KMeans
-from sklearn.mixture import GaussianMixture, BayesianGaussianMixture
+from sklearn.model_selection import train_test_split, StratifiedKFold #, cross_validate, cross_val_score, cross_val_predict
 from sklearn.semi_supervised import SelfTrainingClassifier, LabelSpreading
 
 # from sklearn.multioutput import MultiOutputClassifier
 
 # TODO plot confusion matrix beautifully (multilabel_confusion_matrix)
-
-# TODO plot ROC AUC curve beautifully (roc_curve(y_true, y_pred))
+# TODO plot ROC AUC curve beautifully (roc_curve(y_true, # TODO just import the metrics you need or everything# TODO just import the metrics you need or everything# TODO just import the metrics you need or everything# TODO just import the metrics you need or everything# TODO just import the metrics you need or everything# TODO just import the metrics you need or everything# TODO just import the metrics you need or everything# TODO just import the metrics you need or everything# TODO just import the metrics you need or everything# TODO just import the metrics you need or everything# TODO just import the metrics you need or everything# TODO just import the metrics you need or everything# TODO just import the metrics you need or everything# TODO just import the metrics you need or everything# TODO just import the metrics you need or everything# TODO just import the metrics you need or everything# TODO just import the metrics you need or everything# TODO just import the metrics you need or everything# TODO just import the metrics you need or everything# TODO just import the metrics you need or everything# TODO just import the metrics you need or everythingy_pred))
 
 
 def my_train_test_split(smp, test_size=0.2, train_size=0.8):
@@ -92,6 +78,8 @@ def label_spreading(unlabelled_data, x_train, y_train, cv):
     """
     return "blubb"
 
+# TODO put this in an own function
+# TODO one parameter should be the table format of the output
 def main():
     # 1. Load dataframe with smp data
     smp = load_data("smp_lambda_delta_gradient.npz")
@@ -138,30 +126,31 @@ def main():
     all_scores = []
 
     # A Baseline - majority class predicition
-    # print("Starting Baseline Model...")
-    # baseline_scores = majority_class_baseline(x_train, y_train, cv_stratified)
-    # all_scores.append(mean_kfolds(baseline_scores))
-    # print("...finished Baseline Model.")
-    #
-    # # B kmeans clustering (does not work)
-    # print("Starting K-Means Model...")
-    # kmeans_scores = kmeans(unlabelled_smp_x, x_train, y_train, cv_stratified, num_clusters=10, find_num_clusters="both", plot=False)
-    # all_scores.append(mean_kfolds(kmeans_scores))
-    # print("...finished K-Means Model.")
+    print("Starting Baseline Model...")
+    baseline_scores = majority_class_baseline(x_train, y_train, cv_stratified)
+    all_scores.append(mean_kfolds(baseline_scores))
+    print("...finished Baseline Model.")
+
+    # B kmeans clustering (does not work)
+    print("Starting K-Means Model...")
+    kmeans_scores = kmeans(unlabelled_smp_x, x_train, y_train, cv_stratified, num_clusters=10, find_num_clusters="both", plot=True)
+    all_scores.append(mean_kfolds(kmeans_scores))
+    print("...finished K-Means Model.")
     # print(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
 
     # C mixture model clustering ("diag" works best at the moment)
     print("Starting Gaussian Mixture Model...")
-    gm_acc_diag = gaussian_mix(unlabelled_smp_x, x_train, y_train, cv_stratified, cov_type="diag", plot=False)
+    gm_acc_diag = gaussian_mix(unlabelled_smp_x, x_train, y_train, cv_stratified, cov_type="diag", plot=True)
     all_scores.append(mean_kfolds(gm_acc_diag))
     print("...finished Gaussian Mixture Model.")
-    exit(0)
+
     print("Starting Baysian Gaussian Mixture Model...")
     bgm_acc_diag = bayesian_gaussian_mix(unlabelled_smp_x, x_train, y_train, cv_stratified, cov_type="diag")
     all_scores.append(mean_kfolds(bgm_acc_diag))
     print("...finished Bayesian Gaussian Mixture Model.")
 
     print(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
+    print(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='latex_raw'))
 
     # # ARE TAKING TOO MUCH TIME
     # # D + E -> different data preparation necessary
@@ -218,11 +207,13 @@ def main():
 
     # K Encoder-Decoder
 
-    # 8. Visualize the results
+    # print the validation results
+    # TODO maybe rename the table columns (validation results)
     print(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
     with open('plots/tables/models_with_baseline.txt', 'w') as f:
         f.write(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
 
+    # 8. Visualize the results
 
 
 if __name__ == "__main__":
