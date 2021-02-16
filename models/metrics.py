@@ -17,6 +17,28 @@ def roc_auc(y_true, y_pred):
 def my_log_loss(y_true, y_pred):
     return log_loss(y_true, y_pred)
 
+# TODO add Metrics as parameter
+def calculate_metrics_raw(y_trues, y_preds, metrics=METRICS, name=None, annot="train"):
+    """ Calculates metrics when already the list of the observed and predicted target values is given. E.g. from a manual cross validation.
+    Paramters:
+        y_preds (list): List of lists (crossvalidation!) with predicted target values
+        y_trues (list): List of listst (crossvalidation!) with true or observed target values
+        name (String): Name of the model evaluated
+        annot (String): indicates if we speak about train or test or validation data
+    Returns:
+        dict: dictionary with different scores
+    """
+    metric_names = list(metrics.keys())
+    if annot is not None: annot = annot + "_"
+    scores = {}
+    if name is not None:
+        scores["model"] = name
+    # iterate through a list of metric functions and add the lists of results to scores
+    for func, name in zip(metrics, metric_names):
+        scores[annot + name] = np.asarray([func(y_true, y_pred) for y_true, y_pred in zip(y_trues, y_preds)])
+
+    return scores
+
 SCORERS = {"balanced_accuracy": make_scorer(balanced_accuracy),
            "recall": make_scorer(recall),
            "precision": make_scorer(precision)}
