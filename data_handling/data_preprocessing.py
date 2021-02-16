@@ -422,6 +422,7 @@ def main():
     # export, unite and label smp data
     start = time.time()
     # export data from pnt to csv or npz
+    # pnt_dir can be also a small sub directory if you want to update only a few files
     export_pnt(pnt_dir=SMP_LOC, target_dir=EXP_LOC, export_as="npz", overwrite=True, **PARAMS)
 
     # OTHER OPTIONS
