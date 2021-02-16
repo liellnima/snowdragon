@@ -6,6 +6,8 @@ from sklearn.cluster import KMeans
 from sklearn.mixture import GaussianMixture, BayesianGaussianMixture
 from sklearn.metrics import silhouette_score, balanced_accuracy_score
 
+# TODO make name a parameter and return_train_score as well
+
 # ATTENTION: log_loss and roc_auc or other probability based metrics cannot be calculated for kmeans (not well defined!)
 # https://towardsdatascience.com/cluster-then-predict-for-classification-tasks-142fdfdc87d6
 def kmeans(unlabelled_data, x_train, y_train, cv, num_clusters=5, find_num_clusters="both", plot=True):
@@ -77,7 +79,6 @@ def kmeans(unlabelled_data, x_train, y_train, cv, num_clusters=5, find_num_clust
 
     return semisupervised_cv(km, unlabelled_data, x_train, y_train, num_clusters, cv, name="Kmeans")
 
-# TODO save plots
 def gaussian_mix(unlabelled_data, x_train, y_train, cv, cov_type="tied", num_components=15, find_num_components="both", plot=True):
     """ Semisupervised Gaussian Mixture Algorithm. Assigns most frequent snow label to gaussians.
     Parameters:
@@ -151,7 +152,6 @@ def bayesian_gaussian_mix(unlabelled_data, x_train, y_train, cv, cov_type="tied"
         cv (list of tuples): cross validation indices
         cov_type (str): type of covariance used for gaussian mixture model - one of: "tied", "diag", "spherical", "full"
         num_components (int): number of distributions maximally used for the model
-        plot (bool): whether the bic and balanced accuracy should be plot
     Returns:
         dict: results of crossvalidation
     """

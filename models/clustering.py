@@ -18,8 +18,7 @@ from sklearn.semi_supervised import SelfTrainingClassifier, LabelSpreading
 # from sklearn.multioutput import MultiOutputClassifier
 
 # TODO plot confusion matrix beautifully (multilabel_confusion_matrix)
-# TODO plot ROC AUC curve beautifully (roc_curve(y_true, # TODO just import the metrics you need or everything# TODO just import the metrics you need or everything# TODO just import the metrics you need or everything# TODO just import the metrics you need or everything# TODO just import the metrics you need or everything# TODO just import the metrics you need or everything# TODO just import the metrics you need or everything# TODO just import the metrics you need or everything# TODO just import the metrics you need or everything# TODO just import the metrics you need or everything# TODO just import the metrics you need or everything# TODO just import the metrics you need or everything# TODO just import the metrics you need or everything# TODO just import the metrics you need or everything# TODO just import the metrics you need or everything# TODO just import the metrics you need or everything# TODO just import the metrics you need or everything# TODO just import the metrics you need or everything# TODO just import the metrics you need or everything# TODO just import the metrics you need or everything# TODO just import the metrics you need or everythingy_pred))
-
+# TODO plot ROC AUC curve beautifully (roc_curve(y_true, y_pred))
 
 def my_train_test_split(smp, test_size=0.2, train_size=0.8):
     """ Splits data into training and testing data
@@ -95,7 +94,8 @@ def main():
 
     # TODO: maybe visualize some things only after normalization and standardization?
     # 2. Visualize the original data
-    #visualize_original_data(smp)
+    visualize_original_data(smp)
+    exit(0)
     # 3. Sum up certain classes if necessary (alternative: do something to balance the dataset)
     smp = sum_up_labels(smp, ["df", "drift_end", "ifwp", "if", "sh"], name="rare", label_idx=18)
 
@@ -149,8 +149,8 @@ def main():
     all_scores.append(mean_kfolds(bgm_acc_diag))
     print("...finished Bayesian Gaussian Mixture Model.")
 
-    print(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
-    print(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='latex_raw'))
+    print(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql')) # latex_raw works as well
+    exit(0)
 
     # # ARE TAKING TOO MUCH TIME
     # # D + E -> different data preparation necessary

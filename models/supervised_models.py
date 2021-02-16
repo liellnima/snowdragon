@@ -14,7 +14,7 @@ def random_forest(x_train, y_train, cv):
         y_train: Target data for training
         cv (list of tuples): cross validation indices
     Returns:
-        float: balanced_accuracy_score of training (for the moment)
+        dict: contains results of models
     """
     rf = RandomForestClassifier(n_estimators=10,
                                 criterion = "entropy",
@@ -33,7 +33,7 @@ def svm(x_train, y_train, cv, gamma="auto"):
         cv (list of tuples): cross validation indices
         gamma (num or Str): gamma value for svm
     Returns:
-        float: balanced_accuracy_score of training (for the moment)
+        dict: contains results of models
     """
     svm = SVC(decision_function_shape = "ovr",
               kernel = "rbf",
@@ -52,7 +52,7 @@ def knn(x_train, y_train, cv, n_neighbors):
         cv (list of tuples): cross validation indices
         n_neighbors: Number of neighbors to consider
     Returns:
-        float: balanced_accuracy_score of training (for the moment)
+        dict: contains results of models
     """
     knn = KNeighborsClassifier(n_neighbors = n_neighbors,
                                weights = "distance")
@@ -67,7 +67,7 @@ def ada_boost(x_train, y_train, cv):
         y_train: Target data for training
         cv (list of tuples): cross validation indices
     Returns:
-        float: balanced_accuracy_score of training (for the moment)
+        dict: contains results of models
     """
     eec = EasyEnsembleClassifier(n_estimators=100,
                                  sampling_strategy="all",

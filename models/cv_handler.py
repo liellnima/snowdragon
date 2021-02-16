@@ -7,7 +7,7 @@ import pandas as pd
 from types import GeneratorType
 from sklearn.model_selection import cross_validate
 
-# TODO I have to weight the labels! Assigning the most frequent label is not helpful! But that won't help either...
+
 def assign_clusters(targets, clusters, cluster_num):
     """ Assigns snow labels to previously calculated clusters. This is a helper function for semisupervised models
     Parameters:
@@ -30,8 +30,7 @@ def assign_clusters(targets, clusters, cluster_num):
     # return the predicted snow labels
     return pred_snow_labels
 
-# TODO make METRICS and SCORERS a parameter
-def calculate_metrics_cv(model, X, y_true, cv, name=None, return_train_score=True):
+def calculate_metrics_cv(model, X, y_true, cv, metrics=SCORERS, prob_metrics=METRICS_PROB, name=None, return_train_score=True):
     """ Calculate wished metrics one a cross-validation split for a certain data set and model
     Metrics calculated at the moment: Balanced accuracy, weighted recall, weighted precision
     Parameters:
@@ -39,16 +38,18 @@ def calculate_metrics_cv(model, X, y_true, cv, name=None, return_train_score=Tru
         X (nd array-like): the training data
         y_true (1d array-like): observed (true) target values for training data X
         cv (list): a k-fold list with (training, test) tuples containing the indices for training and test data
+        metrics (dict): dictionary that contains scorer functions as values. Functions must contain the parameters y_true and y_pred.
+        prob_metrics (dict): dictionary that contains probability based metrics (not as scorers!). Functions must contain the parameters y_true and y_pred.
         name (String): name of the model, if an entry for the scores list is wished (Default None)
         return_train_score (bool): if the training scores should be saved as well
     Returns:
         dict: with results
     """
-    scores = cross_validate(model, X, y_true, cv=cv, scoring=SCORERS, return_train_score=return_train_score, n_jobs=-1)
+    scores = cross_validate(model, X, y_true, cv=cv, scoring=metrics, return_train_score=return_train_score, n_jobs=-1)
     # in case model is not done suitable for probability prediction
     if hasattr(model, "probability"):
         model.probability = True
-    prob_based_scores = prob_based_cross_validate(model, X, y_true, cv=cv, scoring=METRICS_PROB, return_train_score=return_train_score)
+    prob_based_scores = prob_based_cross_validate(model, X, y_true, cv=cv, scoring=prob_metrics, return_train_score=return_train_score)
     all_scores = {**scores, **prob_based_scores}
 
     if name is not None:

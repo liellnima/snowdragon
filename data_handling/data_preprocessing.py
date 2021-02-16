@@ -78,7 +78,7 @@ def get_temperature(temp):
     Parameters:
         temp (Path): file location of temperature data
     Returns:
-        dd.DataFrame: complete data in pd.DataFrame format
+        pd.DataFrame: complete data in pd.DataFrame format
     """
     return pd.read_csv(temp)
 
@@ -252,6 +252,8 @@ def remove_negatives(df, col="force", threshold=-1):
         df (pd.DataFrame): dataframe
         col (String): column which negative values should get replaced. Default: "force"
         threshold (int): Below which threshold the values should not just get assigned with 0?
+    Returns:
+        pd.DataFrame: where the negative values are removed
     """
     df_removed = df.copy(deep=True)
     # in case the values are just slightly below zero, replace them with 0

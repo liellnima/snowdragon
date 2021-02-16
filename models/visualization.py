@@ -6,21 +6,22 @@ from data_handling.data_parameters import LABELS
 import numpy as np
 import pandas as pd
 import seaborn as sns
-import matplotlib.ticker as ticker
 import matplotlib.pyplot as plt
-import pingouin as pg
+import matplotlib.ticker as ticker
+
 
 from scipy import stats
+from tabulate import tabulate
 from sklearn.feature_selection import SelectKBest
 from sklearn.feature_selection import f_classif
 from sklearn.decomposition import PCA
 
 ANTI_LABELS = {0: "not_labelled",  1: "surface", 2: "ground", 3: "dh", 4: "dhid", 5: "mfdh", 6: "rgwp",
-          7: "df", 8: "if", 9: "ifwp", 10:"sh", 11: "drift_end", 12: "snow-ice", 13: "dhwp", 14: "mfcl", 15: "mfsl", 16: "mfcr", 17: "pp"}
+          7: "df", 8: "if", 9: "ifwp", 10:"sh", 11: "snow-ice", 12: "dhwp", 13: "mfcl", 14: "mfsl", 15: "mfcr", 16: "pp"}
 
 COLORS = {0: "lightsteelblue", 1: "chocolate", 2: "darkslategrey", 3: "lightseagreen", 4: "mediumaquamarine", 5: "midnightblue",
-          6: "tomato", 7: "mediumvioletred", 8: "firebrick", 9: "lightgreen", 10: "orange", 11: "black", 12: "paleturquoise",
-          13: "gold", 14: "orchid", 15: "fuchsia", 16: "brown", 17: "lila"}
+          6: "tomato", 7: "mediumvioletred", 8: "firebrick", 9: "lightgreen", 10: "orange", 11: "paleturquoise",
+          12: "gold", 13: "orchid", 14: "fuchsia", 15: "brown", 16: "lila"}
 
 
 def smp_unlabelled(smp, smp_name):
@@ -87,7 +88,7 @@ def smp_features(smp, smp_name, features):
 # Longterm TODO: more beautiful heatmaps: https://towardsdatascience.com/better-heatmaps-and-correlation-matrix-plots-in-python-41445d0f2bec
 def corr_heatmap(smp, labels=None):
     """ Plots a correlation heatmap of all features.
-    Paramters:
+    Parameters:
         smp (df.Dataframe): SMP preprocessed data
         labels (list): Default None - usual complete correlation heatmap is calculated.
             Else put in the labels for which the correlation heatmap should be calculated
@@ -129,11 +130,12 @@ def corr_heatmap(smp, labels=None):
         plt.show()
 
 
-def anova(smp, file_name=None):
+def anova(smp, file_name=None, tablefmt='psql'):
     """ Prints ANOVA F-scores for features.
-    Paramters:
+    Parameters:
         smp (df.Dataframe): SMP preprocessed data
         file_name (str): in case the results should be saved in a file, indicate the path here
+        tablefmt (str): table format that should be used for tabulate, e.g. 'psql' or 'latex_raw'
     """
     np.set_printoptions(precision=3)
     smp_filtered = smp[smp["label"] != 0]
@@ -143,16 +145,17 @@ def anova(smp, file_name=None):
     test = SelectKBest(score_func=f_classif, k="all")
     fit = test.fit(features, target)
     results = pd.DataFrame({"Feature" : features.columns, "ANOVA-F-value" : fit.scores_, "P-value" : fit.pvalues_})
+    results = results.sort_values(by=["ANOVA-F-value"], ascending=False)
 
     if file_name is not None:
         with open(file_name, "w") as f:
-            f.write(results.sort_values(by=["ANOVA-F-value"], ascending=False).to_markdown())
+            f.write(tabulate(results, headers='keys', tablefmt=tablefmt))
 
-    print(results.sort_values(by=["ANOVA-F-value"], ascending=False).to_markdown())
+    print(tabulate(results, headers='keys', tablefmt=tablefmt))
 
 def pairwise_features(smp, features, samples=None, kde=False):
     """ Produces a plot that shows the relation between all the feature given in the features list.
-    Paramters:
+    Parameters:
         smp (df.DataFrame): SMP preprocessed data
         features (list): contains all features that should be displayed for pairwise comparison
         samples (int): Default None, how many samples should be drawn from the lablled dataset
@@ -169,7 +172,7 @@ def pairwise_features(smp, features, samples=None, kde=False):
 
 def plot_balancing(smp):
     """ Produces a plot that shows how balanced the dataset is.
-    Paramters:
+    Parameters:
         smp (df.DataFrame): SMP preprocessed data
     """
     # take only labelled data and exclude surface and ground
@@ -234,7 +237,7 @@ def visualize_original_data(smp):
     corr_heatmap(smp, labels=[3, 4, 5, 6, 7, 8, 9, 10])
     # Correlation does not help for categorical + continuous data - use ANOVA instead
     # FEATURE "EXTRACTION"
-    #anova(smp, "plots/tables/ANOVA_results.txt")
+    anova(smp, "plots/tables/ANOVA_results.txt", tablefmt="psql") # latex_raw also possible
     # TODO: RANDOM FOREST FEATURE EXTRACTION
     # SHOW ONE SMP PROFILE WITHOUT LABELS
     #smp_unlabelled(smp, smp_name=smp_profile_name)
@@ -249,7 +252,6 @@ def visualize_original_data(smp):
 def main():
     # load dataframe with smp data
     smp = load_data("smp_lambda_delta_gradient.npz")
-    # TODO: maybe normalize data already here
 
     # visualize the original data
     visualize_original_data(smp)
