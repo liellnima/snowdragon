@@ -3,6 +3,7 @@ from models.metrics import calculate_metrics_raw
 import time
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 
 def majority_class_baseline(x_train, y_train, cv):
     """ A model which always predicts the majority class of the data it was fit on to.
@@ -20,7 +21,8 @@ def majority_class_baseline(x_train, y_train, cv):
     all_fit_time = []
     all_score_time = []
 
-    for k in cv:
+    print("Crossvalidation of Baseline Model:")
+    for k in tqdm(cv):
         # current target values for this fold (training and validation)
         fit_time = time.time()
         fold_y_train = y_train[k[1]]

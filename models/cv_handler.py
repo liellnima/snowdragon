@@ -4,6 +4,7 @@ import time
 import warnings
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 from types import GeneratorType
 from sklearn.model_selection import cross_validate
 
@@ -45,7 +46,8 @@ def calculate_metrics_cv(model, X, y_true, cv, metrics=SCORERS, prob_metrics=MET
     Returns:
         dict: with results
     """
-    scores = cross_validate(model, X, y_true, cv=cv, scoring=metrics, return_train_score=return_train_score, n_jobs=-1)
+    print("Cross-Validation Progress:")
+    scores = cross_validate(model, X, y_true, cv=cv, scoring=metrics, return_train_score=return_train_score, n_jobs=-1, verbose=2)
     # in case model is not done suitable for probability prediction
     if hasattr(model, "probability"):
         model.probability = True
@@ -75,7 +77,8 @@ def prob_based_cross_validate(model, X, y_true, cv, scoring, return_train_score=
     valid_scores = {key: [] for key in scoring.keys()}
 
     # go through the different folds
-    for k in cv:
+    print("Probability Metrics Cross-Validation:")
+    for k in tqdm(cv):
         # prepare training and validation data
         x_train = X.iloc[k[0]]
         y_train = y_true.iloc[k[0]]
@@ -137,7 +140,8 @@ def semisupervised_cv(model, unlabelled_data, x_train, y_train, cluster_num, cv,
     all_score_time = []
 
     # cross validation
-    for k in cv:
+    print("Semisupervised Crossvalidation:")
+    for k in tqdm(cv):
         # assignments
         train_target = y_train.iloc[k[0]]
         train_input  = x_train.iloc[k[0]]

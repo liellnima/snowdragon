@@ -2,6 +2,7 @@ from models.cv_handler import semisupervised_cv, assign_clusters
 
 import numpy as np
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 from sklearn.cluster import KMeans
 from sklearn.mixture import GaussianMixture, BayesianGaussianMixture
 from sklearn.metrics import silhouette_score, balanced_accuracy_score
@@ -30,8 +31,8 @@ def kmeans(unlabelled_data, x_train, y_train, cv, num_clusters=5, find_num_clust
         all_sil_scores = []
         bal_acc_scores = []
         # iterate through all possible numbers of clusters and calculate their sil score
-        for cluster_num in range(2, max_cluster+1):
-            print("Cluster Num: ", cluster_num)
+        print("Find best number of clusters for kmeans:")
+        for cluster_num in tqdm(range(2, max_cluster+1)):
             km = KMeans(n_clusters=cluster_num, init="random", n_init=cluster_num, random_state=42).fit(x_train)
             # calculate sil scores
             if find_num_clusters == "sil" or find_num_clusters == "both":
@@ -100,8 +101,8 @@ def gaussian_mix(unlabelled_data, x_train, y_train, cv, cov_type="tied", num_com
         all_bic_scores = []
         bal_acc_scores = []
 
-        for n_gaussians in range(1, max_components+1):
-            print("N Components: ", n_gaussians)
+        print("Find best number of components for Gaussian Mixture Model:")
+        for n_gaussians in tqdm(range(1, max_components+1)):
             gm = GaussianMixture(n_components=n_gaussians, init_params="random", max_iter=150, covariance_type=cov_type, random_state=42)
             gm.fit(x_train)
             # calculate bic score
