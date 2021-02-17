@@ -58,6 +58,20 @@ def calculate_metrics_cv(model, X, y_true, cv, metrics=SCORERS, prob_metrics=MET
         all_scores["model"] = name
     return all_scores
 
+def ignore_unlabelled_data(y_true, y_prob):
+    """ Returns the same data, but without the unlabelled samples (label=-1.0)
+    Parameters:
+        y_true ((n,) array-like): target data containing unlablled samples indicated by label -1.0
+        y_prob ((n, k) array-like): predicted target probabilities. For each class a probability that the sample is of this class is predicted.
+            k is the number of classes that should get predicted.
+    Returns:
+        tuple: (y_true_filtered, y_pred_filtered) A tuple with filtered data.
+    """
+    mask_labels = y_true != -1.0
+    y_true = y_true[mask_labels]
+    y_prob = y_prob[mask_labels]
+    return (y_true, y_prob)
+
 def prob_based_cross_validate(model, X, y_true, cv, scoring, return_train_score=True):
     """ Cross validation that can calculate probability based metrics.
     Parameters:
@@ -70,6 +84,9 @@ def prob_based_cross_validate(model, X, y_true, cv, scoring, return_train_score=
     Returns:
         dict: containing lists for different cv folds with the wished scores.
     """
+    # TESTING
+    print("Length of X:", len(X))
+    print("Length of y:", len(y_true))
     all_fit_time = []
     all_score_time = []
     # dictionary were scores are saved
@@ -90,8 +107,16 @@ def prob_based_cross_validate(model, X, y_true, cv, scoring, return_train_score=
         all_fit_time.append(time.time() - fit_time)
 
         y_pred_train = model_fit.predict_proba(x_train)
+        # Ignore the samples where no label (label: -1) exists -> no prediction for them possible
+        if -1.0 in y_train.values:
+            y_train, y_pred_train = ignore_unlabelled_data(y_train, y_pred_train)
+
         score_time = time.time()
         y_pred_valid = model_fit.predict_proba(x_valid)
+        # Ignore the samples where no label (label: -1) exists -> no prediction for them possible
+        if -1.0 in y_valid.values:
+            y_valid, y_pred_valid = ignore_unlabelled_data(y_valid, y_pred_valid)
+
         all_score_time.append(time.time() - score_time)
 
         # calculate the wished scores

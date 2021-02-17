@@ -18,6 +18,7 @@ from sklearn.semi_supervised import SelfTrainingClassifier, LabelSpreading
 # TODO remove all the following imports!!!
 from sklearn.neighbors import KNeighborsClassifier
 from models.metrics import balanced_accuracy
+from models.cv_handler import calculate_metrics_cv
 # from sklearn.multioutput import MultiOutputClassifier
 
 # TODO plot confusion matrix beautifully (multilabel_confusion_matrix)
@@ -44,8 +45,9 @@ def my_train_test_split(smp, test_size=0.2, train_size=0.8):
     train_idx, test_idx = train_test_split(idx_list, test_size=test_size, train_size=train_size, random_state=42)
     train = labelled_smp[labelled_smp["smp_idx"].isin(train_idx)]
     test = labelled_smp[labelled_smp["smp_idx"].isin(test_idx)]
-    x_train = train.drop(["label"], axis=1)
-    x_test = test.drop(["label"], axis=1)
+    # drop the label and also smp_idx (should not be used as an informative feature)
+    x_train = train.drop(["label", "smp_idx"], axis=1)
+    x_test = test.drop(["label", "smp_idx"], axis=1)
     y_train = train["label"]
     y_test = test["label"]
     print("Labels in training data:\n", y_train.value_counts())
@@ -84,8 +86,9 @@ def self_training(x_train, y_train, cv):
     knn = KNeighborsClassifier(n_neighbors = 20,
                                weights = "distance")
     st_model = SelfTrainingClassifier(knn, verbose=True).fit(x_train, y_train)
-    y_pred = st_model.predict(x_train)
-    return balanced_accuracy(y_pred, y_train)
+    # predict_proba possible
+    #y_pred = st_model.predict(x_train)
+    return calculate_metrics_cv(model=st_model, X=x_train, y_true=y_train, cv=cv, name="SelfTrainingClassifier")
 
 # TODO add kernel and alpha parameter
 def label_spreading(x_train, y_train, cv):
@@ -99,55 +102,66 @@ def label_spreading(x_train, y_train, cv):
     """
     # TODO cv: use the same cv split but randomly assign the other unlabelled data pieces to the other cv folds
     ls_model = LabelSpreading(kernel="knn", alpha=0.2, n_jobs=-1).fit(x_train, y_train)
-    y_pred = ls_model.predict(x_train)
-    return balanced_accuracy(y_pred, y_train)
+    #y_pred = ls_model.predict(x_train)
+    return calculate_metrics_cv(model=ls_model, X=x_train, y_true=y_train, cv=cv, name="LabelSpreading")
 
 # TODO put this in an own function
 # TODO one parameter should be the table format of the output
 def main():
     # 1. Load dataframe with smp data
     smp = load_data("smp_lambda_delta_gradient.npz")#("smp_all_02.npz")#
+    # fill in nans (occur only for lambda_4, delta_4, lambda_12 and delta_12): use next occuring value
+    smp = smp.fillna(method='ffill')
 
+    # TODO: maybe visualize some things only after normalization and standardization?
+    # 2. Visualize the original data
+    #visualize_original_data(smp)
+
+    # 3. Prepare data for two of the semisupervised modles:
     # prepare dataset of unlabelled data
     # TODO: fix this: CURRENTLY crushes for smp_lambda_delta_gradient
     unlabelled_smp = smp[(smp["label"] == 0)]
     # set unlabelled_smp label to -1
     unlabelled_smp.loc["label"] = -1
     unlabelled_smp_x = unlabelled_smp.drop(["label", "smp_idx"], axis=1)
-    unlabelled_smp_x = unlabelled_smp_x.dropna()
     unlabelled_smp_y = pd.Series(np.repeat(-1, len(unlabelled_smp_x)))
 
-    # TODO: maybe visualize some things only after normalization and standardization?
-    # 2. Visualize the original data
-    #visualize_original_data(smp)
+    # sample in order to make it time-wise possible
+    # OBSERVATION: the more data we include the worse the scores for the models become
+    unlabelled_x = unlabelled_smp_x.sample(1000) # complete data: 650 326
+    unlabelled_y = unlabelled_smp_y.sample(1000) # we can do this, because labels are only -1 anyway
 
-    # 3. Sum up certain classes if necessary (alternative: do something to balance the dataset)
+    # 4. Sum up certain classes if necessary (alternative: do something to balance the dataset)
     smp = sum_up_labels(smp, ["df", "ifwp", "if", "sh"], name="rare", label_idx=18)
 
-    # 4. Split up the data into training and test data
+    # 5. Split up the data into training and test data
     x_train, x_test, y_train, y_test = my_train_test_split(smp)
+
     # reset internal panda index
     x_train.reset_index(drop=True, inplace=True)
     x_test.reset_index(drop=True, inplace=True)
     y_train.reset_index(drop=True, inplace=True)
     y_test.reset_index(drop=True, inplace=True)
+    # For two of the semisupervised models: include unlabelled data points in x_train and y_train (test data stays the same!)
+    x_train_all = pd.concat([x_train, unlabelled_x])
+    y_train_all = pd.concat([y_train, unlabelled_y])
 
-    # 5. Normalize and standardize the data
+    # 6. Normalize and standardize the data
     # TODO
 
-    # 6. Make crossvalidation split
-    k = 3
+    # 7. Make crossvalidation split
+    k = 4
     # Note: if we want to use StratifiedKFold, we can just hand over an integer to the functions
     cv_stratified = StratifiedKFold(n_splits=k, shuffle=True, random_state=42).split(x_train, y_train)
     cv_stratified = list(cv_stratified)
-    # yields a list of tuples with training and test indices
-    cv = cv_manual(x_train, k) # in progress
-
-    x_train = x_train.drop(["smp_idx"], axis=1)
-    x_test = x_test.drop(["smp_idx"], axis=1)
+    # Attention the cv fold for these two semi-supervised models is different from the other cv folds!
+    cv_semisupervised = StratifiedKFold(n_splits=k, shuffle=True, random_state=42).split(x_train_all, y_train_all)
+    cv_semisupervised = list(cv_semisupervised)
+    #cv = cv_manual(x_train, k) # in progress
     print(np.unique(y_train, return_counts=True))
 
-    # 7. Call the models
+
+    # 8. Call the models
     all_scores = []
 
     # # A Baseline - majority class predicition
@@ -176,31 +190,34 @@ def main():
     #
     # print(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql')) # latex_raw works as well
 
-
-    # ARE TAKING TOO MUCH TIME
+    # TAKES A LOT OF TIME FOR COMPLETE DATA SET
     # D + E -> different data preparation necessary
-    # include unlabelled data points in x_train and y_train
-    # OBSERVATION: the more data we include the worse the balanced_accuracy on the training data becomes
-    subset_unlabelled_x = unlabelled_smp_x # complete data: 650 326
-    subset_unlabelled_y = unlabelled_smp_y
 
-    x_train_all = pd.concat([x_train, subset_unlabelled_x])
-    y_train_all = pd.concat([y_train, subset_unlabelled_y])
+    # D label spreading model
+    print("Starting Label Spreading Model...")
+    ls_scores = label_spreading(x_train=x_train_all, y_train=y_train_all, cv=cv_semisupervised)
+    all_scores.append(mean_kfolds(ls_scores))
+    print("...finished Label Spreading Model.\n")
 
     # TODO it makes sense to use the best hyperparameter tuned models here!
     # E self training model
     print("Starting Self Training Classifier...")
-    st_bal_acc = self_training(x_train=x_train_all, y_train=y_train_all, cv=cv)
-    print("Self Training Classifier, Training Accuracy: ", st_bal_acc)
+    st_scores = self_training(x_train=x_train_all, y_train=y_train_all, cv=cv_semisupervised)
+    all_scores.append(mean_kfolds(st_scores))
     print("...finished Self Training Classifier.\n")
 
 
-    # D label spreading model
-    print("Starting Label Spreading Model...")
-    ls_bal_acc = label_spreading(x_train=x_train_all, y_train=y_train_all, cv=cv)
-    print("Label Spreading Model, Training Accuracy: ", ls_bal_acc)
-    print("...finished Label Spreading Model.\n")
-
+    # rename the columns
+    all_scores = pd.DataFrame(all_scores).rename(columns={"test_balanced_accuracy": "test_bal_acc",
+                                                         "train_balanced_accuracy": "train_bal_acc",
+                                                         "test_recall": "test_rec",
+                                                         "train_recall": "train_rec",
+                                                         "test_precision": "test_prec",
+                                                         "train_precision": "train_prec",
+                                                         "train_roc_auc": "train_roc",
+                                                         "test_roc_auc": "test_roc",
+                                                         "train_log_loss": "train_ll",
+                                                         "test_log_loss": "test_ll"})
     print(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
     exit(0)
 
@@ -213,19 +230,19 @@ def main():
     # G Support Vector Machines
     # works with very high gamma (overfitting) -> "auto" yields 0.75, still good and no overfitting
     print("Starting Support Vector Machine...")
-    svm_scores = svm(x_train, y_train, cv, gamma="auto")
+    svm_scores = svm(x_train, y_train, cv_stratified, gamma="auto")
     all_scores.append(mean_kfolds(svm_scores))
     print("...finished Support Vector Machine.\n")
 
     # H knn (works with weights=distance)
     print("Starting K-Nearest Neighbours Model...")
-    knn_scores = knn(x_train, y_train, cv, n_neighbors=20)
+    knn_scores = knn(x_train, y_train, cv_stratified, n_neighbors=20)
     all_scores.append(mean_kfolds(knn_scores))
     print("...finished K-Nearest Neighbours Model.\n")
 
     # I adaboost
     print("Starting AdaBoost Model...")
-    ada_scores = ada_boost(x_train, y_train, cv)
+    ada_scores = ada_boost(x_train, y_train, cv_stratified)
     all_scores.append(mean_kfolds(ada_scores))
     print("...finished AdaBoost Model.\n")
 
@@ -233,13 +250,22 @@ def main():
 
     # K Encoder-Decoder
 
-    # print the validation results
-    # TODO maybe rename the table columns (validation results)
+    # 9. print the validation results
+    all_scores = pd.DataFrame(all_scores).rename(columns={"test_balanced_accuracy": "test_bal_acc",
+                                                         "train_balanced_accuracy": "train_bal_acc",
+                                                         "test_recall": "test_rec",
+                                                         "train_recall": "train_rec",
+                                                         "test_precision": "test_prec",
+                                                         "train_precision": "train_prec",
+                                                         "train_roc_auc": "train_roc",
+                                                         "test_roc_auc": "test_roc",
+                                                         "train_log_loss": "train_ll",
+                                                         "test_log_loss": "test_ll"})
     print(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
     with open('plots/tables/models_with_baseline.txt', 'w') as f:
         f.write(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
 
-    # 8. Visualize the results
+    # 10. Visualize the results
 
 
 if __name__ == "__main__":
