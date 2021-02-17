@@ -213,7 +213,7 @@ def mean_kfolds(scores):
     Returns:
         dict: same keys as dict scores, but the values are averaged now
     """
-    return {key: scores[key].mean() if key != "model" else scores[key] for key, value in scores.items()}
+    return {key: scores[key].mean() if not isinstance(value, str) else scores[key] for key, value in scores.items()}
 
 # TODO: make this kind of stratified:
     # make the data a set of time-series data

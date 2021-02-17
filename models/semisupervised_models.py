@@ -7,7 +7,7 @@ from sklearn.cluster import KMeans
 from sklearn.mixture import GaussianMixture, BayesianGaussianMixture
 from sklearn.metrics import silhouette_score, balanced_accuracy_score
 
-# TODO make name a parameter and return_train_score as well
+# TODO make return_train_score a parameter
 
 # ATTENTION: log_loss and roc_auc or other probability based metrics cannot be calculated for kmeans (not well defined!)
 # https://towardsdatascience.com/cluster-then-predict-for-classification-tasks-142fdfdc87d6
@@ -143,7 +143,7 @@ def gaussian_mix(unlabelled_data, x_train, y_train, cv, cov_type="tied", num_com
                 plt.show()
 
     gm = GaussianMixture(n_components=n_components, init_params="random", max_iter=150, covariance_type=cov_type, random_state=42)
-    return semisupervised_cv(gm, unlabelled_data, x_train, y_train, n_gaussians, cv, name=(name+"{}"+cov_type))
+    return semisupervised_cv(gm, unlabelled_data, x_train, y_train, n_gaussians, cv, name=(name+"_"+cov_type))
 
 def bayesian_gaussian_mix(unlabelled_data, x_train, y_train, cv, cov_type="tied", num_components=15, name="BayesianGaussianMixture"):
     """ Semisupervised Variational Bayesian estimation of a Gaussian Mixture Algorithm. Assigns most frequent snow label to gaussians.

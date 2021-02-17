@@ -5,7 +5,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import RandomForestClassifier
 from imblearn.ensemble import EasyEnsembleClassifier
 
-# TODO make name a parameter and return_train_score as well
+# TODO make return_train_score a parameter
 
 def random_forest(x_train, y_train, cv, name="RandomForest"):
     """ Random Forest.
