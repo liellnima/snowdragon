@@ -11,7 +11,7 @@ from sklearn.metrics import silhouette_score, balanced_accuracy_score
 
 # ATTENTION: log_loss and roc_auc or other probability based metrics cannot be calculated for kmeans (not well defined!)
 # https://towardsdatascience.com/cluster-then-predict-for-classification-tasks-142fdfdc87d6
-def kmeans(unlabelled_data, x_train, y_train, cv, num_clusters=5, find_num_clusters="both", plot=True):
+def kmeans(unlabelled_data, x_train, y_train, cv, num_clusters=5, find_num_clusters="both", plot=True, name="Kmeans"):
     """ Semisupervised kmeans algorithm. Assigns most frequent snow label to cluster.
     Parameters:
         unlabelled_data: Data on which the clustering should take place
@@ -23,6 +23,7 @@ def kmeans(unlabelled_data, x_train, y_train, cv, num_clusters=5, find_num_clust
             In case of "both" the optimal number of cluster is choosen according to results of acc
             Default: None - in this case only the kmeans model with num_clusters cluster is run
         plot (bool): whether silhouette coefficient or balanced accuracy should be plot
+        name (str): Name/Description for the model
     Returns:
         dict: results from cross validation
     """
@@ -78,9 +79,9 @@ def kmeans(unlabelled_data, x_train, y_train, cv, num_clusters=5, find_num_clust
 
     km = KMeans(n_clusters=num_clusters, init="random", n_init=num_clusters, random_state=42)
 
-    return semisupervised_cv(km, unlabelled_data, x_train, y_train, num_clusters, cv, name="Kmeans")
+    return semisupervised_cv(km, unlabelled_data, x_train, y_train, num_clusters, cv, name=name)
 
-def gaussian_mix(unlabelled_data, x_train, y_train, cv, cov_type="tied", num_components=15, find_num_components="both", plot=True):
+def gaussian_mix(unlabelled_data, x_train, y_train, cv, cov_type="tied", num_components=15, find_num_components="both", plot=True, name="GaussianMixture"):
     """ Semisupervised Gaussian Mixture Algorithm. Assigns most frequent snow label to gaussians.
     Parameters:
         unlabelled_data: Data on which the clustering should take place
@@ -93,6 +94,7 @@ def gaussian_mix(unlabelled_data, x_train, y_train, cv, cov_type="tied", num_com
             In case of "both" the optimal number of cluster is choosen according to results of acc
             Default: None - in this case only the kmeans model with num_clusters cluster is run
         plot (bool): whether the bic and balanced accuracy should be plot
+        name (str): Name/Description for the model
     Returns:
         dict: results of crossvalidation
     """
@@ -141,9 +143,9 @@ def gaussian_mix(unlabelled_data, x_train, y_train, cv, cov_type="tied", num_com
                 plt.show()
 
     gm = GaussianMixture(n_components=n_components, init_params="random", max_iter=150, covariance_type=cov_type, random_state=42)
-    return semisupervised_cv(gm, unlabelled_data, x_train, y_train, n_gaussians, cv, name="GaussianMixture_{}".format(cov_type))
+    return semisupervised_cv(gm, unlabelled_data, x_train, y_train, n_gaussians, cv, name=(name+"{}"+cov_type))
 
-def bayesian_gaussian_mix(unlabelled_data, x_train, y_train, cv, cov_type="tied", num_components=15):
+def bayesian_gaussian_mix(unlabelled_data, x_train, y_train, cv, cov_type="tied", num_components=15, name="BayesianGaussianMixture"):
     """ Semisupervised Variational Bayesian estimation of a Gaussian Mixture Algorithm. Assigns most frequent snow label to gaussians.
     Find automatically the right number of
     Parameters:
@@ -153,12 +155,13 @@ def bayesian_gaussian_mix(unlabelled_data, x_train, y_train, cv, cov_type="tied"
         cv (list of tuples): cross validation indices
         cov_type (str): type of covariance used for gaussian mixture model - one of: "tied", "diag", "spherical", "full"
         num_components (int): number of distributions maximally used for the model
+        name (str): Name/Description for the model
     Returns:
         dict: results of crossvalidation
     """
     bgm = GaussianMixture(n_components=num_components, init_params="random", max_iter=150, covariance_type=cov_type, random_state=42)
 
-    return semisupervised_cv(bgm, unlabelled_data, x_train, y_train, num_components, cv, name="BayesianGaussianMixture_{}".format(cov_type))
+    return semisupervised_cv(bgm, unlabelled_data, x_train, y_train, num_components, cv, name=(name+"_"+cov_type))
 
 
 # TODO Delete after using the visualization

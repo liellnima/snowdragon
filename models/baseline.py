@@ -5,12 +5,13 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-def majority_class_baseline(x_train, y_train, cv):
+def majority_class_baseline(x_train, y_train, cv, name="MajorityClassBaseline"):
     """ A model which always predicts the majority class of the data it was fit on to.
     Parameters:
         x_train: Data samples and features on which the model should train.
         y_train: The corresponding labels to x_train
         cv (list): The training-validation split (indices of data in a list of tuples)
+        name (str): Name/Description for the model
     Returns:
         dict: scores describing the performance of the model. Probability based measures cannot be calculated
     """
@@ -41,8 +42,8 @@ def majority_class_baseline(x_train, y_train, cv):
         y_preds_train.append(pd.Series(np.repeat(maj_class, len(fold_y_train)))) # predicted labels of training data
 
 
-    train_scores = calculate_metrics_raw(y_trues_train, y_preds_train, name="MajorityClassBaseline", annot="train")
-    test_scores = calculate_metrics_raw(y_trues_valid, y_preds_valid, name="MajorityClassBaseline", annot="test")
+    train_scores = calculate_metrics_raw(y_trues_train, y_preds_train, name=name, annot="train")
+    test_scores = calculate_metrics_raw(y_trues_valid, y_preds_valid, name=name, annot="test")
 
     scores = {**train_scores, **test_scores}
     scores["fit_time"] = np.asarray(all_fit_time)

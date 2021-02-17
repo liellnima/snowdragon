@@ -72,12 +72,13 @@ def sum_up_labels(smp, labels, name, label_idx):
     return smp
 
 # TODO add parameters for base estimator etc.
-def self_training(x_train, y_train, cv):
+def self_training(x_train, y_train, cv, name="SelfTrainingClassifier"):
     """ Self training - a semisupervised model.
     Parameters:
         x_train (pd.DataFrame): contains both the features of labelled and unlabelled data.
         y_train (pd.Series): contains the labels of the labelled and unlabelled data. Unlabelled data must have label -1.
         cv (list): List of training and testing tuples which contain the indiced for the different folds.
+        name (str): Name/Description for the model.
     Returns:
         float: At the moment just the balanced accuracy
     """
@@ -88,22 +89,23 @@ def self_training(x_train, y_train, cv):
     st_model = SelfTrainingClassifier(knn, verbose=True).fit(x_train, y_train)
     # predict_proba possible
     #y_pred = st_model.predict(x_train)
-    return calculate_metrics_cv(model=st_model, X=x_train, y_true=y_train, cv=cv, name="SelfTrainingClassifier")
+    return calculate_metrics_cv(model=st_model, X=x_train, y_true=y_train, cv=cv, name=name)
 
 # TODO add kernel and alpha parameter
-def label_spreading(x_train, y_train, cv):
+def label_spreading(x_train, y_train, cv, name="LabelSpreading"):
     """ Label spreading - a semisupervised model.
     Parameters:
         x_train (pd.DataFrame): contains both the features of labelled and unlabelled data.
         y_train (pd.Series): contains the labels of the labelled and unlabelled data. Unlabelled data must have label -1.
         cv (list): List of training and testing tuples which contain the indiced for the different folds.
+        name (str): Name/Description for the model.
     Returns:
         float: At the moment just the balanced accuracy
     """
     # TODO cv: use the same cv split but randomly assign the other unlabelled data pieces to the other cv folds
     ls_model = LabelSpreading(kernel="knn", alpha=0.2, n_jobs=-1).fit(x_train, y_train)
     #y_pred = ls_model.predict(x_train)
-    return calculate_metrics_cv(model=ls_model, X=x_train, y_true=y_train, cv=cv, name="LabelSpreading")
+    return calculate_metrics_cv(model=ls_model, X=x_train, y_true=y_train, cv=cv, name=name)
 
 # TODO put this in an own function
 # TODO one parameter should be the table format of the output
@@ -120,16 +122,16 @@ def main():
     # 3. Prepare data for two of the semisupervised modles:
     # prepare dataset of unlabelled data
     # TODO: fix this: CURRENTLY crushes for smp_lambda_delta_gradient
-    unlabelled_smp = smp[(smp["label"] == 0)]
+    unlabelled_smp = smp[(smp["label"] == 0)].copy()
     # set unlabelled_smp label to -1
-    unlabelled_smp.loc["label"] = -1
+    unlabelled_smp.loc[:, "label"] = -1
     unlabelled_smp_x = unlabelled_smp.drop(["label", "smp_idx"], axis=1)
-    unlabelled_smp_y = pd.Series(np.repeat(-1, len(unlabelled_smp_x)))
+    unlabelled_smp_y = unlabelled_smp["label"]
 
     # sample in order to make it time-wise possible
     # OBSERVATION: the more data we include the worse the scores for the models become
-    unlabelled_x = unlabelled_smp_x.sample(1000) # complete data: 650 326
-    unlabelled_y = unlabelled_smp_y.sample(1000) # we can do this, because labels are only -1 anyway
+    unlabelled_x = unlabelled_smp_x.sample(100) # complete data: 650 326
+    unlabelled_y = unlabelled_smp_y.sample(100) # we can do this, because labels are only -1 anyway
 
     # 4. Sum up certain classes if necessary (alternative: do something to balance the dataset)
     smp = sum_up_labels(smp, ["df", "ifwp", "if", "sh"], name="rare", label_idx=18)
@@ -160,7 +162,6 @@ def main():
     #cv = cv_manual(x_train, k) # in progress
     print(np.unique(y_train, return_counts=True))
 
-
     # 8. Call the models
     all_scores = []
 
@@ -170,56 +171,41 @@ def main():
     # all_scores.append(mean_kfolds(baseline_scores))
     # print("...finished Baseline Model.\n")
     #
-    # # B kmeans clustering (does not work)
-    # print("Starting K-Means Model...")
-    # kmeans_scores = kmeans(unlabelled_smp_x, x_train, y_train, cv_stratified, num_clusters=10, find_num_clusters="both", plot=True)
-    # all_scores.append(mean_kfolds(kmeans_scores))
-    # print("...finished K-Means Model.\n")
-    # # print(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
-    #
-    # # C mixture model clustering ("diag" works best at the moment)
-    # print("Starting Gaussian Mixture Model...")
-    # gm_acc_diag = gaussian_mix(unlabelled_smp_x, x_train, y_train, cv_stratified, cov_type="diag", plot=True)
-    # all_scores.append(mean_kfolds(gm_acc_diag))
-    # print("...finished Gaussian Mixture Model.\n")
-    #
+    # B kmeans clustering (does not work)
+    print("Starting K-Means Model...")
+    kmeans_scores = kmeans(unlabelled_smp_x, x_train, y_train, cv_stratified, num_clusters=10, find_num_clusters="acc", plot=False)
+    all_scores.append(mean_kfolds(kmeans_scores))
+    print("...finished K-Means Model.\n")
+    # print(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
+
+    # C mixture model clustering ("diag" works best at the moment)
+    print("Starting Gaussian Mixture Model...")
+    gm_acc_diag = gaussian_mix(unlabelled_smp_x, x_train, y_train, cv_stratified, cov_type="diag", find_num_clusters="acc", plot=False)
+    all_scores.append(mean_kfolds(gm_acc_diag))
+    print("...finished Gaussian Mixture Model.\n")
+
     # print("Starting Baysian Gaussian Mixture Model...")
     # bgm_acc_diag = bayesian_gaussian_mix(unlabelled_smp_x, x_train, y_train, cv_stratified, cov_type="diag")
     # all_scores.append(mean_kfolds(bgm_acc_diag))
     # print("...finished Bayesian Gaussian Mixture Model.\n")
     #
-    # print(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql')) # latex_raw works as well
+    print(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql')) # latex_raw works as well
 
     # TAKES A LOT OF TIME FOR COMPLETE DATA SET
     # D + E -> different data preparation necessary
 
-    # D label spreading model
-    print("Starting Label Spreading Model...")
-    ls_scores = label_spreading(x_train=x_train_all, y_train=y_train_all, cv=cv_semisupervised)
-    all_scores.append(mean_kfolds(ls_scores))
-    print("...finished Label Spreading Model.\n")
-
-    # TODO it makes sense to use the best hyperparameter tuned models here!
-    # E self training model
-    print("Starting Self Training Classifier...")
-    st_scores = self_training(x_train=x_train_all, y_train=y_train_all, cv=cv_semisupervised)
-    all_scores.append(mean_kfolds(st_scores))
-    print("...finished Self Training Classifier.\n")
-
-
-    # rename the columns
-    all_scores = pd.DataFrame(all_scores).rename(columns={"test_balanced_accuracy": "test_bal_acc",
-                                                         "train_balanced_accuracy": "train_bal_acc",
-                                                         "test_recall": "test_rec",
-                                                         "train_recall": "train_rec",
-                                                         "test_precision": "test_prec",
-                                                         "train_precision": "train_prec",
-                                                         "train_roc_auc": "train_roc",
-                                                         "test_roc_auc": "test_roc",
-                                                         "train_log_loss": "train_ll",
-                                                         "test_log_loss": "test_ll"})
-    print(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
-    exit(0)
+    # # D label spreading model
+    # print("Starting Label Spreading Model...")
+    # ls_scores = label_spreading(x_train=x_train_all, y_train=y_train_all, cv=cv_semisupervised)
+    # all_scores.append(mean_kfolds(ls_scores))
+    # print("...finished Label Spreading Model.\n")
+    #
+    # # TODO it makes sense to use the best hyperparameter tuned models here!
+    # # E self training model
+    # print("Starting Self Training Classifier...")
+    # st_scores = self_training(x_train=x_train_all, y_train=y_train_all, cv=cv_semisupervised)
+    # all_scores.append(mean_kfolds(st_scores))
+    # print("...finished Self Training Classifier.\n")
 
     # F random forests (works)
     print("Starting Random Forest Model ...")
