@@ -122,7 +122,7 @@ def main():
     # 3. Prepare data for two of the semisupervised modles:
     # prepare dataset of unlabelled data
     # TODO: fix this: CURRENTLY crushes for smp_lambda_delta_gradient
-    unlabelled_smp = smp[(smp["label"] == 0)].copy()
+    unlabelled_smp = smp.loc[(smp["label"] == 0)].copy()
     # set unlabelled_smp label to -1
     unlabelled_smp.loc[:, "label"] = -1
     unlabelled_smp_x = unlabelled_smp.drop(["label", "smp_idx"], axis=1)
@@ -171,25 +171,50 @@ def main():
     # all_scores.append(mean_kfolds(baseline_scores))
     # print("...finished Baseline Model.\n")
     #
-    # B kmeans clustering (does not work)
+    # B kmeans clustering (does not work well)
+    # BEST cluster selection criterion: no difference, you can use either acc or sil (use sil in this case!)
     print("Starting K-Means Model...")
     kmeans_scores = kmeans(unlabelled_smp_x, x_train, y_train, cv_stratified, num_clusters=10, find_num_clusters="acc", plot=False)
+    kmeans_scores["sel_crit"] = "bal_acc"
     all_scores.append(mean_kfolds(kmeans_scores))
+
+    kmeans_scores_2 = kmeans(unlabelled_smp_x, x_train, y_train, cv_stratified, num_clusters=10, find_num_clusters="sil", plot=False)
+    kmeans_scores_2["sel_crit"] = "sil"
+    all_scores.append(mean_kfolds(kmeans_scores_2))
     print("...finished K-Means Model.\n")
     # print(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
 
     # C mixture model clustering ("diag" works best at the moment)
+    # BEST cluster selection criterion: bic is slightly better than acc (generalization)
     print("Starting Gaussian Mixture Model...")
-    gm_acc_diag = gaussian_mix(unlabelled_smp_x, x_train, y_train, cv_stratified, cov_type="diag", find_num_clusters="acc", plot=False)
+    gm_acc_diag = gaussian_mix(unlabelled_smp_x, x_train, y_train, cv_stratified, cov_type="diag", find_num_components="acc", plot=False)
+    gm_acc_diag["sel_crit"] = "bal_acc"
     all_scores.append(mean_kfolds(gm_acc_diag))
+    gm_acc_diag_2 = gaussian_mix(unlabelled_smp_x, x_train, y_train, cv_stratified, cov_type="diag", find_num_components="bic", plot=False)
+    gm_acc_diag_2["sel_crit"] = "bic"
+    all_scores.append(mean_kfolds(gm_acc_diag_2))
     print("...finished Gaussian Mixture Model.\n")
 
     # print("Starting Baysian Gaussian Mixture Model...")
     # bgm_acc_diag = bayesian_gaussian_mix(unlabelled_smp_x, x_train, y_train, cv_stratified, cov_type="diag")
     # all_scores.append(mean_kfolds(bgm_acc_diag))
     # print("...finished Bayesian Gaussian Mixture Model.\n")
-    #
+
+    all_scores = pd.DataFrame(all_scores).rename(columns={"test_balanced_accuracy": "test_bal_acc",
+                                                         "train_balanced_accuracy": "train_bal_acc",
+                                                         "test_recall": "test_rec",
+                                                         "train_recall": "train_rec",
+                                                         "test_precision": "test_prec",
+                                                         "train_precision": "train_prec",
+                                                         "train_roc_auc": "train_roc",
+                                                         "test_roc_auc": "test_roc",
+                                                         "train_log_loss": "train_ll",
+                                                         "test_log_loss": "test_ll"})
     print(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql')) # latex_raw works as well
+
+    with open('plots/tables/acc_vs_sil_bic.txt', 'w') as f:
+        f.write(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
+    exit(0)
 
     # TAKES A LOT OF TIME FOR COMPLETE DATA SET
     # D + E -> different data preparation necessary
