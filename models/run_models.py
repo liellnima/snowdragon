@@ -1,6 +1,6 @@
 # import from other snowdragon modules
 from data_handling.data_loader import load_data
-from data_handling.data_parameters import LABELS
+from data_handling.data_parameters import LABELS, ANTI_LABELS, COLORS
 from models.visualization import visualize_original_data # TODO or something like this
 from models.cv_handler import cv_manual, mean_kfolds
 from models.supervised_models import svm, random_forest, ada_boost, knn
@@ -54,21 +54,24 @@ def my_train_test_split(smp, test_size=0.2, train_size=0.8):
     print("Labels in testing data:\n", y_test.value_counts())
     return x_train, x_test, y_train, y_test
 
-def sum_up_labels(smp, labels, name, label_idx):
+def sum_up_labels(smp, labels, name, label_idx, color="orchid"):
     """ Sums up the datapoints belonging to one of the classes in labels to one class.
     Parameters:
         smp (pd.DataFrame): a dataframe with the smp profiles
         labels (list): a list of Strings with the labels which should be united
         name (String): name of the new unified class
         label_idx (int): the number identifying which label it is
+        color (str): indicates which color the summed up class should get
     Returns:
         pd.DataFrame: the updated smp
     """
     int_labels = [LABELS[label] for label in labels]
     smp.loc[smp["label"].isin(int_labels), "label"] = label_idx
     # add a new key value pair to labels (and antilabels and colors?)
-    # TODO update: add this also to antilabels and colors
+    # TODO are the labels really updated also in other files?
     LABELS[name] = label_idx
+    ANTI_LABELS[label_idx] = name
+    COLORS[label_idx] = color
     return smp
 
 # TODO add parameters for base estimator etc.
@@ -111,7 +114,7 @@ def label_spreading(x_train, y_train, cv, name="LabelSpreading"):
 # TODO one parameter should be the table format of the output
 def main():
     # 1. Load dataframe with smp data
-    smp = load_data("smp_lambda_delta_gradient.npz")#("smp_all_02.npz")#
+    smp = load_data("smp_all_02.npz")#("smp_lambda_delta_gradient.npz")#
     # fill in nans (occur only for lambda_4, delta_4, lambda_12 and delta_12): use next occuring value
     smp = smp.fillna(method='ffill')
 
@@ -130,11 +133,12 @@ def main():
 
     # sample in order to make it time-wise possible
     # OBSERVATION: the more data we include the worse the scores for the models become
-    unlabelled_x = unlabelled_smp_x.sample(100) # complete data: 650 326
-    unlabelled_y = unlabelled_smp_y.sample(100) # we can do this, because labels are only -1 anyway
+    unlabelled_x = unlabelled_smp_x.sample(1000) # complete data: 650 326
+    unlabelled_y = unlabelled_smp_y.sample(1000) # we can do this, because labels are only -1 anyway
 
     # 4. Sum up certain classes if necessary (alternative: do something to balance the dataset)
-    smp = sum_up_labels(smp, ["df", "ifwp", "if", "sh"], name="rare", label_idx=18)
+    # (keep: 6, 3, 4, 13, 5: rgwp, dh, dhid, mfcl, mfdh)
+    smp = sum_up_labels(smp, ["df", "ifwp", "if", "sh", "snow-ice", "dhwp", "mfsl", "mfcr", "pp"], name="rare", label_idx=17)
 
     # 5. Split up the data into training and test data
     x_train, x_test, y_train, y_test = my_train_test_split(smp)
@@ -165,72 +169,46 @@ def main():
     # 8. Call the models
     all_scores = []
 
-    # # A Baseline - majority class predicition
-    # print("Starting Baseline Model...")
-    # baseline_scores = majority_class_baseline(x_train, y_train, cv_stratified)
-    # all_scores.append(mean_kfolds(baseline_scores))
-    # print("...finished Baseline Model.\n")
-    #
+    # A Baseline - majority class predicition
+    print("Starting Baseline Model...")
+    baseline_scores = majority_class_baseline(x_train, y_train, cv_stratified)
+    all_scores.append(mean_kfolds(baseline_scores))
+    print("...finished Baseline Model.\n")
+
     # B kmeans clustering (does not work well)
     # BEST cluster selection criterion: no difference, you can use either acc or sil (use sil in this case!)
     print("Starting K-Means Model...")
     kmeans_scores = kmeans(unlabelled_smp_x, x_train, y_train, cv_stratified, num_clusters=10, find_num_clusters="acc", plot=False)
-    kmeans_scores["sel_crit"] = "bal_acc"
     all_scores.append(mean_kfolds(kmeans_scores))
-
-    kmeans_scores_2 = kmeans(unlabelled_smp_x, x_train, y_train, cv_stratified, num_clusters=10, find_num_clusters="sil", plot=False)
-    kmeans_scores_2["sel_crit"] = "sil"
-    all_scores.append(mean_kfolds(kmeans_scores_2))
     print("...finished K-Means Model.\n")
-    # print(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
 
     # C mixture model clustering ("diag" works best at the moment)
     # BEST cluster selection criterion: bic is slightly better than acc (generalization)
     print("Starting Gaussian Mixture Model...")
     gm_acc_diag = gaussian_mix(unlabelled_smp_x, x_train, y_train, cv_stratified, cov_type="diag", find_num_components="acc", plot=False)
-    gm_acc_diag["sel_crit"] = "bal_acc"
     all_scores.append(mean_kfolds(gm_acc_diag))
-    gm_acc_diag_2 = gaussian_mix(unlabelled_smp_x, x_train, y_train, cv_stratified, cov_type="diag", find_num_components="bic", plot=False)
-    gm_acc_diag_2["sel_crit"] = "bic"
-    all_scores.append(mean_kfolds(gm_acc_diag_2))
     print("...finished Gaussian Mixture Model.\n")
 
-    # print("Starting Baysian Gaussian Mixture Model...")
-    # bgm_acc_diag = bayesian_gaussian_mix(unlabelled_smp_x, x_train, y_train, cv_stratified, cov_type="diag")
-    # all_scores.append(mean_kfolds(bgm_acc_diag))
-    # print("...finished Bayesian Gaussian Mixture Model.\n")
-
-    all_scores = pd.DataFrame(all_scores).rename(columns={"test_balanced_accuracy": "test_bal_acc",
-                                                         "train_balanced_accuracy": "train_bal_acc",
-                                                         "test_recall": "test_rec",
-                                                         "train_recall": "train_rec",
-                                                         "test_precision": "test_prec",
-                                                         "train_precision": "train_prec",
-                                                         "train_roc_auc": "train_roc",
-                                                         "test_roc_auc": "test_roc",
-                                                         "train_log_loss": "train_ll",
-                                                         "test_log_loss": "test_ll"})
-    print(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql')) # latex_raw works as well
-
-    with open('plots/tables/acc_vs_sil_bic.txt', 'w') as f:
-        f.write(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
-    exit(0)
+    print("Starting Baysian Gaussian Mixture Model...")
+    bgm_acc_diag = bayesian_gaussian_mix(unlabelled_smp_x, x_train, y_train, cv_stratified, cov_type="diag")
+    all_scores.append(mean_kfolds(bgm_acc_diag))
+    print("...finished Bayesian Gaussian Mixture Model.\n")
 
     # TAKES A LOT OF TIME FOR COMPLETE DATA SET
     # D + E -> different data preparation necessary
 
-    # # D label spreading model
-    # print("Starting Label Spreading Model...")
-    # ls_scores = label_spreading(x_train=x_train_all, y_train=y_train_all, cv=cv_semisupervised)
-    # all_scores.append(mean_kfolds(ls_scores))
-    # print("...finished Label Spreading Model.\n")
-    #
-    # # TODO it makes sense to use the best hyperparameter tuned models here!
-    # # E self training model
-    # print("Starting Self Training Classifier...")
-    # st_scores = self_training(x_train=x_train_all, y_train=y_train_all, cv=cv_semisupervised)
-    # all_scores.append(mean_kfolds(st_scores))
-    # print("...finished Self Training Classifier.\n")
+    # D label spreading model
+    print("Starting Label Spreading Model...")
+    ls_scores = label_spreading(x_train=x_train_all, y_train=y_train_all, cv=cv_semisupervised, name="LabelSpreading_1000")
+    all_scores.append(mean_kfolds(ls_scores))
+    print("...finished Label Spreading Model.\n")
+
+    # TODO it makes sense to use the best hyperparameter tuned models here!
+    # E self training model
+    print("Starting Self Training Classifier...")
+    st_scores = self_training(x_train=x_train_all, y_train=y_train_all, cv=cv_semisupervised, name="SelfTraining_1000")
+    all_scores.append(mean_kfolds(st_scores))
+    print("...finished Self Training Classifier.\n")
 
     # F random forests (works)
     print("Starting Random Forest Model ...")
@@ -273,8 +251,11 @@ def main():
                                                          "train_log_loss": "train_ll",
                                                          "test_log_loss": "test_ll"})
     print(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
-    with open('plots/tables/models_with_baseline.txt', 'w') as f:
+    with open('plots/tables/models_160smp.txt', 'w') as f:
         f.write(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
+
+    with open('plots/tables/models_160smp_latex.txt', 'w') as f:
+        f.write(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='latex_raw'))
 
     # 10. Visualize the results
 
