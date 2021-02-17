@@ -397,12 +397,6 @@ def npz_to_pd(npz_file, is_dir):
         for file in file_generator:
             # load npz file
             smp_npz = np.load(file)
-
-            # INTERIM: (to delete) check whether there is a drift_end and if yes print smp_idx
-            if "drift_end" in smp_npz["label"]:
-                # how many datapoints are drift end points? which smp index
-                print("The SMP Profile {} contains drift_end labels.".format(smp_npz["smp_idx"].iloc[0]))
-
             # creata dict and save all dicts
             smp_dict = {item: smp_npz[item] for item in smp_npz.files}
             all_dicts.append(smp_dict)
