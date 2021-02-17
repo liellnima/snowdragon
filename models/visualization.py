@@ -1,7 +1,7 @@
 # import from other snowdragon modules
 from data_handling.data_loader import load_data
 from data_handling.data_preprocessing import idx_to_int
-from data_handling.data_parameters import LABELS
+from data_handling.data_parameters import LABELS, ANTI_LABELS, COLORS
 
 import numpy as np
 import pandas as pd
@@ -15,13 +15,6 @@ from tabulate import tabulate
 from sklearn.feature_selection import SelectKBest
 from sklearn.feature_selection import f_classif
 from sklearn.decomposition import PCA
-
-ANTI_LABELS = {0: "not_labelled",  1: "surface", 2: "ground", 3: "dh", 4: "dhid", 5: "mfdh", 6: "rgwp",
-          7: "df", 8: "if", 9: "ifwp", 10:"sh", 11: "snow-ice", 12: "dhwp", 13: "mfcl", 14: "mfsl", 15: "mfcr", 16: "pp"}
-
-COLORS = {0: "lightsteelblue", 1: "chocolate", 2: "darkslategrey", 3: "lightseagreen", 4: "mediumaquamarine", 5: "midnightblue",
-          6: "tomato", 7: "mediumvioletred", 8: "firebrick", 9: "lightgreen", 10: "orange", 11: "paleturquoise",
-          12: "gold", 13: "orchid", 14: "fuchsia", 15: "brown", 16: "lila"}
 
 
 def smp_unlabelled(smp, smp_name):
