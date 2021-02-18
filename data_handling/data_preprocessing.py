@@ -10,6 +10,7 @@ import os
 import glob
 import time # only used in main
 import re
+from tqdm import tqdm
 from pathlib import Path # for os independent path handling
 from snowmicropyn import Profile, loewe2012, windowing
 
@@ -17,6 +18,9 @@ from snowmicropyn import Profile, loewe2012, windowing
 SMP_LOC = Path(SMP_LOC)
 EXP_LOC = Path(EXP_LOC)
 T_LOC = Path(T_LOC)
+
+
+
 
 # exports pnt files (our smp profiles!) to csv files in a target directory
 def export_pnt (pnt_dir, target_dir, export_as="npz", overwrite=False, **kwargs):
@@ -38,13 +42,16 @@ def export_pnt (pnt_dir, target_dir, export_as="npz", overwrite=False, **kwargs)
     # use generator to reduce memory usage
     file_generator = glob.iglob(match_pnt, recursive=True)
     # yields each matching file and exports it
-    for file in file_generator:
-        file_name = Path(target_dir, file.split("/")[-1].split(".")[0] + "." + export_as)
-        # exports file only if we want to overwrite it or it doesnt exist yet
-        if overwrite or not file_name.is_file():
-            smp_profile = Profile.load(file)
-            # indexes, labels, summarizes and applies a rolling window to the data
-            preprocess_profile(smp_profile, target_dir, export_as=export_as, **kwargs)
+    print("Progressbar is only correct when using the Mosaic SMP Data.")
+    with tqdm(total=3730) as pbar:
+        for file in file_generator:
+            file_name = Path(target_dir, file.split("/")[-1].split(".")[0] + "." + export_as)
+            # exports file only if we want to overwrite it or it doesnt exist yet
+            if overwrite or not file_name.is_file():
+                smp_profile = Profile.load(file)
+                # indexes, labels, summarizes and applies a rolling window to the data
+                preprocess_profile(smp_profile, target_dir, export_as=export_as, **kwargs)
+            pbar.update(1)
 
     print("Finished exporting all pnt file as {} files in {}.".format(export_as, target_dir))
 
@@ -235,7 +242,8 @@ def rolling_window(df, window_size, rolling_cols, window_type="gaussian", window
         if poisson_cols is not None:
             try:
                 # calculate lambda and delta and media of poisson shot model
-                poisson_rolled = loewe2012.calc(poisson_df, window=window, overlap=(((window - 1) / window) * 100 + 0.0001)) # add epsilon to round up
+                overlap = (((window - 1) / window) * 100) + 0.0001 # add epsilon to round up 0.0001
+                poisson_rolled = calc(poisson_df, window=window, overlap=overlap) #essentially the loewe2012.calc function
                 poisson_rolled.columns = poisson_all_cols
                 poisson_rolled = poisson_rolled[poisson_cols]
             except KeyError:
@@ -245,6 +253,34 @@ def rolling_window(df, window_size, rolling_cols, window_type="gaussian", window
             all_dfs.append(poisson_rolled)
 
     return pd.concat(all_dfs, axis=1)
+
+
+# author Henning Loewe (2012) -> only difference: I am preventing zero divisions
+def calc(samples, window, overlap):
+    """Calculation of shot noise model parameters.
+    :param samples: A pandas dataframe with columns called 'distance' and 'force'.
+    :param window: Size of moving window.
+    :param overlap: Overlap factor in percent.
+    :return: Pandas dataframe with the columns 'distance', 'force_median',
+             'L2012_lambda', 'L2012_f0', 'L2012_delta', 'L2012_L'.
+    """
+    # Calculate spatial resolution of the distance samples as median of all step sizes.
+    spatial_res = np.median(np.diff(samples.distance.values))
+
+    # Split dataframe into chunks
+    chunks = windowing.chunkup(samples, window, overlap)
+    result = []
+    for center, chunk in chunks:
+        f_median = np.median(chunk.force)
+        # check if all elements are zero -> if yes, replace results with 0
+        if all(item == 0 for item in chunk.force):
+            sn = (0, 0, 0, 0) # a tuple containing four zeros (lamda, f0, delta, L)
+        else:
+            sn = loewe2012.calc_step(spatial_res, chunk.force)
+        result.append((center, f_median) + sn)
+
+    return pd.DataFrame(result, columns=['distance', 'force_median', 'L2012_lambda', 'L2012_f0',
+                                         'L2012_delta', 'L2012_L'])
 
 def remove_negatives(df, col="force", threshold=-1):
     """ Remove negative values of a column from dataframe. The values are replaced with the mean of the next and last positive value.
@@ -257,7 +293,7 @@ def remove_negatives(df, col="force", threshold=-1):
     """
     df_removed = df.copy(deep=True)
     # in case the values are just slightly below zero, replace them with 0
-    df_removed[(df_removed[col] < 0) & (df_removed[col] > threshold)] = 0
+    df_removed.loc[(df_removed[col] < 0) & (df_removed[col] > threshold), col] = 0
     # if nothing is below a certain threshold, return result
     if not any(df_removed[col] < threshold):
         return df_removed
@@ -321,7 +357,7 @@ def preprocess_profile(profile, target_dir, export_as="csv", sum_mm=1, gradient=
             profile.detect_ground()
             profile.detect_surface()
         except ValueError:
-            print("Profile {} is too short for data processing. Profile is skipped".format(profile.name))
+            print("Profile {} is too short for data processing. Profile is skipped.".format(profile.name))
             # leave function
             return
 
@@ -339,7 +375,11 @@ def preprocess_profile(profile, target_dir, export_as="csv", sum_mm=1, gradient=
 
     # 4. Remove all values below 0, replace them with average value around
     if any(df["force"] < 0):
-        df_rem = remove_negatives(df)
+        # skip profile if more than 80 % of the values are negative
+        if sum(df["force"] < 0) >= (0.8 * len(df)):
+            print("Profile {} contains more than 80% negative values. Profile is skipped.".format(profile.name))
+            return
+        df = remove_negatives(df, col="force")
 
     # 5. summarize data (precision: 1mm)
     df_mm = summarize_rows(df, mm_window=sum_mm)
@@ -358,9 +398,14 @@ def preprocess_profile(profile, target_dir, export_as="csv", sum_mm=1, gradient=
             else:
                 raise e
 
-
-    # 8. add cols, index DataFrame and convert dtypes
+    # 8. add other features, index DataFrame and convert dtypes
+    # Add SMP idx
     final_df["smp_idx"] = idx_to_int(profile.name)
+    # Add relative position feature, if df is not empty
+    final_df["pos_rel"] = final_df.apply(lambda x: x["distance"] / final_df["distance"].max(), axis=1) if not final_df.empty else 0
+    # Add distance from ground, if df is not empty
+    final_df["dist_ground"] = final_df.apply(lambda x: final_df["distance"].max() - x["distance"], axis=1) if not final_df.empty else 0
+
 
     for col in final_df:
         if col == "label" or col == "smp_idx":
@@ -418,7 +463,7 @@ def main():
     start = time.time()
     # export data from pnt to csv or npz
     # pnt_dir can be also a small sub directory if you want to update only a few files
-    export_pnt(pnt_dir=SMP_LOC, target_dir=EXP_LOC, export_as="npz", overwrite=True, **PARAMS)
+    export_pnt(pnt_dir=SMP_LOC, target_dir=EXP_LOC, export_as="npz", overwrite=False, **PARAMS)
 
     # OTHER OPTIONS
     # unite csv data in one csv file, index it, convert it to pandas (and save it as npz)
