@@ -263,11 +263,12 @@ def remove_negatives(df, col="force", threshold=-1):
         return df_removed
 
     # in all other cases replace the negative value with the mean of its next two neighbouring positive values
-    index = df_removed.index
+    index = pd.Series(df_removed.index)
     values_neg = df_removed[df_removed[col] < 0]
     indices_neg = index[df_removed[col] < 0]
+
     # for each negative value
-    for value, index in zip(values_neg, indices_neg):
+    for value, index in zip(values_neg[col], indices_neg):
         # find the next positive value
         next_pos_idx = index
         # as long as index+1 is still in the list, add 1
