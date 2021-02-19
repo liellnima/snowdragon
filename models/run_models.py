@@ -19,6 +19,7 @@ from sklearn.semi_supervised import SelfTrainingClassifier, LabelSpreading
 from sklearn.neighbors import KNeighborsClassifier
 from models.metrics import balanced_accuracy
 from models.cv_handler import calculate_metrics_cv
+from data_handling.data_preprocessing import remove_negatives
 # from sklearn.multioutput import MultiOutputClassifier
 
 # TODO plot confusion matrix beautifully (multilabel_confusion_matrix)
@@ -110,39 +111,98 @@ def label_spreading(x_train, y_train, cv, name="LabelSpreading"):
     #y_pred = ls_model.predict(x_train)
     return calculate_metrics_cv(model=ls_model, X=x_train, y_true=y_train, cv=cv, name=name)
 
+def remove_nans_mosaic(smp):
+    """ Very specific function to remove special nans and negative values. The selection was done manually.
+    Don't use this function for a different dataset or for any kind of updated dataset.
+    Params:
+        smp (pd.DataFrame): SMP Dataframe
+    Returns:
+        pd.DataFrame: the same smp dataframe but with removed nans and without negative values
+    """
+    # remove profile 4002260.0 -> only nans and always the same negative mean value
+    smp = smp.loc[smp["smp_idx"] != 4002260.0, :]
+    # remove part of the profile 4002627, since the last half has only 0 as values and later negative values (and other nonsense)
+    smp = smp.drop(range(625705, 625848), axis=0).reset_index(drop=True)
+    # the rest can be solved by forward filling (checked this manually)
+    smp = smp.fillna(method='ffill')
+    # drop another row that contains a negative value for no reason
+    smp = smp.drop(397667, axis=0).reset_index(drop=True)
+
+    return smp
+
+def normalize(data, features, min, max):
+    """ Normalizes the given features of a dataframe.
+    Parameters:
+        data (pd.DataFrame): the dataframe to normalize
+        features (list or str): list of strings or a single string indicating the feature to normalize.
+            If several feature they must share the same min and max.
+        min (int): the minimum of the features
+        max (int): the maximum of the features
+    Returns:
+        pd.DataFrame: data with normalized features
+    """
+    data.loc[:, features] = data.loc[:, features].apply(lambda x: (x - min) / (max - min))
+    return data
+
+def normalize_mosaic(smp):
+    """ Normalizes all the features that should be normalized in the data. Don't use this method for other data!
+    Parameters:
+        smp (pd.DataFrame): Mosaic SMP dataframe
+    Returns:
+        pd.DataFrame: the normalized version of the given dataframe
+    """
+    # Unchanged features: distance, pos_rel, dist_ground, smp_idx, label
+    # Physical normalization: all force features between 0 and 45
+    physical_features = [feature for feature in smp.columns if ("force" in feature) and (not "var" in feature)]
+    smp = normalize(smp, physical_features, min=0, max=45)
+    # Non physical normalization: (natural min 0) lambda: ; delta: ; L -> they are normalized on the complete dataset (too different results otherwise)
+    non_physical_features = [feature for feature in smp.columns if ("lambda" in feature) or ("delta" in feature) or ("L" in feature)]
+    for feature in non_physical_features:
+        smp = normalize(smp, feature, min=0, max=smp[feature].max())
+    # Unclear: gradient, var_force
+    smp = normalize(smp, "gradient", min=smp["gradient"].min(), max= smp["gradient"].max())
+    var_features = [feature for feature in smp.columns if ("var" in feature)]
+    for feature in var_features:
+        smp = normalize(smp, feature, min=0, max=smp[feature].max())
+
+    return smp
+
 # TODO put this in an own function
 # TODO one parameter should be the table format of the output
 def main():
     # 1. Load dataframe with smp data
-    smp = load_data("smp_all_02.npz")#("smp_lambda_delta_gradient.npz")#
-    # fill in nans (occur only for lambda_4, delta_4, lambda_12 and delta_12): use next occuring value
-    smp = smp.fillna(method='ffill')
+    smp = load_data("smp_all_03.npz")#("smp_lambda_delta_gradient.npz")
+    # remove nans
+    smp = remove_nans_mosaic(smp)
 
-    # TODO: maybe visualize some things only after normalization and standardization?
-    # 2. Visualize the original data
+    # 2. Visualize before normalization
     #visualize_original_data(smp)
 
-    # 3. Prepare data for two of the semisupervised modles:
+    # 3. Normalize
+    smp = normalize_mosaic(smp)
+    # 4. Sum up certain classes if necessary (alternative: do something to balance the dataset)
+    # (keep: 6, 3, 4, 13, 5: rgwp, dh, dhid, mfcl, mfdh)
+    smp = sum_up_labels(smp, ["df", "ifwp", "if", "sh", "snow-ice", "dhwp", "mfsl", "mfcr", "pp"], name="rare", label_idx=17)
+
+    # TODO: maybe visualize some things only after normalization and standardization?
+    # 5. Visualize the data after normalization
+    visualize_original_data(smp)
+
+    # 6. Prepare data for two of the semisupervised modles:
     # prepare dataset of unlabelled data
-    # TODO: fix this: CURRENTLY crushes for smp_lambda_delta_gradient
     unlabelled_smp = smp.loc[(smp["label"] == 0)].copy()
     # set unlabelled_smp label to -1
     unlabelled_smp.loc[:, "label"] = -1
     unlabelled_smp_x = unlabelled_smp.drop(["label", "smp_idx"], axis=1)
     unlabelled_smp_y = unlabelled_smp["label"]
-
     # sample in order to make it time-wise possible
     # OBSERVATION: the more data we include the worse the scores for the models become
     unlabelled_x = unlabelled_smp_x.sample(1000) # complete data: 650 326
     unlabelled_y = unlabelled_smp_y.sample(1000) # we can do this, because labels are only -1 anyway
 
-    # 4. Sum up certain classes if necessary (alternative: do something to balance the dataset)
-    # (keep: 6, 3, 4, 13, 5: rgwp, dh, dhid, mfcl, mfdh)
-    smp = sum_up_labels(smp, ["df", "ifwp", "if", "sh", "snow-ice", "dhwp", "mfsl", "mfcr", "pp"], name="rare", label_idx=17)
 
-    # 5. Split up the data into training and test data
+    # 7. Split up the data into training and test data
     x_train, x_test, y_train, y_test = my_train_test_split(smp)
-
     # reset internal panda index
     x_train.reset_index(drop=True, inplace=True)
     x_test.reset_index(drop=True, inplace=True)
@@ -152,10 +212,7 @@ def main():
     x_train_all = pd.concat([x_train, unlabelled_x])
     y_train_all = pd.concat([y_train, unlabelled_y])
 
-    # 6. Normalize and standardize the data
-    # TODO
-
-    # 7. Make crossvalidation split
+    # 8. Make crossvalidation split
     k = 4
     # Note: if we want to use StratifiedKFold, we can just hand over an integer to the functions
     cv_stratified = StratifiedKFold(n_splits=k, shuffle=True, random_state=42).split(x_train, y_train)
@@ -166,7 +223,7 @@ def main():
     #cv = cv_manual(x_train, k) # in progress
     print(np.unique(y_train, return_counts=True))
 
-    # 8. Call the models
+    # 9. Call the models
     all_scores = []
 
     # A Baseline - majority class predicition
@@ -239,7 +296,7 @@ def main():
 
     # K Encoder-Decoder
 
-    # 9. print the validation results
+    # 10. print the validation results
     all_scores = pd.DataFrame(all_scores).rename(columns={"test_balanced_accuracy": "test_bal_acc",
                                                          "train_balanced_accuracy": "train_bal_acc",
                                                          "test_recall": "test_rec",
@@ -257,7 +314,7 @@ def main():
     with open('plots/tables/models_160smp_latex.txt', 'w') as f:
         f.write(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='latex_raw'))
 
-    # 10. Visualize the results
+    # 11. Visualize the results
 
 
 if __name__ == "__main__":
