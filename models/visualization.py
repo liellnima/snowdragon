@@ -6,15 +6,18 @@ from data_handling.data_parameters import LABELS, ANTI_LABELS, COLORS
 import numpy as np
 import pandas as pd
 import seaborn as sns
+import matplotlib.colors as colors
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 
 
 from scipy import stats
 from tabulate import tabulate
+from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.feature_selection import SelectKBest
 from sklearn.feature_selection import f_classif
 from sklearn.decomposition import PCA
+from sklearn.manifold import TSNE
 
 
 def smp_unlabelled(smp, smp_name):
@@ -151,7 +154,7 @@ def pairwise_features(smp, features, samples=None, kde=False):
     Parameters:
         smp (df.DataFrame): SMP preprocessed data
         features (list): contains all features that should be displayed for pairwise comparison
-        samples (int): Default None, how many samples should be drawn from the lablled dataset
+        samples (int): Default None, how many samples should be drawn from the labelled dataset
         kde (bool): Default False, whether the lower triangle should overlay kde plots
     """
     # use only data that is already labelled
@@ -188,8 +191,44 @@ def plot_balancing(smp):
     ax.set_ylim(0,len(labelled_smp))
     plt.show()
 
+# TODO why do depth hoar and depth hoar indurated not show up in the data? (only very few times)
+def bog_label_plot(smp):
+    """ Creates a bog plot for the given smp profiles. Makes the labels visible.
+    Parameters:
+        smp (pd.DataFrame): dataframe containing smp profiles
+    """
+    labelled_smp = smp[(smp["label"] != 0) & (smp["label"] != 2)]
+    anti_colors = {ANTI_LABELS[key] : value for key, value in COLORS.items() if key in labelled_smp["label"].unique()}
+    my_colors = {key : value for key, value in COLORS.items() if key in labelled_smp["label"].unique()}
+    distance_between_smp = 0.5
+    day_id = 1
+    smp_indices = labelled_smp["smp_idx"].unique()
+
+    for i, curr_smp_idx in zip(range(len(smp_indices)), smp_indices):
+        smp_profile = labelled_smp[labelled_smp["smp_idx"] == curr_smp_idx]
+        Y = smp_profile["label"]
+        z = smp_profile["distance"]
+        x1 = i * distance_between_smp
+        x2 = (i+1) * distance_between_smp
+        colors_list = [value for key, value in my_colors.items() if key >= min(Y) and key <= max(Y)]
+        plt.contourf([x1, x2], z, np.array([Y,Y]).transpose(), cmap=colors.ListedColormap(colors_list))
+
+    plt.xlabel('Snow Micro Pen Profiles')
+    plt.ylabel('Depth (mm)')
+    plt.gca().invert_yaxis()
+    plt.tight_layout()
+    markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='') for color in anti_colors.values()]
+    plt.legend(markers, anti_colors.keys(), numpoints=1)
+    plt.title("All Labelled SMP Profiles with Assigned Labels")
+    plt.grid()
+    plt.show()
+
 def bog_plot(smp):
-    labelled_smp = smp[(smp["label"] != 0)]
+    """ Creates a bog plot for the given smp profiles. Makes the mean force visible.
+    Parameters:
+        smp (pd.DataFrame): dataframe containing smp profiles
+    """
+    labelled_smp = smp[(smp["label"] != 0) & (smp["label"] != 2)]
     distance_between_smp = 0.5
     day_id = 1
     smp_indices = labelled_smp["smp_idx"].unique()
@@ -207,31 +246,136 @@ def bog_plot(smp):
         x2 = (i+1) * distance_between_smp
         plt.contourf([x1, x2], z, np.array([Y,Y]).transpose(), cmap='jet')
 
-    plt.xlabel('Transect position (m)')
+    plt.xlabel('Snow Micro Pen Profiles')
     plt.ylabel('Depth (mm)')
     plt.gca().invert_yaxis()
     plt.tight_layout()
     cbar = plt.colorbar()
-    cbar.set_label('Mean force (N)', rotation=90)
+    cbar.set_label("Mean force (N)", rotation=90)
+    plt.title("All Labelled SMP Profiles with Mean Force Values")
     plt.grid()
     plt.show()
 
-def visualize_original_data(smp):
-    """ Visualizing some things of the original data
+# TODO Labels and colors for 3d plot
+# TODO cleaning up
+def pca(smp):
+    """ Visualizing 2d and 2d plot with the 2 or 3 principal components that explain the most variance.
     Parameters:
         smp (df.DataFrame): SMP preprocessed data
     """
-    smp_profile_name = "S31H0368" #"S31H0607"
+    smp_labelled = smp[(smp["label"] != 0) & (smp["label"] != 2)]
+    x = smp_labelled.drop(["label", "smp_idx"], axis=1)
+    y = smp_labelled["label"]
+    # first two components explain the most anyway!
+    pca = PCA(n_components=3, random_state=42)
+    pca_result = pca.fit_transform(x)
+    smp_with_pca = pd.DataFrame({"pca-one": pca_result[:,0], "pca-two": pca_result[:,1], "pca-three": pca_result[:,2], "label": y})
+    print("Explained variation per principal component: {}.".format(pca.explained_variance_ratio_))
+
+    # 2d plot
+    sns.scatterplot(x="pca-one", y="pca-two", hue="label", palette=COLORS, data=smp_with_pca, alpha=0.3)
+    plt.show()
+
+    # 3d plot
+    ax = plt.figure(figsize=(16,10)).gca(projection="3d")
+    ax.scatter(xs=smp_with_pca["pca-one"], ys=smp_with_pca["pca-two"], zs=smp_with_pca["pca-three"], c=smp_with_pca["label"])
+    ax.set_xlabel("pca-one")
+    ax.set_ylabel("pca-two")
+    ax.set_zlabel("pca-three")
+    plt.show()
+
+# TODO Labels and colors for 3d plot
+# TODO cleaning up
+def tsne(smp):
+    """ Visualizing 2d and 2d plot with the 2 or 3 TSNE components.
+    Parameters:
+        smp (df.DataFrame): SMP preprocessed data
+    """
+    smp_labelled = smp[(smp["label"] != 0) & (smp["label"] != 2)]
+    x = smp_labelled.drop(["label", "smp_idx"], axis=1)
+    y = smp_labelled["label"]
+    tsne = TSNE(n_components=3, verbose=1, perplexity=40, n_iter=300, random_state=42)
+    tsne_results = tsne.fit_transform(x)
+    smp_with_tsne = pd.DataFrame({"tsne-one": tsne_results[:, 0], "tsne-two": tsne_results[:, 1], "tsne-three": tsne_results[:, 2], "label": y})
+
+    # 2d plot
+    sns.scatterplot(x="tsne-one", y="tsne-two", hue="label", palette=COLORS, data=smp_with_tsne, alpha=0.3)
+    plt.show()
+
+    # 3d plot
+    ax = plt.figure(figsize=(16,10)).gca(projection="3d")
+    ax.scatter(xs=smp_with_tsne["tsne-one"], ys=smp_with_tsne["tsne-two"], zs=smp_with_tsne["tsne-three"], c=smp_with_tsne["label"])
+    ax.set_xlabel("tsne-one")
+    ax.set_ylabel("tsne-two")
+    ax.set_zlabel("tsne-three")
+    plt.show()
+
+# TODO clean-up, 3d plot, labeling, etc.
+def tsne_pca(smp):
+    """ Visualizing 2d and 2d plot with the 2 or 3 TSNE components being feed with 3 principal components of a previous PCA.
+    Parameters:
+        smp (df.DataFrame): SMP preprocessed data
+    """
+    smp_labelled = smp[(smp["label"] != 0) & (smp["label"] != 2)]
+    x = smp_labelled.drop(["label", "smp_idx"], axis=1)
+    y = smp_labelled["label"]
+    pca = PCA(n_components=3, random_state=42)
+    pca_result = pca.fit_transform(x)
+    print("Cumulative explained variation for 3 principal components: {}".format(np.sum(pca.explained_variance_ratio_)))
+    tsne = TSNE(n_components=2, verbose=1, perplexity=40, n_iter=300)
+    tsne_pca_results = tsne.fit_transform(pca_result)
+    smp_pca_tsne = pd.DataFrame({"tsne-pca3-one": tsne_pca_results[:, 0], "tsne-pca3-two": tsne_pca_results[:, 1], "label": y})
+    sns.scatterplot(x="tsne-pca3-one", y="tsne-pca3-two", hue="label", palette=COLORS, data=smp_pca_tsne, alpha=0.3)
+    plt.show()
+
+# TODO cleanup, etc.
+# save table, use different table format
+# maybe add plot to ANOVA
+def forest_extractor(smp):
+    """ Random Forest for feature extraction.
+    """
+    smp_labelled = smp[(smp["label"] != 0) & (smp["label"] != 2)]
+    x = smp_labelled.drop(["label", "smp_idx"], axis=1)
+    y = smp_labelled["label"]
+    # Build a forest and compute the impurity-based feature importances
+    forest = ExtraTreesClassifier(n_estimators=250,
+                                  random_state=42)
+    forest.fit(x, y)
+    importances = forest.feature_importances_
+    std = np.std([tree.feature_importances_ for tree in forest.estimators_], axis=0)
+    indices = np.argsort(importances)[::-1]
+    indices_names = [list(x.columns)[index] for index in indices]
+
+    # Print the feature ranking
+    print("Feature ranking:")
+    for f in range(x.shape[1]):
+        print("%d. feature %s (%f)" % (f + 1, indices_names[f], importances[indices[f]]))
+    # Plot the impurity-based feature importances of the forest
+    plt.figure()
+    plt.title("Feature importances")
+    plt.bar(range(x.shape[1]), importances[indices],
+            color="lightgreen", yerr=std[indices], align="center")
+    plt.xticks(range(x.shape[1]), indices_names, rotation=55)
+    plt.xlim([-1, x.shape[1]])
+    plt.show()
+
+def visualize_normalized_data(smp):
+    """ Visualization after normalization and summing up classes has been achieved.
+    Parameters:
+        smp (df.DataFrame): SMP preprocessed data
+    """
+    smp_profile_name = "S31H0368"
     # HOW BALANCED IS THE LABELLED DATASET?
     #plot_balancing(smp)
     # SHOW THE DATADISTRIBUTION OF ALL FEATURES
     #pairwise_features(smp, features=["label", "distance", "var_force", "mean_force", "delta_4", "lambda_4", "gradient"], samples=200)
     # SHOW HEATMAP OF ALL FEATURES (with what are the labels correlated the most?)
-    corr_heatmap(smp, labels=[3, 4, 5, 6, 7, 8, 9, 10])
+    corr_heatmap(smp, labels=[3, 4, 5, 6, 12, 17])
     # Correlation does not help for categorical + continuous data - use ANOVA instead
     # FEATURE "EXTRACTION"
-    anova(smp, "plots/tables/ANOVA_results.txt", tablefmt="psql") # latex_raw also possible
-    # TODO: RANDOM FOREST FEATURE EXTRACTION
+    #anova(smp, "plots/tables/ANOVA_results.txt", tablefmt="psql") # latex_raw also possible
+    # RANDOM FOREST FEATURE EXTRACTION
+    #forest_extractor(smp)
     # SHOW ONE SMP PROFILE WITHOUT LABELS
     #smp_unlabelled(smp, smp_name=smp_profile_name)
     # SHOW ONE SMP PROFILE WITH LABELS
@@ -240,7 +384,43 @@ def visualize_original_data(smp):
     #smp_features(smp, smp_name=smp_profile_name, features=["mean_force", "var_force", "delta_4", "delta_12", "gradient"])
 
     # PLOT BOGPLOT
+    # bog_plot(smp)
+    bog_label_plot(smp)
+
+    # PCA and TSNE
+    # pca(smp)
+    # tsne(smp)
+    # tsne_pca(smp)
+
+
+
+
+def visualize_original_data(smp):
+    """ Visualizing some things of the original data
+    Parameters:
+        smp (df.DataFrame): SMP preprocessed data
+    """
+    # smp_profile_name = "S31H0368" #"S31H0607"
+    # # HOW BALANCED IS THE LABELLED DATASET?
+    #plot_balancing(smp)
+    # # SHOW THE DATADISTRIBUTION OF ALL FEATURES
+    # pairwise_features(smp, features=["label", "distance", "var_force", "mean_force", "delta_4", "lambda_4", "gradient"], samples=2000)
+    # # SHOW HEATMAP OF ALL FEATURES (with what are the labels correlated the most?)
+    # corr_heatmap(smp, labels=[3, 4, 5, 6, 7, 8, 9, 10])
+    # # Correlation does not help for categorical + continuous data - use ANOVA instead
+    # # FEATURE "EXTRACTION"
+    # anova(smp, "plots/tables/ANOVA_results.txt", tablefmt="psql") # latex_raw also possible
+    # # TODO: RANDOM FOREST FEATURE EXTRACTION
+    # # SHOW ONE SMP PROFILE WITHOUT LABELS
+    # smp_unlabelled(smp, smp_name=smp_profile_name)
+    # # SHOW ONE SMP PROFILE WITH LABELS
+    # smp_labelled(smp, smp_name=smp_profile_name)
+    # # PLOT ALL FEATURES AS LINES IN ONE PROFILE
+    # smp_features(smp, smp_name=smp_profile_name, features=["mean_force", "var_force", "delta_4", "delta_12", "gradient"])
+
+    # PLOT BOGPLOT
     #bog_plot(smp)
+    bog_label_plot(smp)
 
 def main():
     # load dataframe with smp data

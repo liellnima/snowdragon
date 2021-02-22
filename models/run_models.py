@@ -1,7 +1,7 @@
 # import from other snowdragon modules
 from data_handling.data_loader import load_data
 from data_handling.data_parameters import LABELS, ANTI_LABELS, COLORS
-from models.visualization import visualize_original_data # TODO or something like this
+from models.visualization import visualize_original_data, visualize_normalized_data # TODO or something like this
 from models.cv_handler import cv_manual, mean_kfolds
 from models.supervised_models import svm, random_forest, ada_boost, knn
 from models.semisupervised_models import kmeans, gaussian_mix, bayesian_gaussian_mix
@@ -55,7 +55,7 @@ def my_train_test_split(smp, test_size=0.2, train_size=0.8):
     print("Labels in testing data:\n", y_test.value_counts())
     return x_train, x_test, y_train, y_test
 
-def sum_up_labels(smp, labels, name, label_idx, color="orchid"):
+def sum_up_labels(smp, labels, name, label_idx, color="blue"):
     """ Sums up the datapoints belonging to one of the classes in labels to one class.
     Parameters:
         smp (pd.DataFrame): a dataframe with the smp profiles
@@ -171,23 +171,23 @@ def normalize_mosaic(smp):
 # TODO one parameter should be the table format of the output
 def main():
     # 1. Load dataframe with smp data
-    smp = load_data("smp_all_03.npz")#("smp_lambda_delta_gradient.npz")
+    smp_org = load_data("smp_all_03.npz")#("smp_lambda_delta_gradient.npz")
     # remove nans
-    smp = remove_nans_mosaic(smp)
+    smp_org = remove_nans_mosaic(smp_org)
 
     # 2. Visualize before normalization
-    #visualize_original_data(smp)
+    #visualize_original_data(smp_org)
 
     # 3. Normalize
-    smp = normalize_mosaic(smp)
+    smp = normalize_mosaic(smp_org)
     # 4. Sum up certain classes if necessary (alternative: do something to balance the dataset)
-    # (keep: 6, 3, 4, 13, 5: rgwp, dh, dhid, mfcl, mfdh)
-    smp = sum_up_labels(smp, ["df", "ifwp", "if", "sh", "snow-ice", "dhwp", "mfsl", "mfcr", "pp"], name="rare", label_idx=17)
+    # (keep: 6, 3, 4, 12, 5, 16: rgwp, dh, dhid, dhwp, mfdh, pp)
+    smp = sum_up_labels(smp, ["df", "ifwp", "if", "sh", "snow-ice", "mfcl", "mfsl", "mfcr"], name="rare", label_idx=17)
 
     # TODO: maybe visualize some things only after normalization and standardization?
     # 5. Visualize the data after normalization
-    visualize_original_data(smp)
-
+    visualize_normalized_data(smp)
+    exit(0)
     # 6. Prepare data for two of the semisupervised modles:
     # prepare dataset of unlabelled data
     unlabelled_smp = smp.loc[(smp["label"] == 0)].copy()
