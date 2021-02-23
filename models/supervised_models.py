@@ -1,29 +1,33 @@
 from models.cv_handler import calculate_metrics_cv
+from models.visualization import visualize_tree
 
 from sklearn.svm import SVC
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import RandomForestClassifier
 from imblearn.ensemble import EasyEnsembleClassifier
 
-# TODO make return_train_score a parameter
 
-def random_forest(x_train, y_train, cv, name="RandomForest"):
+# TODO make return_train_score a parameter
+def random_forest(x_train, y_train, cv, name="RandomForest", visualize=False):
     """ Random Forest.
     Parameters:
         x_train: Input data for training
         y_train: Target data for training
         cv (list of tuples): cross validation indices
         name (str): Name/Description for the model
+        visualize (bool): whether a single decision tree from the forest should be plotted
     Returns:
         dict: contains results of models
     """
-    rf = RandomForestClassifier(n_estimators=10,
+    rf = RandomForestClassifier(n_estimators = 10,
                                 criterion = "entropy",
                                 bootstrap = True,
                                 max_samples = 0.6,     # 60 % of the training data (None: all)
                                 max_features = "sqrt", # uses sqrt(num_features) features
                                 class_weight = "balanced", # balanced_subsample computes weights based on bootstrap sample
                                 random_state = 42)
+    if visualize:
+        visualize_tree(rf, x_train, y_train, file_name="plots/forests/tree")
     return calculate_metrics_cv(model=rf, X=x_train, y_true=y_train, cv=cv, name=name)
 
 def svm(x_train, y_train, cv, gamma="auto", name="SupportVectorMachine"):

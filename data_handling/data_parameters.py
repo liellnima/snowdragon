@@ -15,7 +15,7 @@ ANTI_LABELS = {0: "not_labelled",  1: "surface", 2: "ground", 3: "dh", 4: "dhid"
 
 COLORS = {0: "lightsteelblue", 1: "chocolate", 2: "darkslategrey", 3: "lightseagreen", 4: "mediumaquamarine", 5: "midnightblue",
           6: "tomato", 7: "mediumvioletred", 8: "firebrick", 9: "lightgreen", 10: "orange", 11: "paleturquoise",
-          12: "gold", 13: "orchid", 14: "fuchsia", 15: "brown", 16: "lila"}
+          12: "gold", 13: "orchid", 14: "fuchsia", 15: "brown", 16: "green"}
 
 # arguments for Preprocessing
 PARAMS = {"sum_mm": 1, "gradient": True, "window_size": [4,12], "window_type": "gaussian",

@@ -184,7 +184,6 @@ def main():
     # (keep: 6, 3, 4, 12, 5, 16: rgwp, dh, dhid, dhwp, mfdh, pp)
     smp = sum_up_labels(smp, ["df", "ifwp", "if", "sh", "snow-ice", "mfcl", "mfsl", "mfcr"], name="rare", label_idx=17)
 
-    # TODO: maybe visualize some things only after normalization and standardization?
     # 5. Visualize the data after normalization
     visualize_normalized_data(smp)
     exit(0)
@@ -226,50 +225,50 @@ def main():
     # 9. Call the models
     all_scores = []
 
-    # A Baseline - majority class predicition
-    print("Starting Baseline Model...")
-    baseline_scores = majority_class_baseline(x_train, y_train, cv_stratified)
-    all_scores.append(mean_kfolds(baseline_scores))
-    print("...finished Baseline Model.\n")
-
-    # B kmeans clustering (does not work well)
-    # BEST cluster selection criterion: no difference, you can use either acc or sil (use sil in this case!)
-    print("Starting K-Means Model...")
-    kmeans_scores = kmeans(unlabelled_smp_x, x_train, y_train, cv_stratified, num_clusters=10, find_num_clusters="acc", plot=False)
-    all_scores.append(mean_kfolds(kmeans_scores))
-    print("...finished K-Means Model.\n")
-
-    # C mixture model clustering ("diag" works best at the moment)
-    # BEST cluster selection criterion: bic is slightly better than acc (generalization)
-    print("Starting Gaussian Mixture Model...")
-    gm_acc_diag = gaussian_mix(unlabelled_smp_x, x_train, y_train, cv_stratified, cov_type="diag", find_num_components="acc", plot=False)
-    all_scores.append(mean_kfolds(gm_acc_diag))
-    print("...finished Gaussian Mixture Model.\n")
-
-    print("Starting Baysian Gaussian Mixture Model...")
-    bgm_acc_diag = bayesian_gaussian_mix(unlabelled_smp_x, x_train, y_train, cv_stratified, cov_type="diag")
-    all_scores.append(mean_kfolds(bgm_acc_diag))
-    print("...finished Bayesian Gaussian Mixture Model.\n")
-
-    # TAKES A LOT OF TIME FOR COMPLETE DATA SET
-    # D + E -> different data preparation necessary
-
-    # D label spreading model
-    print("Starting Label Spreading Model...")
-    ls_scores = label_spreading(x_train=x_train_all, y_train=y_train_all, cv=cv_semisupervised, name="LabelSpreading_1000")
-    all_scores.append(mean_kfolds(ls_scores))
-    print("...finished Label Spreading Model.\n")
-
-    # TODO it makes sense to use the best hyperparameter tuned models here!
-    # E self training model
-    print("Starting Self Training Classifier...")
-    st_scores = self_training(x_train=x_train_all, y_train=y_train_all, cv=cv_semisupervised, name="SelfTraining_1000")
-    all_scores.append(mean_kfolds(st_scores))
-    print("...finished Self Training Classifier.\n")
+    # # A Baseline - majority class predicition
+    # print("Starting Baseline Model...")
+    # baseline_scores = majority_class_baseline(x_train, y_train, cv_stratified)
+    # all_scores.append(mean_kfolds(baseline_scores))
+    # print("...finished Baseline Model.\n")
+    #
+    # # B kmeans clustering (does not work well)
+    # # BEST cluster selection criterion: no difference, you can use either acc or sil (use sil in this case!)
+    # print("Starting K-Means Model...")
+    # kmeans_scores = kmeans(unlabelled_smp_x, x_train, y_train, cv_stratified, num_clusters=10, find_num_clusters="acc", plot=False)
+    # all_scores.append(mean_kfolds(kmeans_scores))
+    # print("...finished K-Means Model.\n")
+    #
+    # # C mixture model clustering ("diag" works best at the moment)
+    # # BEST cluster selection criterion: bic is slightly better than acc (generalization)
+    # print("Starting Gaussian Mixture Model...")
+    # gm_acc_diag = gaussian_mix(unlabelled_smp_x, x_train, y_train, cv_stratified, cov_type="diag", find_num_components="acc", plot=False)
+    # all_scores.append(mean_kfolds(gm_acc_diag))
+    # print("...finished Gaussian Mixture Model.\n")
+    #
+    # print("Starting Baysian Gaussian Mixture Model...")
+    # bgm_acc_diag = bayesian_gaussian_mix(unlabelled_smp_x, x_train, y_train, cv_stratified, cov_type="diag")
+    # all_scores.append(mean_kfolds(bgm_acc_diag))
+    # print("...finished Bayesian Gaussian Mixture Model.\n")
+    #
+    # # TAKES A LOT OF TIME FOR COMPLETE DATA SET
+    # # D + E -> different data preparation necessary
+    #
+    # # D label spreading model
+    # print("Starting Label Spreading Model...")
+    # ls_scores = label_spreading(x_train=x_train_all, y_train=y_train_all, cv=cv_semisupervised, name="LabelSpreading_1000")
+    # all_scores.append(mean_kfolds(ls_scores))
+    # print("...finished Label Spreading Model.\n")
+    #
+    # # TODO it makes sense to use the best hyperparameter tuned models here!
+    # # E self training model
+    # print("Starting Self Training Classifier...")
+    # st_scores = self_training(x_train=x_train_all, y_train=y_train_all, cv=cv_semisupervised, name="SelfTraining_1000")
+    # all_scores.append(mean_kfolds(st_scores))
+    # print("...finished Self Training Classifier.\n")
 
     # F random forests (works)
     print("Starting Random Forest Model ...")
-    rf_scores = random_forest(x_train, y_train, cv_stratified)
+    rf_scores = random_forest(x_train, y_train, cv_stratified, visualize=True)
     all_scores.append(mean_kfolds(rf_scores))
     print("...finished Random Forest Model.\n")
 

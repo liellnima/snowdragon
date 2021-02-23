@@ -3,6 +3,7 @@ from data_handling.data_loader import load_data
 from data_handling.data_preprocessing import idx_to_int
 from data_handling.data_parameters import LABELS, ANTI_LABELS, COLORS
 
+import os
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -13,11 +14,13 @@ import matplotlib.ticker as ticker
 
 from scipy import stats
 from tabulate import tabulate
+from sklearn.manifold import TSNE
+from sklearn.decomposition import PCA
+from sklearn.tree import export_graphviz
+from sklearn.tree._tree import TREE_LEAF
+from sklearn.feature_selection import f_classif
 from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.feature_selection import SelectKBest
-from sklearn.feature_selection import f_classif
-from sklearn.decomposition import PCA
-from sklearn.manifold import TSNE
 
 
 def smp_unlabelled(smp, smp_name):
@@ -358,6 +361,60 @@ def forest_extractor(smp):
     plt.xticks(range(x.shape[1]), indices_names, rotation=55)
     plt.xlim([-1, x.shape[1]])
     plt.show()
+
+def prune(decisiontree, min_samples_leaf = 1):
+    """ Function for posterior decision tree pruning.
+    Paramters:
+        decisiontree (sklearn.tree): The decision tree to prune
+        min_samples_leaf (int): How many samples should be sorted to this leaf minimally?
+    """
+    if decisiontree.min_samples_leaf >= min_samples_leaf:
+        raise Exception('Tree already more pruned')
+    else:
+        decisiontree.min_samples_leaf = min_samples_leaf
+        tree = decisiontree.tree_
+        for i in range(tree.node_count):
+            n_samples = tree.n_node_samples[i]
+            if n_samples <= min_samples_leaf:
+                tree.children_left[i]=-1
+                tree.children_right[i]=-1
+
+def visualize_tree(rf, x_train, y_train, tree_idx=0, min_samples_leaf=1000, file_name="tree"):
+    """ Visualizes a single tree from a decision tree. Works only explicitly for my current data.
+    Parameters:
+        rf (RandomForestClassifier): the scikit learn random forest classfier
+        x_train: Input data for training
+        y_train: Target data for training
+        tree_idx: Indicates which tree from the random forest should be visualized?
+        min_samples_leaf: Indicates how many samples should be sorted to a leaf minimally
+        file_name: The name under which the resulting png should be saved
+    """
+    # deciding directly which label gets which decision tree label
+    y_train[y_train==6.0] = 0
+    y_train[y_train==3.0] = 1
+    y_train[y_train==5.0] = 2
+    y_train[y_train==12.0] = 3
+    y_train[y_train==4.0] = 4
+    y_train[y_train==17.0] = 5
+    y_train[y_train==16.0] = 6
+    anti_labels = {0:"rgwp", 1:"dh", 2: "mfdh", 3:"dhwp", 4:"dhid", 5:"rare", 6:"pp"}
+
+    # fit the model
+    rf.fit(x_train, y_train)
+    # extract one decision tree
+    estimator = rf.estimators_[tree_idx]
+    # we have to prune the tree otherwise the tree is way too big
+    prune(estimator, min_samples_leaf=min_samples_leaf)
+    class_names = [anti_labels[label] for label in y_train.unique()]
+    # export image as dot file
+    export_graphviz(estimator, out_file = file_name + ".dot",
+                feature_names = x_train.columns,
+                class_names = class_names,
+                rounded = True, proportion = False,
+                precision = 2, filled = True)
+    # make a png file from the dot file and delete the dot file
+    os.system("dot -Tpng "+ file_name + ".dot -o " + file_name + ".png")
+    os.system("rm " + file_name + ".dot")
 
 def visualize_normalized_data(smp):
     """ Visualization after normalization and summing up classes has been achieved.
