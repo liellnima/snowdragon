@@ -159,12 +159,15 @@ def normalize_mosaic(smp):
     non_physical_features = [feature for feature in smp.columns if ("lambda" in feature) or ("delta" in feature) or ("L" in feature)]
     for feature in non_physical_features:
         smp = normalize(smp, feature, min=0, max=smp[feature].max())
-    # Unclear: gradient, var_force
-    smp = normalize(smp, "gradient", min=smp["gradient"].min(), max= smp["gradient"].max())
+    # gradient
+    smp = normalize(smp, "gradient", min=smp["gradient"].min(), max=smp["gradient"].max())
+    # var features
     var_features = [feature for feature in smp.columns if ("var" in feature)]
     for feature in var_features:
         smp = normalize(smp, feature, min=0, max=smp[feature].max())
-
+    # distances
+    smp = normalize(smp, "distance", min=smp["distance"].min(), max=smp["distance"].max())
+    smp = normalize(smp, "dist_ground", min=smp["dist_ground"].min(), max=smp["dist_ground"].max())
     return smp
 
 # TODO put this in an own function

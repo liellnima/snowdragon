@@ -20,8 +20,6 @@ EXP_LOC = Path(EXP_LOC)
 T_LOC = Path(T_LOC)
 
 
-
-
 # exports pnt files (our smp profiles!) to csv files in a target directory
 def export_pnt (pnt_dir, target_dir, export_as="npz", overwrite=False, **kwargs):
     """ Exports all pnt files from a dir and its subdirs as csv files into a new dir.
@@ -43,7 +41,7 @@ def export_pnt (pnt_dir, target_dir, export_as="npz", overwrite=False, **kwargs)
     file_generator = glob.iglob(match_pnt, recursive=True)
     # yields each matching file and exports it
     print("Progressbar is only correct when using the Mosaic SMP Data.")
-    with tqdm(total=3730) as pbar:
+    with tqdm(total=3825) as pbar:
         for file in file_generator:
             file_name = Path(target_dir, file.split("/")[-1].split(".")[0] + "." + export_as)
             # exports file only if we want to overwrite it or it doesnt exist yet
@@ -413,7 +411,7 @@ def preprocess_profile(profile, target_dir, export_as="csv", sum_mm=1, gradient=
         else:
             final_df[col] = final_df[col].astype("float32")
 
-    # export as csv or npz
+    export as csv or npz
     if export_as == "csv":
         final_df.to_csv(os.path.join(target_dir, Path(profile.name + ".csv")))
     elif export_as == "npz":
@@ -463,7 +461,7 @@ def main():
     start = time.time()
     # export data from pnt to csv or npz
     # pnt_dir can be also a small sub directory if you want to update only a few files
-    #export_pnt(pnt_dir=SMP_LOC, target_dir=EXP_LOC, export_as="npz", overwrite=False, **PARAMS)
+    #export_pnt(pnt_dir=SMP_LOC, target_dir=EXP_LOC, export_as="npz", overwrite=True, **PARAMS)
 
     # OTHER OPTIONS
     # unite csv data in one csv file, index it, convert it to pandas (and save it as npz)
@@ -481,7 +479,7 @@ def main():
     smp_first = npz_to_pd(EXP_LOC, is_dir=True)
     # than: export smp as united npz
     dict = smp_first.to_dict(orient="list")
-    np.savez_compressed("smp_all_03.npz", **dict)
+    np.savez_compressed("smp_all_test.npz", **dict)
 
     # AFTER FIRST time and during first time:
     # load pd directly from this npz

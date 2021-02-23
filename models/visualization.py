@@ -145,12 +145,56 @@ def anova(smp, file_name=None, tablefmt='psql'):
     fit = test.fit(features, target)
     results = pd.DataFrame({"Feature" : features.columns, "ANOVA-F-value" : fit.scores_, "P-value" : fit.pvalues_})
     results = results.sort_values(by=["ANOVA-F-value"], ascending=False)
+    results = results.reset_index(drop=True)
 
     if file_name is not None:
         with open(file_name, "w") as f:
             f.write(tabulate(results, headers='keys', tablefmt=tablefmt))
 
+    print("ANOVA Feature Ranking")
     print(tabulate(results, headers='keys', tablefmt=tablefmt))
+
+
+def forest_extractor(smp, file_name=None, tablefmt="psql", plot=False):
+    """ Random Forest for feature extraction.
+    Parameters:
+        smp (df.DataFrame): SMP preprocessed data
+        file_name (str): in case the results should be saved in a file, indicate the path here
+        tablefmt (str): table format that should be used for tabulate, e.g. 'psql' or 'latex_raw'
+        plot (bool): shows a plotbar with the ranked feature importances
+    """
+    smp_labelled = smp[(smp["label"] != 0) & (smp["label"] != 2)]
+    x = smp_labelled.drop(["label", "smp_idx"], axis=1)
+    y = smp_labelled["label"]
+    # Build a forest and compute the impurity-based feature importances
+    forest = ExtraTreesClassifier(n_estimators=250,
+                                  random_state=42)
+    forest.fit(x, y)
+    importances = forest.feature_importances_
+    std = np.std([tree.feature_importances_ for tree in forest.estimators_], axis=0)
+    indices = np.argsort(importances)[::-1]
+    indices_names = [list(x.columns)[index] for index in indices]
+
+    # Print the feature ranking
+    importance_list = [importances[indices[f]] for f in range(x.shape[1])]
+    results = pd.DataFrame({"Feature" : indices_names, "Tree-Importance" : importance_list})
+
+    if file_name is not None:
+        with open(file_name, "w") as f:
+            f.write(tabulate(results, headers='keys', tablefmt=tablefmt))
+
+    print("Decision Tree Feature Ranking:")
+    print(tabulate(results, headers='keys', tablefmt=tablefmt))
+
+    # Plot the impurity-based feature importances of the forest
+    if plot:
+        plt.figure()
+        plt.title("Feature importances")
+        plt.bar(range(x.shape[1]), importances[indices],
+                color="lightgreen", yerr=std[indices], align="center")
+        plt.xticks(range(x.shape[1]), indices_names, rotation=55)
+        plt.xlim([-1, x.shape[1]])
+        plt.show()
 
 def pairwise_features(smp, features, samples=None, kde=False):
     """ Produces a plot that shows the relation between all the feature given in the features list.
@@ -194,7 +238,7 @@ def plot_balancing(smp):
     ax.set_ylim(0,len(labelled_smp))
     plt.show()
 
-# TODO why do depth hoar and depth hoar indurated not show up in the data? (only very few times)
+# TODO why does rounded grains do not appear more often?
 def bog_label_plot(smp):
     """ Creates a bog plot for the given smp profiles. Makes the labels visible.
     Parameters:
@@ -259,108 +303,117 @@ def bog_plot(smp):
     plt.grid()
     plt.show()
 
-# TODO Labels and colors for 3d plot
-# TODO cleaning up
-def pca(smp):
+def pca(smp, dim="both"):
     """ Visualizing 2d and 2d plot with the 2 or 3 principal components that explain the most variance.
     Parameters:
         smp (df.DataFrame): SMP preprocessed data
+        dim (str): 2d, 3d or both - for visualization
     """
     smp_labelled = smp[(smp["label"] != 0) & (smp["label"] != 2)]
     x = smp_labelled.drop(["label", "smp_idx"], axis=1)
     y = smp_labelled["label"]
+    anti_colors = {ANTI_LABELS[key] : value for key, value in COLORS.items() if key in smp_labelled["label"].unique()}
     # first two components explain the most anyway!
     pca = PCA(n_components=3, random_state=42)
     pca_result = pca.fit_transform(x)
     smp_with_pca = pd.DataFrame({"pca-one": pca_result[:,0], "pca-two": pca_result[:,1], "pca-three": pca_result[:,2], "label": y})
-    print("Explained variation per principal component: {}.".format(pca.explained_variance_ratio_))
-
+    print("Explained variance per principal component: {}.".format(pca.explained_variance_ratio_))
+    print("Cumulative explained variance: {}".format(sum(pca.explained_variance_ratio_)))
     # 2d plot
-    sns.scatterplot(x="pca-one", y="pca-two", hue="label", palette=COLORS, data=smp_with_pca, alpha=0.3)
-    plt.show()
+    if dim == "2d" or dim == "both":
+        g = sns.scatterplot(x="pca-one", y="pca-two", hue="label", palette=COLORS, data=smp_with_pca, alpha=0.3)
+        markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='') for color in anti_colors.values()]
+        plt.legend(markers, anti_colors.keys(), numpoints=1, loc="center left", bbox_to_anchor=(1.04, 0.5))
+        plt.show()
 
     # 3d plot
-    ax = plt.figure(figsize=(16,10)).gca(projection="3d")
-    ax.scatter(xs=smp_with_pca["pca-one"], ys=smp_with_pca["pca-two"], zs=smp_with_pca["pca-three"], c=smp_with_pca["label"])
-    ax.set_xlabel("pca-one")
-    ax.set_ylabel("pca-two")
-    ax.set_zlabel("pca-three")
-    plt.show()
+    if dim == "3d" or dim == "both":
+        ax = plt.figure(figsize=(16,10)).gca(projection="3d")
+        color_labels = [COLORS[label] for label in smp_with_pca["label"]]
+        g = ax.scatter(xs=smp_with_pca["pca-one"], ys=smp_with_pca["pca-two"], zs=smp_with_pca["pca-three"], c=color_labels, alpha=0.3)
+        ax.set_xlabel("pca-one")
+        ax.set_ylabel("pca-two")
+        ax.set_zlabel("pca-three")
+        markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='') for color in anti_colors.values()]
+        plt.legend(markers, anti_colors.keys(), numpoints=1, bbox_to_anchor=(1.04, 0.5), loc=2)
+        plt.show()
 
-# TODO Labels and colors for 3d plot
-# TODO cleaning up
-def tsne(smp):
+def tsne(smp, dim="both"):
     """ Visualizing 2d and 2d plot with the 2 or 3 TSNE components.
     Parameters:
         smp (df.DataFrame): SMP preprocessed data
+        dim (str): 2d, 3d or both - for visualization
     """
     smp_labelled = smp[(smp["label"] != 0) & (smp["label"] != 2)]
     x = smp_labelled.drop(["label", "smp_idx"], axis=1)
     y = smp_labelled["label"]
-    tsne = TSNE(n_components=3, verbose=1, perplexity=40, n_iter=300, random_state=42)
-    tsne_results = tsne.fit_transform(x)
-    smp_with_tsne = pd.DataFrame({"tsne-one": tsne_results[:, 0], "tsne-two": tsne_results[:, 1], "tsne-three": tsne_results[:, 2], "label": y})
+    anti_colors = {ANTI_LABELS[key] : value for key, value in COLORS.items() if key in smp_labelled["label"].unique()}
 
-    # 2d plot
-    sns.scatterplot(x="tsne-one", y="tsne-two", hue="label", palette=COLORS, data=smp_with_tsne, alpha=0.3)
-    plt.show()
+    if dim == "2d" or dim == "both":
+        tsne = TSNE(n_components=2, verbose=1, perplexity=40, n_iter=300, random_state=42)
+        tsne_results = tsne.fit_transform(x)
+        smp_with_tsne = pd.DataFrame({"tsne-one": tsne_results[:, 0], "tsne-two": tsne_results[:, 1], "label": y})
 
-    # 3d plot
-    ax = plt.figure(figsize=(16,10)).gca(projection="3d")
-    ax.scatter(xs=smp_with_tsne["tsne-one"], ys=smp_with_tsne["tsne-two"], zs=smp_with_tsne["tsne-three"], c=smp_with_tsne["label"])
-    ax.set_xlabel("tsne-one")
-    ax.set_ylabel("tsne-two")
-    ax.set_zlabel("tsne-three")
-    plt.show()
+        sns.scatterplot(x="tsne-one", y="tsne-two", hue="label", palette=COLORS, data=smp_with_tsne, alpha=0.3)
+        markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='') for color in anti_colors.values()]
+        plt.legend(markers, anti_colors.keys(), numpoints=1, loc="center left", bbox_to_anchor=(1.04, 0.5))
+        plt.show()
 
-# TODO clean-up, 3d plot, labeling, etc.
-def tsne_pca(smp):
-    """ Visualizing 2d and 2d plot with the 2 or 3 TSNE components being feed with 3 principal components of a previous PCA.
+    if dim == "3d" or dim == "both":
+        tsne = TSNE(n_components=3, verbose=1, perplexity=40, n_iter=300, random_state=42)
+        tsne_results = tsne.fit_transform(x)
+        smp_with_tsne = pd.DataFrame({"tsne-one": tsne_results[:, 0], "tsne-two": tsne_results[:, 1], "tsne-three": tsne_results[:, 2], "label": y})
+
+        ax = plt.figure(figsize=(16,10)).gca(projection="3d")
+        color_labels = [COLORS[label] for label in smp_with_tsne["label"]]
+        ax.scatter(xs=smp_with_tsne["tsne-one"], ys=smp_with_tsne["tsne-two"], zs=smp_with_tsne["tsne-three"], c=color_labels, alpha=0.3)
+        ax.set_xlabel("tsne-one")
+        ax.set_ylabel("tsne-two")
+        ax.set_zlabel("tsne-three")
+        markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='') for color in anti_colors.values()]
+        plt.legend(markers, anti_colors.keys(), numpoints=1, bbox_to_anchor=(1.04, 0.5), loc=2)
+        plt.show()
+
+
+def tsne_pca(smp, n=3, dim="both"):
+    """ Visualizing 2d and 3d plot with the 2 or 3 TSNE components being feed with n principal components of a previous PCA.
     Parameters:
         smp (df.DataFrame): SMP preprocessed data
+        n (int): how many pca components should be used -> choose such that at least 90% of the variance is explained by them
+        dim (str): 2d, 3d or both - for visualization
     """
     smp_labelled = smp[(smp["label"] != 0) & (smp["label"] != 2)]
     x = smp_labelled.drop(["label", "smp_idx"], axis=1)
     y = smp_labelled["label"]
-    pca = PCA(n_components=3, random_state=42)
+    anti_colors = {ANTI_LABELS[key] : value for key, value in COLORS.items() if key in smp_labelled["label"].unique()}
+    pca = PCA(n_components=n, random_state=42)
     pca_result = pca.fit_transform(x)
-    print("Cumulative explained variation for 3 principal components: {}".format(np.sum(pca.explained_variance_ratio_)))
-    tsne = TSNE(n_components=2, verbose=1, perplexity=40, n_iter=300)
-    tsne_pca_results = tsne.fit_transform(pca_result)
-    smp_pca_tsne = pd.DataFrame({"tsne-pca3-one": tsne_pca_results[:, 0], "tsne-pca3-two": tsne_pca_results[:, 1], "label": y})
-    sns.scatterplot(x="tsne-pca3-one", y="tsne-pca3-two", hue="label", palette=COLORS, data=smp_pca_tsne, alpha=0.3)
-    plt.show()
+    print("Cumulative explained variation for {} principal components: {}".format(n, np.sum(pca.explained_variance_ratio_)))
 
-# TODO cleanup, etc.
-# save table, use different table format
-# maybe add plot to ANOVA
-def forest_extractor(smp):
-    """ Random Forest for feature extraction.
-    """
-    smp_labelled = smp[(smp["label"] != 0) & (smp["label"] != 2)]
-    x = smp_labelled.drop(["label", "smp_idx"], axis=1)
-    y = smp_labelled["label"]
-    # Build a forest and compute the impurity-based feature importances
-    forest = ExtraTreesClassifier(n_estimators=250,
-                                  random_state=42)
-    forest.fit(x, y)
-    importances = forest.feature_importances_
-    std = np.std([tree.feature_importances_ for tree in forest.estimators_], axis=0)
-    indices = np.argsort(importances)[::-1]
-    indices_names = [list(x.columns)[index] for index in indices]
+    if dim == "2d" or dim == "both":
+        tsne = TSNE(n_components=2, verbose=1, perplexity=40, n_iter=300, random_state=42)
+        tsne_pca_results = tsne.fit_transform(pca_result)
+        smp_pca_tsne = pd.DataFrame({"tsne-pca{}-one".format(n): tsne_pca_results[:, 0], "tsne-pca{}-two".format(n): tsne_pca_results[:, 1], "label": y})
 
-    # Print the feature ranking
-    print("Feature ranking:")
-    for f in range(x.shape[1]):
-        print("%d. feature %s (%f)" % (f + 1, indices_names[f], importances[indices[f]]))
-    # Plot the impurity-based feature importances of the forest
-    plt.figure()
-    plt.title("Feature importances")
-    plt.bar(range(x.shape[1]), importances[indices],
-            color="lightgreen", yerr=std[indices], align="center")
-    plt.xticks(range(x.shape[1]), indices_names, rotation=55)
-    plt.xlim([-1, x.shape[1]])
-    plt.show()
+        sns.scatterplot(x="tsne-pca{}-one".format(n), y="tsne-pca{}-two".format(n), hue="label", palette=COLORS, data=smp_pca_tsne, alpha=0.3)
+        markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='') for color in anti_colors.values()]
+        plt.legend(markers, anti_colors.keys(), numpoints=1, loc="center left", bbox_to_anchor=(1.04, 0.5))
+        plt.show()
+
+    if dim == "3d" or dim == "both":
+        tsne = TSNE(n_components=3, verbose=1, perplexity=40, n_iter=300, random_state=42)
+        tsne_pca_results = tsne.fit_transform(pca_result)
+        smp_pca_tsne = pd.DataFrame({"tsne-one": tsne_pca_results[:, 0], "tsne-two": tsne_pca_results[:, 1], "tsne-three": tsne_pca_results[:, 2], "label": y})
+
+        ax = plt.figure(figsize=(16,10)).gca(projection="3d")
+        color_labels = [COLORS[label] for label in smp_pca_tsne["label"]]
+        ax.scatter(xs=smp_pca_tsne["tsne-one"], ys=smp_pca_tsne["tsne-two"], zs=smp_pca_tsne["tsne-three"], c=color_labels, alpha=0.3)
+        ax.set_xlabel("tsne-one")
+        ax.set_ylabel("tsne-two")
+        ax.set_zlabel("tsne-three")
+        markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='') for color in anti_colors.values()]
+        plt.legend(markers, anti_colors.keys(), numpoints=1, bbox_to_anchor=(1.04, 0.5), loc=2)
+        plt.show()
 
 def prune(decisiontree, min_samples_leaf = 1):
     """ Function for posterior decision tree pruning.
@@ -427,7 +480,7 @@ def visualize_normalized_data(smp):
     # SHOW THE DATADISTRIBUTION OF ALL FEATURES
     #pairwise_features(smp, features=["label", "distance", "var_force", "mean_force", "delta_4", "lambda_4", "gradient"], samples=200)
     # SHOW HEATMAP OF ALL FEATURES (with what are the labels correlated the most?)
-    corr_heatmap(smp, labels=[3, 4, 5, 6, 12, 17])
+    #corr_heatmap(smp, labels=[3, 4, 5, 6, 12, 17])
     # Correlation does not help for categorical + continuous data - use ANOVA instead
     # FEATURE "EXTRACTION"
     #anova(smp, "plots/tables/ANOVA_results.txt", tablefmt="psql") # latex_raw also possible
@@ -445,9 +498,9 @@ def visualize_normalized_data(smp):
     bog_label_plot(smp)
 
     # PCA and TSNE
-    # pca(smp)
-    # tsne(smp)
-    # tsne_pca(smp)
+    #pca(smp)
+    #tsne(smp)
+    #tsne_pca(smp, n=5)
 
 
 
