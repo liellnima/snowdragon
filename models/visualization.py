@@ -27,27 +27,38 @@ def smp_unlabelled(smp, smp_name):
     """ Plots a SMP profile without labels.
     Parameters:
         smp (df.DataFrame): SMP preprocessed data
-        smp_name (String): Name of the wished smp profile
+        smp_name (String or float/int): Name of the wished smp profile or alternatively its converted index number
     """
-    smp_profile = smp[smp["smp_idx"] == idx_to_int(smp_name)]
+    if isinstance(smp_name, str):
+        smp_wanted = idx_to_int(smp_name)
+    else:
+        smp_wanted = smp_name
+    smp_profile = smp[smp["smp_idx"] == smp_wanted]
     ax = sns.lineplot(smp_profile["distance"], smp_profile["mean_force"])
     plt.title("{} SMP Profile Distance (1mm layers) and Force".format(smp_name))
     ax.set_xlabel("Snow Depth [mm]")
     ax.set_ylabel("Mean Force [N]")
     plt.show()
 
-def smp_labelled(smp, smp_name):
+def smp_labelled(smp, smp_name, title=None):
     """ Plots a SMP profile with labels.
     Parameters:
         smp (df.DataFrame): SMP preprocessed data
-        smp_name (String): Name of the wished smp profile
+        smp_name (String or float/int): Name of the wished smp profile or alternatively its converted index number
+        title (str): if None, a simple headline for the plot is used. Please specify with string.
     """
     # SHOW THE SAME PROFILE WITH LABELS
-    smp_profile = smp[smp["smp_idx"] == idx_to_int(smp_name)]
-    ax = sns.lineplot(smp_profile["distance"], smp_profile["mean_force"])
-    plt.title("{} SMP Profile Distance (1mm layers) and Force".format(smp_name))
+    if isinstance(smp_name, str):
+        smp_wanted = idx_to_int(smp_name)
+    else:
+        smp_wanted = smp_name
 
-    used_labels=[]
+    smp_profile = smp[smp["smp_idx"] == smp_wanted]
+    ax = sns.lineplot(smp_profile["distance"], smp_profile["mean_force"])
+    if title is None:
+        plt.title("{} SMP Profile Distance (1mm layers) and Force".format(smp_name))
+    else:
+        plt.title(title)
     last_label_num = 1
     last_distance = -1
     # going through labels and distance
@@ -55,18 +66,16 @@ def smp_labelled(smp, smp_name):
         if (label_num != last_label_num):
             # assign new background for each label
             background = ax.axvspan(last_distance, distance-1, color=COLORS[last_label_num], alpha=0.5)
-            # set labels for legend
-            if ANTI_LABELS[last_label_num] not in used_labels:
-                background.set_label(ANTI_LABELS[last_label_num])
-                used_labels.append(ANTI_LABELS[last_label_num])
-
             last_label_num = label_num
             last_distance = distance-1
 
         if distance == smp_profile.iloc[len(smp_profile)-1]["distance"]:
-            ax.axvspan(last_distance, distance, color=COLORS[label_num], alpha=0.5).set_label(ANTI_LABELS[last_label_num])
+            ax.axvspan(last_distance, distance, color=COLORS[label_num], alpha=0.5)
 
-    ax.legend()
+
+    anti_colors = {ANTI_LABELS[key] : value for key, value in COLORS.items() if key in smp_profile["label"].unique()}
+    markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='') for color in anti_colors.values()]
+    plt.legend(markers, anti_colors.keys(), numpoints=1, loc="center left", bbox_to_anchor=(1.04, 0.5))
     ax.set_xlabel("Snow Depth [mm]")
     ax.set_ylabel("Mean Force [N]")
     plt.show()
@@ -238,18 +247,20 @@ def plot_balancing(smp):
     ax.set_ylim(0,len(labelled_smp))
     plt.show()
 
-# TODO why does rounded grains do not appear more often?
+# TODO why does rounded grains do not appear more often? this is certainly wrong -> happens only after normalization
+# TODO this produces in any case wrong results: if not normalized data -> still some parts missing! example: 20001918, 2000367
 def bog_label_plot(smp):
     """ Creates a bog plot for the given smp profiles. Makes the labels visible.
     Parameters:
         smp (pd.DataFrame): dataframe containing smp profiles
     """
     labelled_smp = smp[(smp["label"] != 0) & (smp["label"] != 2)]
-    anti_colors = {ANTI_LABELS[key] : value for key, value in COLORS.items() if key in labelled_smp["label"].unique()}
-    my_colors = {key : value for key, value in COLORS.items() if key in labelled_smp["label"].unique()}
     distance_between_smp = 0.5
     day_id = 1
     smp_indices = labelled_smp["smp_idx"].unique()
+    # color related dicts
+    anti_colors = {ANTI_LABELS[key] : value for key, value in COLORS.items() if key in labelled_smp["label"].unique()}
+    my_colors = {key : value for key, value in COLORS.items() if key in labelled_smp["label"].unique()}
 
     for i, curr_smp_idx in zip(range(len(smp_indices)), smp_indices):
         smp_profile = labelled_smp[labelled_smp["smp_idx"] == curr_smp_idx]
@@ -264,6 +275,7 @@ def bog_label_plot(smp):
     plt.ylabel('Depth (mm)')
     plt.gca().invert_yaxis()
     plt.tight_layout()
+    plt.xticks(range(int(len(smp_indices)/2)+1), smp_indices[0::2], rotation=90, fontsize=5)
     markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='') for color in anti_colors.values()]
     plt.legend(markers, anti_colors.keys(), numpoints=1)
     plt.title("All Labelled SMP Profiles with Assigned Labels")
@@ -281,7 +293,6 @@ def bog_plot(smp):
     smp_indices = labelled_smp["smp_idx"].unique()
     # apply logarithm to force
     #labelled_smp.loc[:, "mean_force"] = labelled_smp.loc[:, "mean_force"].apply(lambda x: np.log10(x))
-
     for i, curr_smp_idx in zip(range(len(smp_indices)), smp_indices):
         smp_profile = labelled_smp[labelled_smp["smp_idx"] == curr_smp_idx]
         Y = smp_profile["mean_force"]
@@ -303,18 +314,20 @@ def bog_plot(smp):
     plt.grid()
     plt.show()
 
-def pca(smp, dim="both"):
+def pca(smp, n=3, dim="both", biplot=True):
     """ Visualizing 2d and 2d plot with the 2 or 3 principal components that explain the most variance.
     Parameters:
         smp (df.DataFrame): SMP preprocessed data
+        n (int): how many principal components should be extracted
         dim (str): 2d, 3d or both - for visualization
+        biplot (bool): indicating if the features most used for the principal components should be plotted as biplot
     """
     smp_labelled = smp[(smp["label"] != 0) & (smp["label"] != 2)]
     x = smp_labelled.drop(["label", "smp_idx"], axis=1)
     y = smp_labelled["label"]
     anti_colors = {ANTI_LABELS[key] : value for key, value in COLORS.items() if key in smp_labelled["label"].unique()}
     # first two components explain the most anyway!
-    pca = PCA(n_components=3, random_state=42)
+    pca = PCA(n_components=n, random_state=42)
     pca_result = pca.fit_transform(x)
     smp_with_pca = pd.DataFrame({"pca-one": pca_result[:,0], "pca-two": pca_result[:,1], "pca-three": pca_result[:,2], "label": y})
     print("Explained variance per principal component: {}.".format(pca.explained_variance_ratio_))
@@ -322,6 +335,17 @@ def pca(smp, dim="both"):
     # 2d plot
     if dim == "2d" or dim == "both":
         g = sns.scatterplot(x="pca-one", y="pca-two", hue="label", palette=COLORS, data=smp_with_pca, alpha=0.3)
+        # plot the variables that explain the highest variance
+        if biplot:
+            coeff = pca.components_
+            labels = list(x.columns)
+            for i in range(coeff.shape[0]):
+                plt.arrow(0, 0, coeff[i,0], coeff[i,1], color="black", alpha=0.5, head_width=0.02)
+                if labels is None:
+                    plt.text(coeff[i,0]* 1.15, coeff[i,1] * 1.15, "Var"+str(i+1), color="black", ha='center', va='center')
+                else:
+                    plt.text(coeff[i,0]* 1.15, coeff[i,1] * 1.15, labels[i], color="black", ha='center', va='center')
+
         markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='') for color in anti_colors.values()]
         plt.legend(markers, anti_colors.keys(), numpoints=1, loc="center left", bbox_to_anchor=(1.04, 0.5))
         plt.show()
@@ -474,6 +498,8 @@ def visualize_normalized_data(smp):
     Parameters:
         smp (df.DataFrame): SMP preprocessed data
     """
+    # ATTENTION: don't print bogplots or single profiles! The results are just wrong after normalization!!!
+
     smp_profile_name = "S31H0368"
     # HOW BALANCED IS THE LABELLED DATASET?
     #plot_balancing(smp)
@@ -495,7 +521,8 @@ def visualize_normalized_data(smp):
 
     # PLOT BOGPLOT
     # bog_plot(smp)
-    bog_label_plot(smp)
+    # bog_label_plot(smp) # does not work correctly
+    # smp_labelled(smp, smp_name=2000367.0)
 
     # PCA and TSNE
     #pca(smp)
@@ -530,7 +557,13 @@ def visualize_original_data(smp):
 
     # PLOT BOGPLOT
     #bog_plot(smp)
-    bog_label_plot(smp)
+    #bog_label_plot(smp) # does not work correctly
+    #smp_labelled(smp, smp_name=2000367.0)
+
+    # PCA and TSNE
+    #pca(smp)
+    #tsne(smp)
+    #tsne_pca(smp, n=5)
 
 def main():
     # load dataframe with smp data

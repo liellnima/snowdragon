@@ -6,6 +6,8 @@ from models.cv_handler import cv_manual, mean_kfolds
 from models.supervised_models import svm, random_forest, ada_boost, knn
 from models.semisupervised_models import kmeans, gaussian_mix, bayesian_gaussian_mix
 from models.baseline import majority_class_baseline
+from models.supervised_models import testing
+from models.helper_funcs import normalize
 
 import numpy as np
 import pandas as pd
@@ -25,14 +27,15 @@ from data_handling.data_preprocessing import remove_negatives
 # TODO plot confusion matrix beautifully (multilabel_confusion_matrix)
 # TODO plot ROC AUC curve beautifully (roc_curve(y_true, y_pred))
 
-def my_train_test_split(smp, test_size=0.2, train_size=0.8):
+def my_train_test_split(smp, test_size=0.2, train_size=0.8, return_smp_idx=True):
     """ Splits data into training and testing data
     Parameters:
         smp (df.DataFrame): Preprocessed smp data
         test_size (float): between 0 and 1, size of testing data
         train_size (float): between 0 and 1, size of training data
+        return_smp_idx (bool): indicates whether smp_idx should be returned as well
     Returns:
-        quadruple: x_train, x_test, y_train, y_test
+        quadruple ar hexuple: x_train, x_test, y_train, y_test, (smp_idx_train), (smp_idx_test)
     """
     # labelled data
     labelled_smp = smp[(smp["label"] != 0) & (smp["label"] != 1) & (smp["label"] != 2)]
@@ -46,14 +49,28 @@ def my_train_test_split(smp, test_size=0.2, train_size=0.8):
     train_idx, test_idx = train_test_split(idx_list, test_size=test_size, train_size=train_size, random_state=42)
     train = labelled_smp[labelled_smp["smp_idx"].isin(train_idx)]
     test = labelled_smp[labelled_smp["smp_idx"].isin(test_idx)]
-    # drop the label and also smp_idx (should not be used as an informative feature)
+    # drop the label and smp_idx
     x_train = train.drop(["label", "smp_idx"], axis=1)
     x_test = test.drop(["label", "smp_idx"], axis=1)
     y_train = train["label"]
     y_test = test["label"]
+    smp_idx_train = train["smp_idx"]
+    smp_idx_test = test["smp_idx"]
     print("Labels in training data:\n", y_train.value_counts())
     print("Labels in testing data:\n", y_test.value_counts())
-    return x_train, x_test, y_train, y_test
+
+    # reset internal panda index
+    x_train.reset_index(drop=True, inplace=True)
+    x_test.reset_index(drop=True, inplace=True)
+    y_train.reset_index(drop=True, inplace=True)
+    y_test.reset_index(drop=True, inplace=True)
+    smp_idx_train.reset_index(drop=True, inplace=True)
+    smp_idx_test.reset_index(drop=True, inplace=True)
+
+    if return_smp_idx:
+        return x_train, x_test, y_train, y_test, smp_idx_train, smp_idx_test
+    else:
+        return x_train, x_test, y_train, y_test
 
 def sum_up_labels(smp, labels, name, label_idx, color="blue"):
     """ Sums up the datapoints belonging to one of the classes in labels to one class.
@@ -130,20 +147,6 @@ def remove_nans_mosaic(smp):
 
     return smp
 
-def normalize(data, features, min, max):
-    """ Normalizes the given features of a dataframe.
-    Parameters:
-        data (pd.DataFrame): the dataframe to normalize
-        features (list or str): list of strings or a single string indicating the feature to normalize.
-            If several feature they must share the same min and max.
-        min (int): the minimum of the features
-        max (int): the maximum of the features
-    Returns:
-        pd.DataFrame: data with normalized features
-    """
-    data.loc[:, features] = data.loc[:, features].apply(lambda x: (x - min) / (max - min))
-    return data
-
 def normalize_mosaic(smp):
     """ Normalizes all the features that should be normalized in the data. Don't use this method for other data!
     Parameters:
@@ -166,7 +169,7 @@ def normalize_mosaic(smp):
     for feature in var_features:
         smp = normalize(smp, feature, min=0, max=smp[feature].max())
     # distances
-    smp = normalize(smp, "distance", min=smp["distance"].min(), max=smp["distance"].max())
+    smp = normalize(smp, "distance", min=smp["distance"].min(), max=smp["distance"].max()) # max is 1187
     smp = normalize(smp, "dist_ground", min=smp["dist_ground"].min(), max=smp["dist_ground"].max())
     return smp
 
@@ -204,12 +207,8 @@ def main():
 
 
     # 7. Split up the data into training and test data
-    x_train, x_test, y_train, y_test = my_train_test_split(smp)
-    # reset internal panda index
-    x_train.reset_index(drop=True, inplace=True)
-    x_test.reset_index(drop=True, inplace=True)
-    y_train.reset_index(drop=True, inplace=True)
-    y_test.reset_index(drop=True, inplace=True)
+    x_train, x_test, y_train, y_test, smp_idx_train, smp_idx_test = my_train_test_split(smp)
+
     # For two of the semisupervised models: include unlabelled data points in x_train and y_train (test data stays the same!)
     x_train_all = pd.concat([x_train, unlabelled_x])
     y_train_all = pd.concat([y_train, unlabelled_y])
@@ -271,8 +270,10 @@ def main():
 
     # F random forests (works)
     print("Starting Random Forest Model ...")
-    rf_scores = random_forest(x_train, y_train, cv_stratified, visualize=True)
-    all_scores.append(mean_kfolds(rf_scores))
+    #rf, rf_scores = random_forest(x_train, y_train, cv_stratified, visualize=True)
+    #all_scores.append(mean_kfolds(rf_scores))
+    rf = random_forest(x_train, y_train, cv_stratified, visualize=False, only_model=True)
+    rf_test_scores = testing(rf, x_train, y_train, x_test, y_test, smp_idx_train, smp_idx_test)
     print("...finished Random Forest Model.\n")
 
     # G Support Vector Machines
