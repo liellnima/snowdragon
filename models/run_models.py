@@ -188,8 +188,8 @@ def main():
     smp = sum_up_labels(smp, ["df", "ifwp", "if", "sh", "snow-ice", "mfcl", "mfsl", "mfcr"], name="rare", label_idx=17)
 
     # 5. Visualize the data after normalization
-    visualize_normalized_data(smp)
-    exit(0)
+    #visualize_normalized_data(smp)
+
     # 6. Prepare data for two of the semisupervised modles:
     # prepare dataset of unlabelled data
     unlabelled_smp = smp.loc[(smp["label"] == 0)].copy()

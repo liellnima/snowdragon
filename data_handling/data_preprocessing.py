@@ -411,7 +411,7 @@ def preprocess_profile(profile, target_dir, export_as="csv", sum_mm=1, gradient=
         else:
             final_df[col] = final_df[col].astype("float32")
 
-    export as csv or npz
+    # export as csv or npz
     if export_as == "csv":
         final_df.to_csv(os.path.join(target_dir, Path(profile.name + ".csv")))
     elif export_as == "npz":
