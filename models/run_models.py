@@ -8,6 +8,7 @@ from models.semisupervised_models import kmeans, gaussian_mix, bayesian_gaussian
 from models.baseline import majority_class_baseline
 from models.supervised_models import testing
 from models.helper_funcs import normalize
+from models.anns import lstm
 
 import numpy as np
 import pandas as pd
@@ -221,7 +222,9 @@ def main():
     # Attention the cv fold for these two semi-supervised models is different from the other cv folds!
     cv_semisupervised = StratifiedKFold(n_splits=k, shuffle=True, random_state=42).split(x_train_all, y_train_all)
     cv_semisupervised = list(cv_semisupervised)
-    #cv = cv_manual(x_train, k) # in progress
+    data = x_train.copy()
+    data["smp_idx"] = smp_idx_train
+    cv = cv_manual(data, k) # in progress
     print(np.unique(y_train, return_counts=True))
 
     # 9. Call the models
@@ -268,34 +271,35 @@ def main():
     # all_scores.append(mean_kfolds(st_scores))
     # print("...finished Self Training Classifier.\n")
 
-    # F random forests (works)
-    print("Starting Random Forest Model ...")
-    #rf, rf_scores = random_forest(x_train, y_train, cv_stratified, visualize=True)
-    #all_scores.append(mean_kfolds(rf_scores))
-    rf = random_forest(x_train, y_train, cv_stratified, visualize=False, only_model=True)
-    rf_test_scores = testing(rf, x_train, y_train, x_test, y_test, smp_idx_train, smp_idx_test)
-    print("...finished Random Forest Model.\n")
-
-    # G Support Vector Machines
-    # works with very high gamma (overfitting) -> "auto" yields 0.75, still good and no overfitting
-    print("Starting Support Vector Machine...")
-    svm_scores = svm(x_train, y_train, cv_stratified, gamma="auto")
-    all_scores.append(mean_kfolds(svm_scores))
-    print("...finished Support Vector Machine.\n")
-
-    # H knn (works with weights=distance)
-    print("Starting K-Nearest Neighbours Model...")
-    knn_scores = knn(x_train, y_train, cv_stratified, n_neighbors=20)
-    all_scores.append(mean_kfolds(knn_scores))
-    print("...finished K-Nearest Neighbours Model.\n")
-
-    # I adaboost
-    print("Starting AdaBoost Model...")
-    ada_scores = ada_boost(x_train, y_train, cv_stratified)
-    all_scores.append(mean_kfolds(ada_scores))
-    print("...finished AdaBoost Model.\n")
+    # # F random forests (works)
+    # print("Starting Random Forest Model ...")
+    # #rf, rf_scores = random_forest(x_train, y_train, cv_stratified, visualize=True)
+    # #all_scores.append(mean_kfolds(rf_scores))
+    # rf = random_forest(x_train, y_train, cv_stratified, visualize=False, only_model=True)
+    # rf_test_scores = testing(rf, x_train, y_train, x_test, y_test, smp_idx_train, smp_idx_test)
+    # print("...finished Random Forest Model.\n")
+    #
+    # # G Support Vector Machines
+    # # works with very high gamma (overfitting) -> "auto" yields 0.75, still good and no overfitting
+    # print("Starting Support Vector Machine...")
+    # svm_scores = svm(x_train, y_train, cv_stratified, gamma="auto")
+    # all_scores.append(mean_kfolds(svm_scores))
+    # print("...finished Support Vector Machine.\n")
+    #
+    # # H knn (works with weights=distance)
+    # print("Starting K-Nearest Neighbours Model...")
+    # knn_scores = knn(x_train, y_train, cv_stratified, n_neighbors=20)
+    # all_scores.append(mean_kfolds(knn_scores))
+    # print("...finished K-Nearest Neighbours Model.\n")
+    #
+    # # I adaboost
+    # print("Starting AdaBoost Model...")
+    # ada_scores = ada_boost(x_train, y_train, cv_stratified)
+    # all_scores.append(mean_kfolds(ada_scores))
+    # print("...finished AdaBoost Model.\n")
 
     # J LSTM
+    lstm(x_train, y_train, smp_idx_train, cv)
 
     # K Encoder-Decoder
 
