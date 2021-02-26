@@ -96,7 +96,6 @@ def remove_padding(data, profile_len, argmax=True):
     # flatten the list
     return [data_point for smp in all_preds for data_point in smp]
 
-# TODO use something like filename
 # TODO return real values
 # TODO add name of the values
 # TODO calculate the metrics
@@ -224,6 +223,8 @@ def prepare_data(x, y, smp_idx_all):
     # returning the processed data
     return x_np, y_np, profile_len
 
+# TODO make this more general: possible for all architectures
+# TODO return tuning results
 def tune_lstm(x_train, x_valid, y_train, y_valid, profile_len_train, profile_len_valid, **params):
     """ Tune the LSTM.
     **params:
@@ -236,34 +237,39 @@ def tune_lstm(x_train, x_valid, y_train, y_valid, profile_len_train, profile_len
     batch_sizes = [32, 6, 1] # later 1, for velocity reasons 18 at the moment
 
     # already fixed
-    learning_rate = 0.01
-    dense_units = 100 # the more the better
-    epochs = 50
+    learning_rates = [0.01]
+    dense_sizes = [100] # the more the better
+    epochs = [50]
     i = 0
 
     # TODO unpack param dictionary
-    # TODO make more for loops in case other parameters are changed
-    for dropout in dropouts:
-        for rnn_size in rnn_sizes:
-                for batch_size in batch_sizes:
-                    for type in types:
-                        bidirectional = True if type=="bidirectional" else False
-                        print(bidirectional)
-                        print("Running model with the following specs:")
-                        print("Model Type {}, Batch size {}, Dropout {}, Learning Rate {}, RNN Size {}, No Dense Units, Loss Plot {}: \n".format(type, batch_size, dropout, learning_rate, rnn_size, i))
-                        model_results = eval_lstm(profile_len_train, profile_len_valid, x_train, y_train, x_valid, y_valid, i, type, batch_size, learning_rate, rnn_size)
+    for batch_size in batch_sizes:
+        for epoch in epochs:
+            for learning_rate in learning_rates:
+                for dense_units in dense_sizes:
+                    for dropout in dropouts:
+                        for rnn_size in rnn_sizes:
+                            for type in types:
+                                bidirectional = True if type=="bidirectional" else False
+                                print(bidirectional)
+                                print("Running model with the following specs:")
+                                print("Model Type {}, Batch size {}, Dropout {}, Learning Rate {}, RNN Size {}, No Dense Units, Epochs {}, Loss Plot {}: \n".format(type, batch_size, dropout, learning_rate, rnn_size, epoch, i))
+                                # TODO add epochs!
+                                model_results = eval_lstm(profile_len_train, profile_len_valid, x_train, y_train, x_valid, y_valid, i, type, batch_size, learning_rate, rnn_size)
 
-                        result_list = [i, type, batch_size, dropout, learning_rate, rnn_size, dense_units,
-                                       model_results["train_balanced_accuracy"], model_results["test_balanced_accuracy"]]
+                                result_list = [i, type, batch_size, dropout, learning_rate, rnn_size, dense_units,
+                                               model_results["train_balanced_accuracy"], model_results["test_balanced_accuracy"]]
 
-                        # write the results continously in a csv
-                        with open("plots/tables/lstm02.csv", "a+") as text_file:
-                            text_file.write(",".join([str(x) for x in result_list]))
+                                # write the results continously in a csv
+                                # TODO find out if this works now as intended
+                                with open("plots/tables/lstm02.csv", "a+") as text_file:
+                                    row_content = ",".join([str(x) for x in result_list])
+                                    text_file.write(row_content+'\n')
 
-                        print("Train Bal Acc: ", balanced_accuracy(y_true=y_true_train, y_pred=y_pred_train))
-                        print("Valid Bal Acc: ", balanced_accuracy(y_true=y_true_valid, y_pred=y_pred_valid))
-                        # increment i
-                        i = i + 1
+                                print("Train Bal Acc: ", balanced_accuracy(y_true=y_true_train, y_pred=y_pred_train))
+                                print("Valid Bal Acc: ", balanced_accuracy(y_true=y_true_valid, y_pred=y_pred_valid))
+                                # increment i
+                                i = i + 1
 
 # TODO separate lstm and blstm more clearly
 def lstm(x_train, y_train, smp_idx_train, name="LSTM", tuning=True, visualize=False, **params):
@@ -279,3 +285,11 @@ def lstm(x_train, y_train, smp_idx_train, name="LSTM", tuning=True, visualize=Fa
     # in the case of tuning
     if tuning:
         tune_lstm(x_train, x_valid, y_train, y_valid, profile_len_train, profile_len_valid, **params)
+        # TODO return tuning results
+        # TODO save tuning results or return them
+
+    # in all other cases we already know which model we would like to use
+    # make crossvalidation for this model
+    # return the results
+
+    # make a testing method possible
