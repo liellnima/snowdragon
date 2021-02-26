@@ -7,8 +7,8 @@ import os
 import numpy as np
 import pandas as pd
 import seaborn as sns
-import matplotlib.colors as colors
 import matplotlib.pyplot as plt
+import matplotlib.colors as colors
 import matplotlib.ticker as ticker
 
 
