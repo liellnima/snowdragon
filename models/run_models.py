@@ -300,7 +300,10 @@ def main():
     # print("...finished AdaBoost Model.\n")
 
     # J LSTM
-    lstm(x_train, y_train, smp_idx_train, cv=cv)
+    lstm_scores = lstm(x_train, y_train, smp_idx_train, cv=cv)
+    all_scores.append(mean_kfolds(lstm_scores))
+    print(all_scores)
+    exit(0)
     # TODO make mean_kfolds  for fit and score time
 
     # K Encoder-Decoder
@@ -317,11 +320,11 @@ def main():
                                                          "train_log_loss": "train_ll",
                                                          "test_log_loss": "test_ll"})
     print(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
-    with open('plots/tables/models_160smp.txt', 'w') as f:
-        f.write(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
-
-    with open('plots/tables/models_160smp_latex.txt', 'w') as f:
-        f.write(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='latex_raw'))
+    # with open('plots/tables/models_160smp.txt', 'w') as f:
+    #     f.write(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
+    #
+    # with open('plots/tables/models_160smp_latex.txt', 'w') as f:
+    #     f.write(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='latex_raw'))
 
     # 11. Visualize the results
 
