@@ -10,7 +10,8 @@ import matplotlib.pyplot as plt
 from tabulate import tabulate
 from tensorflow import keras
 from tensorflow.keras import Sequential
-from tensorflow.keras.layers import Embedding, Dense, LSTM, Dropout, TimeDistributed, Masking
+from keras.layers.merge import concatenate
+from tensorflow.keras.layers import Embedding, Dense, LSTM, Dropout, TimeDistributed, Masking, Merge
 
 def lstm_architecture(input_shape, output_shape, rnn_size, dropout, dense_units=100, learning_rate=0.01):
     """ The architecture of a lstm model. (Dense Layer, LSTM Layer, Dense Output Layer)
