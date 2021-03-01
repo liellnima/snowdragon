@@ -12,8 +12,8 @@ def recall(y_true, y_pred):
 def precision(y_true, y_pred):
     return precision_score(y_true, y_pred, average="weighted", zero_division=0)
 
-def roc_auc(y_true, y_pred):
-    return roc_auc_score(y_true, y_pred, average="weighted", multi_class="ovr")#, labels=np.unique(y_true)) # TODO check if ovo makes more sense
+def roc_auc(y_true, y_pred, labels=None):
+    return roc_auc_score(y_true, y_pred, average="weighted", multi_class="ovr", labels=labels)#, labels=np.unique(y_true)) # TODO check if ovo makes more sense
 
 def my_log_loss(y_true, y_pred):
     return log_loss(y_true, y_pred)
@@ -31,18 +31,19 @@ METRICS_PROB = {"roc_auc": roc_auc,
                 "log_loss": my_log_loss}
 
 # helper function to calculate some of the metrics
-def calculate_metrics_raw(y_trues, y_preds, metrics=METRICS, name=None, annot="train"):
+def calculate_metrics_raw(y_trues, y_preds, metrics=METRICS, cv=True, name=None, annot="train"):
     """ Calculates metrics when already the list of the observed and predicted target values is given. E.g. from a manual cross validation.
     Paramters:
         y_preds (list): List of lists (crossvalidation!) with predicted target values
         y_trues (list): List of listst (crossvalidation!) with true or observed target values
         metrics (dict): Dictionary were the keys describe the metrics and the values are callable functions containing y_true and y_pred as parameters.
+        cv (bool): Indicates if y_preds and y_trues come from a crossvalidation and are nested lists. If not, they are not nested lists!
         name (String): Name of the model evaluated
         annot (String): indicates if we speak about train or test or validation data
     Returns:
         dict: dictionary with different scores
     """
-    # TODO convert metrics to list
+    # convert metrics to list
     funcs = list(metrics.values())
     metric_names = list(metrics.keys())
     if annot is not None: annot = annot + "_"
@@ -50,7 +51,11 @@ def calculate_metrics_raw(y_trues, y_preds, metrics=METRICS, name=None, annot="t
     if name is not None:
         scores["model"] = name
     # iterate through a list of metric functions and add the lists of results to scores
-    for func, name in zip(funcs, metric_names):
-        scores[annot + name] = np.asarray([func(y_true, y_pred) for y_true, y_pred in zip(y_trues, y_preds)])
+    if cv:
+        for func, name in zip(funcs, metric_names):
+            scores[annot + name] = np.asarray([func(y_true, y_pred) for y_true, y_pred in zip(y_trues, y_preds)])
+    else:
+        for func, name in zip(funcs, metric_names):
+            scores[annot + name] = func(y_trues, y_preds)
 
     return scores
