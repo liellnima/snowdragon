@@ -74,6 +74,9 @@ def blstm_architecture(input_shape, output_shape, rnn_size, dropout, dense_units
 
     return model
 
+def enc_dec_architecture(input_shape, output_shape, rnn_size, dropout, dense_units=100, learning_rate=0.01):
+    """ Encoder-Decoder Architecture.
+    """
 
 def remove_padding(data, profile_len, return_prob=False):
     """ Removes the padding of the given data, calculates which label was predicted if wished and flats everything.
@@ -175,12 +178,13 @@ def eval_lstm(x_train, x_valid, y_train, y_valid, profile_len_train, profile_len
     return results
 
 
-def prepare_data(x, y, smp_idx_all, max_smp_len=None):
+def prepare_data(x, y, smp_idx_all, labels=None, max_smp_len=None):
     """ One-hot encodes the target data, turns data into numpy arrays of correct shape. Padds the input data such that all time series have the same length.
     Parameters:
         x (pd.DataFrame): feature data
         y (pd.Series): label/target data
         smp_idx (pd.Series): the smp indices for the x and y data
+        labels (list): Labels occurring in x and y. If None (default) this value is inferred from the target data.
         max_smp_len (int): the maximal profile length (used for padding) in the dataset.
             Default=None means that this will be inferred from the given data.
     Returns:
@@ -189,8 +193,22 @@ def prepare_data(x, y, smp_idx_all, max_smp_len=None):
             y_np has the shape (time_series, time_points, labels) e.g. [(124, 794, 7)].
             profile_len contains (time_series) many entries indicating the length of each smp profile used in x and y
     """
-    # one-hot encode target data (3 4 5 6 12 16 17)
-    y_one_hot_enc = pd.get_dummies(y)
+    # usual case: one hot encode the target data
+    if labels is None:
+        # one-hot encode target data (3 4 5 6 12 16 17)
+        y_one_hot_enc = pd.get_dummies(y)
+    # if one of the labels is missing: append it to y and delete last row again
+    else:
+        if len(y.unique()) == len(labels):
+            y_one_hot_enc = pd.get_dummies(y)
+        else:
+            missing_labels = set(labels) - set(y.unique())
+            y_one_hot_enc = pd.get_dummies(y)
+            # append the missing labels as columns
+            for missing_label in missing_labels:
+                y_one_hot_enc[missing_label] = 0
+            # sort columns
+            y_one_hot_enc = y_one_hot_enc.sort_index(axis=1)
 
     # preparation for padding the data
     smp_indices = smp_idx_all.unique()
@@ -205,7 +223,7 @@ def prepare_data(x, y, smp_idx_all, max_smp_len=None):
     ts_len = len(smp_indices) # how many time series we have
     tp_len = max_smp_len # how long the time series maximally are
     features_len = len(x.columns) # how many features we have
-    labels_len = len(y_one_hot_enc.columns) # how many labels we have
+    labels_len = len(y_one_hot_enc.columns) if labels is None else len(labels) # how many labels we have
 
     # Padding input data (time_series, time_points, features) - to be filled in
     x_np = np.zeros(shape=(ts_len, tp_len, features_len))
@@ -220,7 +238,7 @@ def prepare_data(x, y, smp_idx_all, max_smp_len=None):
         profile_len.append(len(curr_smp))
         for row_index, (row_i, row) in enumerate(curr_smp.iterrows()):
             x_np[smp_idx, row_index, :] = row
-            y_np[smp_idx, row_index, :] = y_one_hot_enc.loc[row_i, :] # ATTENTION row_i could be wrong when doing cv!
+            y_np[smp_idx, row_index, :] = y_one_hot_enc.loc[row_i, :]
 
     # returning the processed data
     return x_np, y_np, profile_len
@@ -304,7 +322,7 @@ def calculate_metrics_ann(results):
     Returns:
         dict: with all scores from METRICS and METRICS_PROB for training and validation/testing data
     """
-    all_scores = {"fit_time": results["fit_time"], "score_time": results["score_time"]}
+    all_scores = {"fit_time": np.array(results["fit_time"]), "score_time": np.array(results["score_time"])}
     all_scores.update(calculate_metrics_raw(y_trues=results["y_true_train"], y_preds=results["y_pred_train"], metrics=METRICS, cv=False, annot="train"))
     all_scores.update(calculate_metrics_raw(y_trues=results["y_true_valid"], y_preds=results["y_pred_valid"], metrics=METRICS, cv=False, annot="test"))
     try:
@@ -320,7 +338,7 @@ def calculate_metrics_ann(results):
 
     return all_scores
 
-
+# TODO documentation
 # TODO separate lstm and blstm more clearly
 def lstm(x_train, y_train, smp_idx_train, name="LSTM", cv=0.2, tuning=False, visualize=False, **params):
     """ LSTM model performing a sequence labeling task. Crossvalidation must respect the time series data!
@@ -330,7 +348,6 @@ def lstm(x_train, y_train, smp_idx_train, name="LSTM", cv=0.2, tuning=False, vis
 
 
     # TODO tuning should be done externally
-
 
     # get training and validation data from that
     if isinstance(cv, float):
@@ -351,13 +368,13 @@ def lstm(x_train, y_train, smp_idx_train, name="LSTM", cv=0.2, tuning=False, vis
                                   ann_type="lstm", rnn_size=25, dropout=0.2, dense_units=25)
 
         # call metrics on model_results
-        scores = calculate_metrics_ann(results)
-        return scores
+        return calculate_metrics_ann(results)
 
     else:
         # all results
         all_results = {} # the rest is added on its own
         keys_assigned = False
+        labels = list(y_train.unique())
         # for each fold in the crossvalidation
         for k in cv:
             # find maximal smp profile length in complete dataset
@@ -366,13 +383,14 @@ def lstm(x_train, y_train, smp_idx_train, name="LSTM", cv=0.2, tuning=False, vis
                 if len(x_train[smp_idx_train == smp]) > max_smp_len:
                     max_smp_len = len(x_train[smp_idx_train == smp])
             # mask the data and prepare it
-            x_k_train, y_k_train, profile_len_k_train = prepare_data(x_train.iloc[k[0]], y_train.iloc[k[0]], smp_idx_train.iloc[k[0]], max_smp_len=max_smp_len)
-            x_k_valid, y_k_valid, profile_len_k_valid = prepare_data(x_train.iloc[k[1]], y_train.iloc[k[1]], smp_idx_train.iloc[k[1]], max_smp_len=max_smp_len)
+            x_k_train, y_k_train, profile_len_k_train = prepare_data(x_train.iloc[k[0]], y_train.iloc[k[0]], smp_idx_train.iloc[k[0]], max_smp_len=max_smp_len, labels=labels)
+            x_k_valid, y_k_valid, profile_len_k_valid = prepare_data(x_train.iloc[k[1]], y_train.iloc[k[1]], smp_idx_train.iloc[k[1]], max_smp_len=max_smp_len, labels=labels)
+
             # run the models with this cv split
             k_results = eval_lstm(x_train=x_k_train, x_valid=x_k_valid, y_train=y_k_train, y_valid=y_k_valid,
                                       profile_len_train=profile_len_k_train, profile_len_valid=profile_len_k_valid,
-                                      batch_size=64, epochs=5, learning_rate=0.01,
-                                      ann_type="lstm", rnn_size=25, dropout=0.2, dense_units=25)
+                                      batch_size=6, epochs=50, learning_rate=0.01,
+                                      ann_type="blstm", rnn_size=100, dropout=0.2, dense_units=100)
             if not keys_assigned:
                 all_results = {k: [] for k in k_results.keys()}
                 keys_assigned = True
@@ -381,18 +399,13 @@ def lstm(x_train, y_train, smp_idx_train, name="LSTM", cv=0.2, tuning=False, vis
             for key in k_results.keys():
                 if "time" not in key:
                     all_results[key] = all_results[key] + k_results[key]
-                    #all_results[key].append(k_results[key])
                 elif "score_time" in key:
                     all_results["score_time"].append(k_results[key])
                 elif "fit_time" in key:
                     all_results["fit_time"].append(k_results[key])
 
-        scores = calculate_metrics_ann(all_results)
-        print(scores)
-        return scores
+        return calculate_metrics_ann(all_results)
     # in the case of tuning
     # TODO tuning in the case of crossvalidation?
-
-    print(model_results)
 
     # make a testing method possible
