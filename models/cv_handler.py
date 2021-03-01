@@ -220,12 +220,14 @@ def mean_kfolds(scores):
     # one-hot-encode this data with labels (0 or 1: does this label occur in the timeseries?)
     # use scikit learn StratifiedKFold on this data set!
     # transfer this split to the smp_idx (which smp timeseries is used in which fold?)
-def cv_manual(data, k):
+# TODO check if each label is contained in the split. If not -> add another smp profile with this label into the split
+def cv_manual(data, target, k):
     """ Performs a custom k-fold crossvalidation. Roughly 1/k % of the data is used a testing data,
     the rest is training data. This happens k times - each data chunk has been used as testing data once.
 
     Paramters:
         data (pd.DataFrame): data on which crossvalidation should be performed
+        target (pd.Series): labels for the data - needed in order to provide each fold with all labels
         k (int): number of folds for cross validation
     Returns:
         list: iteratable list of length k with tuples of np 1-d arrays (train_indices, test_indices)
@@ -236,7 +238,7 @@ def cv_manual(data, k):
     k_idx = np.resize(np.arange(1, k+1), 69) # k indices for the smp profiles
     np.random.seed(42)
     np.random.shuffle(k_idx)
-
+    all_labels = target.unique()
     # for each fold k, the corresponding smp profiles are used as test data
     for k in range(1, k+1):
         # indices for the current fold
@@ -247,6 +249,41 @@ def cv_manual(data, k):
         mask = data["smp_idx"].isin(curr_smps)
         valid_indices = data[mask].index.values
         train_indices = data[~mask].index.values
-        cv.append((train_indices, valid_indices))
 
+        # filtering out the cases where labels are missing in the validation dataset
+        train_labels = set(target.iloc[train_indices].unique())
+        valid_labels = set(target.iloc[valid_indices].unique())
+
+        if len(train_labels) != len(valid_labels):
+            missing_labels = list(train_labels - valid_labels) if len(train_labels) > len(valid_labels) else list(valid_labels - train_labels)
+            print("""Warning: In fold {} of the manual crossvalidation the following labels are missing in the training or validation dataset: {}.
+                  The profiles containing the labels are switched with other ones.""".format(k, missing_labels))
+            for missing_label in missing_labels:
+                smp_idx_missing_label = data.loc[target==missing_label, "smp_idx"].unique()
+                # pick a random idx from above
+                smp_chosen = smp_idx_missing_label[np.random.randint(len(smp_idx_missing_label))]
+                if len(train_labels) > len(valid_labels):
+                    # replace one of the validation smp indices with the chosen smp
+                    smp_switcher = data.loc[valid_indices, "smp_idx"].unique()[np.random.randint(len(valid_labels))]
+                    # get indices of both
+                    smp_switcher_idxs = data.loc[data["smp_idx"] == smp_switcher].index.values
+                    smp_chosen_idxs = data.loc[data["smp_idx"] == smp_chosen].index.values
+                    # add smp_chosen_idxs to validation and remove it from training
+                    valid_indices = valid_indices[valid_indices != smp_switcher_idxs][0]
+                    train_indices = train_indices[train_indices != smp_chosen_idxs][0]
+                    valid_indices = np.concatenate([valid_indices, smp_chosen_idxs])
+                    train_indices = np.concatenate([train_indices, smp_switcher_idxs])
+                else:
+                    # replace one of the training smp indices with the chosen smp
+                    smp_switcher = data.loc[train_indices, "smp_idx"].unique()[np.random.randint(len(train_labels))]
+                    # get indices of both
+                    smp_switcher_idxs = data.loc[data["smp_idx"] == smp_switcher].index.values
+                    smp_chosen_idxs = data.loc[data["smp_idx"] == smp_chosen].index.values
+                    # add smp_chosen_idxs to validation and remove it from training
+                    train_indices = train_indices[train_indices != smp_switcher_idxs]
+                    valid_indices = valid_indices[valid_indices != smp_chosen_idxs]
+                    train_indices = np.concatenate([train_indices, smp_chosen_idxs])
+                    valid_indices = np.concatenate([valid_indices, smp_switcher_idxs])
+
+        cv.append((train_indices, valid_indices))
     return cv
