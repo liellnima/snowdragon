@@ -215,7 +215,7 @@ def main():
     y_train_all = pd.concat([y_train, unlabelled_y])
 
     # 8. Make crossvalidation split
-    k = 4
+    k = 3
     # Note: if we want to use StratifiedKFold, we can just hand over an integer to the functions
     cv_stratified = StratifiedKFold(n_splits=k, shuffle=True, random_state=42).split(x_train, y_train)
     cv_stratified = list(cv_stratified)
@@ -223,8 +223,9 @@ def main():
     cv_semisupervised = StratifiedKFold(n_splits=k, shuffle=True, random_state=42).split(x_train_all, y_train_all)
     cv_semisupervised = list(cv_semisupervised)
     data = x_train.copy()
+    target = y_train.copy()
     data["smp_idx"] = smp_idx_train
-    cv = cv_manual(data, k) # in progress
+    cv = cv_manual(data, target, k) # in progress
     print(np.unique(y_train, return_counts=True))
 
     # 9. Call the models
@@ -299,7 +300,8 @@ def main():
     # print("...finished AdaBoost Model.\n")
 
     # J LSTM
-    lstm(x_train, y_train, smp_idx_train, cv)
+    lstm(x_train, y_train, smp_idx_train, cv=cv)
+    # TODO make mean_kfolds  for fit and score time
 
     # K Encoder-Decoder
 
