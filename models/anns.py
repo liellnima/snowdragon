@@ -1,4 +1,5 @@
 from sklearn.model_selection import train_test_split
+from models.attention_decoder import AttentionDecoder
 from models.metrics import balanced_accuracy, recall, precision, roc_auc, my_log_loss, calculate_metrics_raw, METRICS, METRICS_PROB
 
 import time
@@ -10,8 +11,7 @@ import matplotlib.pyplot as plt
 from tabulate import tabulate
 from tensorflow import keras
 from tensorflow.keras import Sequential
-from keras.layers.merge import concatenate
-from tensorflow.keras.layers import Embedding, Dense, LSTM, Dropout, TimeDistributed, Masking, Merge
+from tensorflow.keras.layers import Embedding, Dense, LSTM, Dropout, TimeDistributed, Masking, Bidirectional, Activation
 
 def lstm_architecture(input_shape, output_shape, rnn_size, dropout, dense_units=100, learning_rate=0.01):
     """ The architecture of a lstm model. (Dense Layer, LSTM Layer, Dense Output Layer)
@@ -32,7 +32,8 @@ def lstm_architecture(input_shape, output_shape, rnn_size, dropout, dense_units=
     model.add(Dropout(dropout))
     model.add(LSTM(rnn_size, return_sequences=True))
     model.add(Dropout(dropout))
-    model.add(Dense(units=output_shape, activation="softmax"))
+    model.add(Dense(units=output_shape, activation="relu"))
+    model.add(Activation("relu"))
 
     optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
     model.compile(optimizer=optimizer, loss="categorical_crossentropy", metrics=["acc"])
@@ -53,31 +54,56 @@ def blstm_architecture(input_shape, output_shape, rnn_size, dropout, dense_units
         model: a compiled model ready for fitting
     """
     # architecture
-    # forward LSTM
-    model_forward = Sequential()
-    model_forward.add(Masking(mask_value=0.0, input_shape=input_shape))
-    model_forward.add(Dense(units=dense_units, activation="relu"))
-    model_forward.add(Dropout(dropout))
-    model_forward.add(LSTM(rnn_size, return_sequences=True))
-    model_forward.add(Dropout(dropout))
-    # backward LSTM
-    model_back = Sequential()
-    model_back.add(Masking(mask_value=0.0, input_shape=input_shape))
-    model_back.add(LSTM(rnn_size, return_sequences=True, go_backwards=True))
-    model_back.add(Dropout(dropout))
-    # bidirectional LSTM
+    # change this: https://stackoverflow.com/questions/62991082/bidirectional-lstm-merge-mode-explanation
     model = Sequential()
-    model.add(Merge([model_forward, model_back], mode="concat"))
-    model.add(Dense(units=output_shape, activation="softmax"))
+    model.add(Masking(mask_value=0.0, input_shape=input_shape))
+    model.add(Dense(units=dense_units, activation="relu"))
+    model.add(Dropout(dropout))
+    forward_layer = LSTM(rnn_size, return_sequences=True)
+    backward_layer = LSTM(rnn_size, return_sequences=True, go_backwards=True)
+    model.add(Bidirectional(forward_layer, backward_layer=backward_layer, merge_mode="concat"))
+    model.add(Dropout(dropout))
+    model.add(Dense(units=output_shape, activation="relu"))
+    model.add(Activation("softmax"))
 
     optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
     model.compile(optimizer=optimizer, loss="categorical_crossentropy", metrics=["acc"])
 
     return model
 
-def enc_dec_architecture(input_shape, output_shape, rnn_size, dropout, dense_units=100, learning_rate=0.01):
-    """ Encoder-Decoder Architecture.
+def enc_dec_architecture(input_shape, output_shape, rnn_size, dropout, dense_units=100, learning_rate=0.01, attention=False):
+    """ Encoder-Decoder Architecture. https://www.tensorflow.org/tutorials/text/nmt_with_attention
+    https://machinelearningmastery.com/encoder-decoder-attention-sequence-to-sequence-prediction-keras/
     """
+    if not attention:
+        model = Sequential()
+        model.add(Masking(mask_value=0.0, input_shape=input_shape))
+        model.add(Dense(units=dense_units, activation="relu"))
+        model.add(Dropout(dropout))
+        model.add(LSTM(rnn_size))
+        model.add(RepeatVector(input_shape[0]))
+        model.add(LSTM(rnn_size, return_sequences=True))
+        model.add(Dropout(dropout))
+        model.add(Dense(units=output_shape, activation="relu"))
+        model.add(Activation("softmax"))
+
+        optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
+        model.compile(optimizer=optimizer, loss="categorical_crossentropy", metrics=["acc"])
+    else:
+        model = Sequential()
+        model.add(Masking(mask_value=0.0, input_shape=input_shape))
+        model.add(Dense(units=dense_units, activation="relu"))
+        model.add(Dropout(dropout))
+        model.add(LSTM(rnn_size, return_sequences=True))
+        model.add(AttentionDecoder(rnn_size, input_shape[1]))
+        # attention, these layers might not work
+        model.add(Dropout(dropout))
+        model.add(Dense(units=output_shape, activation="relu"))
+        model.add(Activation("softmax"))
+
+        optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
+        model.compile(optimizer=optimizer, loss="categorical_crossentropy", metrics=["acc"])
+
 
 def remove_padding(data, profile_len, return_prob=False):
     """ Removes the padding of the given data, calculates which label was predicted if wished and flats everything.
@@ -105,8 +131,8 @@ def remove_padding(data, profile_len, return_prob=False):
 # TODO return real values
 # TODO add name of the values
 # TODO calculate the metrics
-# TODO make this more general: eval_ann with ann_type = ["lstm", "blstm", "autoenc"]
 # TODO rename variables (more consistent!)
+# TODO documentation
 def eval_lstm(x_train, x_valid, y_train, y_valid, profile_len_train, profile_len_valid,
              batch_size, epochs, learning_rate, ann_type, rnn_size, dropout, dense_units, cv=None, plot_loss=False, file_name=None):
     """ For experimenting purposes.
@@ -135,6 +161,8 @@ def eval_lstm(x_train, x_valid, y_train, y_valid, profile_len_train, profile_len
         model = blstm_architecture(input_shape=input_shape, output_shape=output_shape, rnn_size=rnn_size, dropout=dropout)
     elif ann_type == "lstm":
         model = lstm_architecture(input_shape=input_shape, output_shape=output_shape, rnn_size=rnn_size, dropout=dropout)
+    elif ann_type == "enc_dec":
+        model = enc_dec_architecture(input_shape=input_shape, output_shape=output_shape, rnn_size=rnn_size, dropout=dropout)
     else:
         raise ValueError("Parameter \"ann_type\" in eval_lstm() must be one of the following: \"lstm\", \"blstm\".")
 
@@ -246,6 +274,7 @@ def prepare_data(x, y, smp_idx_all, labels=None, max_smp_len=None):
 
 # TODO make this more general: possible for all architectures
 # TODO return tuning results
+# TODO documentation
 def tune_lstm(x_train, x_valid, y_train, y_valid, profile_len_train, profile_len_valid, **params):
     """ Tune the LSTM.
     **params:
@@ -341,8 +370,9 @@ def calculate_metrics_ann(results):
 
 # TODO documentation
 # TODO separate lstm and blstm more clearly
-def lstm(x_train, y_train, smp_idx_train, name="LSTM", cv=0.2, tuning=False, visualize=False, **params):
+def ann(x_train, y_train, smp_idx_train, ann_type="lstm", name="LSTM", cv=0.2, tuning=False, visualize=False, **params):
     """ LSTM model performing a sequence labeling task. Crossvalidation must respect the time series data!
+    ann_type must be one of: "lstm", "blstm", "enc_dec"
     """
     # read out csv and check results
     #print_tuning("plots/tables/lstm02.csv")
@@ -356,6 +386,8 @@ def lstm(x_train, y_train, smp_idx_train, name="LSTM", cv=0.2, tuning=False, vis
         x_data, y_data, profile_len = prepare_data(x_train, y_train, smp_idx_train)
         # make the train and validation split
         x_train, x_valid, y_train, y_valid, profile_len_train, profile_len_valid = train_test_split(x_data, y_data, profile_len, test_size=cv, random_state=42)
+        # TODO prepare data afterwards to circumvent problem with validation data
+
         # tune the model if wishes (and stop)
         if tuning:
             tune_lstm(x_train, x_valid, y_train, y_valid, profile_len_train, profile_len_valid, **params)
@@ -365,8 +397,8 @@ def lstm(x_train, y_train, smp_idx_train, name="LSTM", cv=0.2, tuning=False, vis
         # TODO replace with **params
         results = eval_lstm(x_train=x_train, x_valid=x_valid, y_train=y_train, y_valid=y_valid,
                                   profile_len_train=profile_len_train, profile_len_valid=profile_len_valid,
-                                  batch_size=64, epochs=5, learning_rate=0.01,
-                                  ann_type="lstm", rnn_size=25, dropout=0.2, dense_units=25)
+                                  batch_size=6, epochs=50, learning_rate=0.01,
+                                  ann_type=ann_type, rnn_size=100, dropout=0.2, dense_units=100)
 
         # call metrics on model_results
         return calculate_metrics_ann(results)
@@ -391,7 +423,7 @@ def lstm(x_train, y_train, smp_idx_train, name="LSTM", cv=0.2, tuning=False, vis
             k_results = eval_lstm(x_train=x_k_train, x_valid=x_k_valid, y_train=y_k_train, y_valid=y_k_valid,
                                       profile_len_train=profile_len_k_train, profile_len_valid=profile_len_k_valid,
                                       batch_size=6, epochs=50, learning_rate=0.01,
-                                      ann_type="blstm", rnn_size=100, dropout=0.2, dense_units=100)
+                                      ann_type=ann_type, rnn_size=100, dropout=0.2, dense_units=100)
             if not keys_assigned:
                 all_results = {k: [] for k in k_results.keys()}
                 keys_assigned = True
