@@ -8,7 +8,7 @@ from models.semisupervised_models import kmeans, gaussian_mix, bayesian_gaussian
 from models.baseline import majority_class_baseline
 from models.supervised_models import testing
 from models.helper_funcs import normalize
-from models.anns import lstm
+from models.anns import ann
 
 import numpy as np
 import pandas as pd
@@ -300,13 +300,18 @@ def main():
     # print("...finished AdaBoost Model.\n")
 
     # J LSTM
-    lstm_scores = lstm(x_train, y_train, smp_idx_train, cv=cv)
-    all_scores.append(mean_kfolds(lstm_scores))
-    print(all_scores)
-    exit(0)
+    # lstm_scores = ann(x_train, y_train, ann_type="lstm", smp_idx_train, cv=cv)
+    # all_scores.append(mean_kfolds(lstm_scores))
+    # print(all_scores)
+    # exit(0)
     # TODO make mean_kfolds  for fit and score time
 
-    # K Encoder-Decoder
+    # K BLSTM
+    blstm_scores = ann(x_train, y_train, smp_idx_train, ann_type="enc_dec", cv=0.2)
+    all_scores.append(mean_kfolds(blstm_scores))
+    print(all_scores)
+    exit(0)
+    # J Encoder-Decoder
 
     # 10. print the validation results
     all_scores = pd.DataFrame(all_scores).rename(columns={"test_balanced_accuracy": "test_bal_acc",
