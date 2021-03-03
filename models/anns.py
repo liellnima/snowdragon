@@ -11,7 +11,9 @@ import matplotlib.pyplot as plt
 from tabulate import tabulate
 from tensorflow import keras
 from tensorflow.keras import Sequential
-from tensorflow.keras.layers import Embedding, Dense, LSTM, Dropout, TimeDistributed, Masking, Bidirectional, Activation
+from tensorflow.keras.layers import Embedding, Dense, LSTM, Dropout, TimeDistributed, Masking, Bidirectional, Activation, RepeatVector
+
+#from attention_keras.layers.attention import AttentionLayer
 
 def lstm_architecture(input_shape, output_shape, rnn_size, dropout, dense_units=100, learning_rate=0.01):
     """ The architecture of a lstm model. (Dense Layer, LSTM Layer, Dense Output Layer)
@@ -71,7 +73,12 @@ def blstm_architecture(input_shape, output_shape, rnn_size, dropout, dense_units
 
     return model
 
-def enc_dec_architecture(input_shape, output_shape, rnn_size, dropout, dense_units=100, learning_rate=0.01, attention=False):
+# TODO: bidirectional!
+# easier:
+# BEST ONE: https://towardsdatascience.com/light-on-math-ml-attention-with-keras-dc8dbc1fad39
+# https://stackoverflow.com/questions/63289566/keras-attention-layer-on-sequence-to-sequence-model-typeerror-cannot-iterate-ov
+# https://www.tensorflow.org/addons/tutorials/networks_seq2seq_nmt
+def enc_dec_architecture(input_shape, output_shape, rnn_size, dropout, dense_units=100, learning_rate=0.01, attention=True):
     """ Encoder-Decoder Architecture. https://www.tensorflow.org/tutorials/text/nmt_with_attention
     https://machinelearningmastery.com/encoder-decoder-attention-sequence-to-sequence-prediction-keras/
     """
@@ -89,6 +96,7 @@ def enc_dec_architecture(input_shape, output_shape, rnn_size, dropout, dense_uni
 
         optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
         model.compile(optimizer=optimizer, loss="categorical_crossentropy", metrics=["acc"])
+
     else:
         model = Sequential()
         model.add(Masking(mask_value=0.0, input_shape=input_shape))
@@ -103,6 +111,7 @@ def enc_dec_architecture(input_shape, output_shape, rnn_size, dropout, dense_uni
 
         optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
         model.compile(optimizer=optimizer, loss="categorical_crossentropy", metrics=["acc"])
+    return model
 
 
 def remove_padding(data, profile_len, return_prob=False):
