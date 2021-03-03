@@ -8,6 +8,7 @@ from sklearn.svm import SVC
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import RandomForestClassifier
 from imblearn.ensemble import EasyEnsembleClassifier
+from imblearn.ensemble import BalancedRandomForestClassifier
 
 
 def testing(model, x_train, y_train, x_test, y_test, smp_idx_train, smp_idx_test):
@@ -36,7 +37,7 @@ def testing(model, x_train, y_train, x_test, y_test, smp_idx_train, smp_idx_test
 
 
 # TODO make return_train_score a parameter
-def random_forest(x_train, y_train, cv, name="RandomForest", visualize=False, only_model=False):
+def random_forest(x_train, y_train, cv, name="RandomForest", visualize=False, only_model=False, class_weight="balanced", resample=False):
     """ Random Forest.
     Parameters:
         x_train: Input data for training
@@ -45,16 +46,28 @@ def random_forest(x_train, y_train, cv, name="RandomForest", visualize=False, on
         name (str): Name/Description for the model
         visualize (bool): whether a single decision tree from the forest should be plotted
         only_model (bool): if True returns only the model
+        class_weight (str): should be at least 'balanced'. 'balanced_subsample' should be better.
+        resample (bool): if True, a balanced Random Forest is used which randomly undersamples each bootstrap sample to balance it.
     Returns:
         model or (model, dict): tuple of the model itself and a dict containing results of models (or returns only model if indicated)
     """
-    rf = RandomForestClassifier(n_estimators = 10,
-                                criterion = "entropy",
-                                bootstrap = True,
-                                max_samples = 0.6,     # 60 % of the training data (None: all)
-                                max_features = "sqrt", # uses sqrt(num_features) features
-                                class_weight = "balanced", # balanced_subsample computes weights based on bootstrap sample
-                                random_state = 42)
+    if resample:
+        rf = BalancedRandomForestClassifier(n_estimators = 10,
+                                    criterion = "entropy",
+                                    bootstrap = True,
+                                    max_samples = 0.6,     # 60 % of the training data (None: all)
+                                    max_features = "sqrt", # uses sqrt(num_features) features
+                                    class_weight = class_weight, # balanced_subsample computes weights based on bootstrap sample
+                                    random_state = 42) #random state might not work
+    else:
+        rf = RandomForestClassifier(n_estimators = 10,
+                                    criterion = "entropy",
+                                    bootstrap = True,
+                                    max_samples = 0.6,     # 60 % of the training data (None: all)
+                                    max_features = "sqrt", # uses sqrt(num_features) features
+                                    class_weight = class_weight, # balanced_subsample computes weights based on bootstrap sample
+                                    random_state = 42)
+
     if visualize:
         visualize_tree(rf, x_train, y_train, file_name="plots/forests/tree")
 
