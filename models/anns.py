@@ -1,5 +1,4 @@
 from sklearn.model_selection import train_test_split
-from models.attention_decoder import AttentionDecoder
 from models.metrics import balanced_accuracy, recall, precision, roc_auc, my_log_loss, calculate_metrics_raw, METRICS, METRICS_PROB
 
 import time
@@ -11,7 +10,10 @@ import matplotlib.pyplot as plt
 from tabulate import tabulate
 from tensorflow import keras
 from tensorflow.keras import Sequential
-from tensorflow.keras.layers import Embedding, Dense, LSTM, Dropout, TimeDistributed, Masking, Bidirectional, Activation, RepeatVector
+from tensorflow.keras import regularizers
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Dense, LSTM, Dropout, Masking, Bidirectional, Activation, Input, RepeatVector
+from keras_self_attention import SeqSelfAttention
 
 #from attention_keras.layers.attention import AttentionLayer
 
@@ -30,8 +32,9 @@ def lstm_architecture(input_shape, output_shape, rnn_size, dropout, dense_units=
     # architecture
     model = Sequential()
     model.add(Masking(mask_value=0.0, input_shape=input_shape))
-    model.add(Dense(units=dense_units, activation="relu"))
-    model.add(Dropout(dropout))
+    if dense_units > 0:
+        model.add(Dense(units=dense_units, activation="relu"))
+        model.add(Dropout(dropout))
     model.add(LSTM(rnn_size, return_sequences=True))
     model.add(Dropout(dropout))
     model.add(Dense(units=output_shape, activation="relu"))
@@ -59,8 +62,9 @@ def blstm_architecture(input_shape, output_shape, rnn_size, dropout, dense_units
     # change this: https://stackoverflow.com/questions/62991082/bidirectional-lstm-merge-mode-explanation
     model = Sequential()
     model.add(Masking(mask_value=0.0, input_shape=input_shape))
-    model.add(Dense(units=dense_units, activation="relu"))
-    model.add(Dropout(dropout))
+    if dense_units > 0:
+        model.add(Dense(units=dense_units, activation="relu"))
+        model.add(Dropout(dropout))
     forward_layer = LSTM(rnn_size, return_sequences=True)
     backward_layer = LSTM(rnn_size, return_sequences=True, go_backwards=True)
     model.add(Bidirectional(forward_layer, backward_layer=backward_layer, merge_mode="concat"))
@@ -73,25 +77,35 @@ def blstm_architecture(input_shape, output_shape, rnn_size, dropout, dense_units
 
     return model
 
-# TODO: bidirectional!
-# easier:
-# BEST ONE: https://towardsdatascience.com/light-on-math-ml-attention-with-keras-dc8dbc1fad39
-# https://stackoverflow.com/questions/63289566/keras-attention-layer-on-sequence-to-sequence-model-typeerror-cannot-iterate-ov
-# https://www.tensorflow.org/addons/tutorials/networks_seq2seq_nmt
-def enc_dec_architecture(input_shape, output_shape, rnn_size, dropout, dense_units=100, learning_rate=0.01, attention=True):
+# package I use for attention: https://github.com/CyberZHG/keras-self-attention
+# https://lilianweng.github.io/lil-log/2018/06/24/attention-attention.html#whats-wrong-with-seq2seq-model
+def enc_dec_architecture(input_shape, output_shape, rnn_size, dropout=0.2, dense_units=0, learning_rate=0.001, attention=False, bidirectional=True):
     """ Encoder-Decoder Architecture. https://www.tensorflow.org/tutorials/text/nmt_with_attention
     https://machinelearningmastery.com/encoder-decoder-attention-sequence-to-sequence-prediction-keras/
+    if dense_units = 0 -> no feed forward network used in the beginning
     """
-    if not attention:
+    if attention:
         model = Sequential()
         model.add(Masking(mask_value=0.0, input_shape=input_shape))
-        model.add(Dense(units=dense_units, activation="relu"))
-        model.add(Dropout(dropout))
-        model.add(LSTM(rnn_size))
-        model.add(RepeatVector(input_shape[0]))
+        # first dense layer
+        if dense_units > 0:
+            model.add(Dense(units=dense_units, activation="relu"))
+            model.add(Dropout(dropout))
+        # encoder
+        forward_layer = LSTM(rnn_size, return_sequences=True)
+        backward_layer = LSTM(rnn_size, return_sequences=True, go_backwards=True)
+        model.add(Bidirectional(forward_layer, backward_layer=backward_layer, merge_mode="concat"))
+        # global attention -> can be changed to local attention with attention_width
+        model.add(SeqSelfAttention(attention_type=SeqSelfAttention.ATTENTION_TYPE_ADD, # attention_type (ADD: Bahadenau) (MUL: Luong)
+                                   units=32, # units for feed forward network of attention layer
+                                   attention_activation="tanh")) # as in Bahadenau
+        # decoder
         model.add(LSTM(rnn_size, return_sequences=True))
         model.add(Dropout(dropout))
+
+        # output layer
         model.add(Dense(units=output_shape, activation="relu"))
+        # softmax for probability
         model.add(Activation("softmax"))
 
         optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
@@ -100,17 +114,27 @@ def enc_dec_architecture(input_shape, output_shape, rnn_size, dropout, dense_uni
     else:
         model = Sequential()
         model.add(Masking(mask_value=0.0, input_shape=input_shape))
-        model.add(Dense(units=dense_units, activation="relu"))
+        # first dense layer
+        if dense_units > 0:
+            model.add(Dense(units=dense_units, activation="relu"))
+            model.add(Dropout(dropout))
+        # encoder
+        model.add(LSTM(rnn_size, kernel_regularizer=regularizers.l1_l2(l1=0.001, l2=0.001), return_sequences=True))
         model.add(Dropout(dropout))
-        model.add(LSTM(rnn_size, return_sequences=True))
-        model.add(AttentionDecoder(rnn_size, input_shape[1]))
-        # attention, these layers might not work
+        # bottleneck
+        #model.add(RepeatVector(input_shape[0]))
+        # decoder
+        model.add(LSTM(rnn_size, return_sequences=True, kernel_regularizer=regularizers.l1_l2(l1=0.001, l2=0.001)))
         model.add(Dropout(dropout))
+        # output layer
         model.add(Dense(units=output_shape, activation="relu"))
+        # softmax for probability
         model.add(Activation("softmax"))
 
         optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
         model.compile(optimizer=optimizer, loss="categorical_crossentropy", metrics=["acc"])
+
+
     return model
 
 
@@ -124,8 +148,6 @@ def remove_padding(data, profile_len, return_prob=False):
     Returns:
         list: 1d list where all predicted labels (argmax index from one hot encoded labels) are concatenated
     """
-    # TODO find out how the probability part works
-
     # find the predicted label if wished
     argmax_pred = np.argmax(data, axis=2) if not return_prob else data
 
@@ -137,9 +159,6 @@ def remove_padding(data, profile_len, return_prob=False):
     # flatten the list
     return [data_point for smp in all_preds for data_point in smp]
 
-# TODO return real values
-# TODO add name of the values
-# TODO calculate the metrics
 # TODO rename variables (more consistent!)
 # TODO documentation
 def eval_lstm(x_train, x_valid, y_train, y_valid, profile_len_train, profile_len_valid,
@@ -290,7 +309,7 @@ def tune_lstm(x_train, x_valid, y_train, y_valid, profile_len_train, profile_len
     batch_size, epochs, learning_rate, ann_type, rnn_size, dropout, dense_units
     """
     # TODO catch these values from params
-    ann_types = ["lstm", "blstm"]
+    ann_types = ["lstm", "blstm", "enc_dec"]
     dropouts = [0, 0.2, 0.5]
     rnn_sizes = [25, 50, 100]
     batch_sizes = [32, 6, 1] # later 1, for velocity reasons 18 at the moment
@@ -368,6 +387,9 @@ def calculate_metrics_ann(results):
         all_scores.update(calculate_metrics_raw(y_trues=results["y_true_train"], y_preds=results["y_pred_prob_train"], metrics=METRICS_PROB, cv=False, annot="train"))
         all_scores.update(calculate_metrics_raw(y_trues=results["y_true_valid"], y_preds=results["y_pred_prob_valid"], metrics=METRICS_PROB, cv=False, annot="test"))
     except ValueError as e:
+        # print the non-probability based scores that were possible to calculate
+        print(all_scores)
+        # and raise a ValueError for the rest
         if str(e) == "Number of classes in y_true not equal to the number of columns in 'y_score'":
             raise ValueError("""The train-test split you chose is most likely not stratified.
                 Some of the classes occuring in the training dataset do not occur in the testing dataset.
@@ -406,8 +428,8 @@ def ann(x_train, y_train, smp_idx_train, ann_type="lstm", name="LSTM", cv=0.2, t
         # TODO replace with **params
         results = eval_lstm(x_train=x_train, x_valid=x_valid, y_train=y_train, y_valid=y_valid,
                                   profile_len_train=profile_len_train, profile_len_valid=profile_len_valid,
-                                  batch_size=6, epochs=50, learning_rate=0.01,
-                                  ann_type=ann_type, rnn_size=100, dropout=0.2, dense_units=100)
+                                  batch_size=32, epochs=50, learning_rate=0.01,
+                                  ann_type=ann_type, rnn_size=100, dropout=0, dense_units=0, plot_loss=True)
 
         # call metrics on model_results
         return calculate_metrics_ann(results)
