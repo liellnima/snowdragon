@@ -12,6 +12,7 @@ from models.anns import ann
 
 import numpy as np
 import pandas as pd
+import random
 from tabulate import tabulate
 
 # Other metrics: https://stats.stackexchange.com/questions/390725/suitable-performance-metric-for-an-unbalanced-multi-class-classification-problem
@@ -36,7 +37,7 @@ def my_train_test_split(smp, test_size=0.2, train_size=0.8, return_smp_idx=True)
         train_size (float): between 0 and 1, size of training data
         return_smp_idx (bool): indicates whether smp_idx should be returned as well
     Returns:
-        quadruple ar hexuple: x_train, x_test, y_train, y_test, (smp_idx_train), (smp_idx_test)
+        quadruple or hexuple of pd.DataFrames/Series: x_train, x_test, y_train, y_test, (smp_idx_train), (smp_idx_test)
     """
     # labelled data
     labelled_smp = smp[(smp["label"] != 0) & (smp["label"] != 1) & (smp["label"] != 2)]
@@ -183,7 +184,7 @@ def main():
     smp_org = remove_nans_mosaic(smp_org)
 
     # 2. Visualize before normalization
-    #visualize_original_data(smp_org)
+    # visualize_original_data(smp_org)
 
     # 3. Normalize
     smp = normalize_mosaic(smp_org)
@@ -287,7 +288,7 @@ def main():
     # all_scores.append(mean_kfolds(svm_scores))
     # print("...finished Support Vector Machine.\n")
     #
-    # # H knn (works with weights=distance)
+    # H knn (works with weights=distance)
     # print("Starting K-Nearest Neighbours Model...")
     # knn_scores = knn(x_train, y_train, cv_stratified, n_neighbors=20)
     # all_scores.append(mean_kfolds(knn_scores))
@@ -307,10 +308,19 @@ def main():
     # TODO make mean_kfolds  for fit and score time
 
     # K BLSTM
-    blstm_scores = ann(x_train, y_train, smp_idx_train, ann_type="enc_dec", cv=0.2)
+    #  cv can be a float, or a cv split
+    blstm_scores = ann(x_train, y_train, smp_idx_train, ann_type="blstm", cv=0.2,
+                       batch_size=32, epochs=10, rnn_size=50, dense_units=50, dropout=0.2, learning_rate=0.01)
+    print(blstm_scores)
     all_scores.append(mean_kfolds(blstm_scores))
-    print(all_scores)
-    exit(0)
+    #print(all_scores)
+    #exit(0)
+
+    # batch_size=6, epochs=50, learning_rate=0.01, plot_loss=plot_loss
+    # ann_type=ann_type, rnn_size=100, dropout=0.2, dense_units=100
+
+    # batch_size=32, epochs=10, learning_rate=0.01,
+    # ann_type=ann_type, rnn_size=100, dropout=0, dense_units=0, plot_loss=plot_loss
     # J Encoder-Decoder
 
     # 10. print the validation results
@@ -335,4 +345,5 @@ def main():
 
 
 if __name__ == "__main__":
+    random.seed(42)
     main()

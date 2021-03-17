@@ -15,9 +15,8 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Dense, LSTM, Dropout, Masking, Bidirectional, Activation, Input, RepeatVector
 from keras_self_attention import SeqSelfAttention
 
-#from attention_keras.layers.attention import AttentionLayer
 
-def lstm_architecture(input_shape, output_shape, rnn_size, dropout, dense_units=100, learning_rate=0.01):
+def lstm_architecture(input_shape, output_shape, rnn_size=100, dropout=0, dense_units=100, learning_rate=0.01):
     """ The architecture of a lstm model. (Dense Layer, LSTM Layer, Dense Output Layer)
     Parameters:
         input_shape (tuple): contains part of the input shape of the data, namely the maximal length of time points and the number of features
@@ -46,7 +45,7 @@ def lstm_architecture(input_shape, output_shape, rnn_size, dropout, dense_units=
     return model
 
 
-def blstm_architecture(input_shape, output_shape, rnn_size, dropout, dense_units=100, learning_rate=0.01):
+def blstm_architecture(input_shape, output_shape, rnn_size=100, dropout=0, dense_units=100, learning_rate=0.01):
     """ The architecture of a bidirectional lstm model. (Dense Layer, forward LSTM Layer, backward LSTM Layer, Dense Output Layer)
     Parameters:
         input_shape (tuple): contains part of the input shape of the data, namely the maximal length of time points and the number of features
@@ -79,61 +78,62 @@ def blstm_architecture(input_shape, output_shape, rnn_size, dropout, dense_units
 
 # package I use for attention: https://github.com/CyberZHG/keras-self-attention
 # https://lilianweng.github.io/lil-log/2018/06/24/attention-attention.html#whats-wrong-with-seq2seq-model
-def enc_dec_architecture(input_shape, output_shape, rnn_size, dropout=0.2, dense_units=0, learning_rate=0.001, attention=False, bidirectional=True):
-    """ Encoder-Decoder Architecture. https://www.tensorflow.org/tutorials/text/nmt_with_attention
-    https://machinelearningmastery.com/encoder-decoder-attention-sequence-to-sequence-prediction-keras/
-    if dense_units = 0 -> no feed forward network used in the beginning
+# https://www.tensorflow.org/tutorials/text/nmt_with_attention
+# https://machinelearningmastery.com/encoder-decoder-attention-sequence-to-sequence-prediction-keras/
+def enc_dec_architecture(input_shape, output_shape, rnn_size=100, dropout=0.2, dense_units=0, learning_rate=0.001, attention=False, bidirectional=False, regularize=True):
+    """ An Encoder-Decoder Architecture - if wished with attention mechanism.
+    Parameters:
+        input_shape (tuple): contains part of the input shape of the data, namely the maximal length of time points and the number of features
+        output_shape (int): contains part of the output shape of the data, namely the number of labels
+        rnn_size (int): how many units the LSTM layers should have
+        dropout (float): how many percent of the units in the layers should drop out
+        dense_units (int): how many units the first dense layer should have. Default=0 means that no feed forward network is used in the beginning.
+        learning_rate (float): which learning rate the Adam optimizer should use.
+            Default=0.001, since the encoder-decoder needs a smaller learning rate than simpler models.
+        bidirectional (bool): if the encoder should be bidirectional. Default=False.
+        regularize (bool): sets a regularizer for the encoder and decoder. Default=True means that the regularizer is set.
     """
-    if attention:
-        model = Sequential()
-        model.add(Masking(mask_value=0.0, input_shape=input_shape))
-        # first dense layer
-        if dense_units > 0:
-            model.add(Dense(units=dense_units, activation="relu"))
-            model.add(Dropout(dropout))
-        # encoder
-        forward_layer = LSTM(rnn_size, return_sequences=True)
-        backward_layer = LSTM(rnn_size, return_sequences=True, go_backwards=True)
+    lstm_regularizers = regularizers.l1_l2(l1=0.001, l2=0.001) if regularize else None
+    enc_return_seq = True if attention else False
+
+    model = Sequential()
+    model.add(Masking(mask_value=0.0, input_shape=input_shape))
+    # TODO a boolean to decide if there should be stacked (B)LSTMs instead of a dense layer
+    # first dense layer
+    if dense_units > 0:
+        model.add(Dense(units=dense_units, activation="relu"))
+        model.add(Dropout(dropout))
+
+    # encoder
+    if bidirectional:
+        forward_layer = LSTM(rnn_size, return_sequences=enc_return_seq)
+        backward_layer = LSTM(rnn_size, return_sequences=enc_return_seq, go_backwards=True)
         model.add(Bidirectional(forward_layer, backward_layer=backward_layer, merge_mode="concat"))
+        model.add(Dropout(dropout))
+    else:
+        model.add(LSTM(rnn_size, kernel_regularizer=lstm_regularizers, return_sequences=enc_return_seq))
+        model.add(Dropout(dropout))
+
+    # attention if wished
+    if attention:
         # global attention -> can be changed to local attention with attention_width
         model.add(SeqSelfAttention(attention_type=SeqSelfAttention.ATTENTION_TYPE_ADD, # attention_type (ADD: Bahadenau) (MUL: Luong)
                                    units=32, # units for feed forward network of attention layer
                                    attention_activation="tanh")) # as in Bahadenau
-        # decoder
-        model.add(LSTM(rnn_size, return_sequences=True))
-        model.add(Dropout(dropout))
-
-        # output layer
-        model.add(Dense(units=output_shape, activation="relu"))
-        # softmax for probability
-        model.add(Activation("softmax"))
-
-        optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
-        model.compile(optimizer=optimizer, loss="categorical_crossentropy", metrics=["acc"])
-
+    # bottleneck
     else:
-        model = Sequential()
-        model.add(Masking(mask_value=0.0, input_shape=input_shape))
-        # first dense layer
-        if dense_units > 0:
-            model.add(Dense(units=dense_units, activation="relu"))
-            model.add(Dropout(dropout))
-        # encoder
-        model.add(LSTM(rnn_size, kernel_regularizer=regularizers.l1_l2(l1=0.001, l2=0.001), return_sequences=True))
-        model.add(Dropout(dropout))
-        # bottleneck
-        #model.add(RepeatVector(input_shape[0]))
-        # decoder
-        model.add(LSTM(rnn_size, return_sequences=True, kernel_regularizer=regularizers.l1_l2(l1=0.001, l2=0.001)))
-        model.add(Dropout(dropout))
-        # output layer
-        model.add(Dense(units=output_shape, activation="relu"))
-        # softmax for probability
-        model.add(Activation("softmax"))
+        model.add(RepeatVector(input_shape[0]))
 
-        optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
-        model.compile(optimizer=optimizer, loss="categorical_crossentropy", metrics=["acc"])
+    # decoder
+    model.add(LSTM(rnn_size, kernel_regularizer=lstm_regularizers, return_sequences=True))
+    model.add(Dropout(dropout))
+    # output layer
+    model.add(Dense(units=output_shape, activation="relu"))
+    # softmax for probability
+    model.add(Activation("softmax"))
 
+    optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
+    model.compile(optimizer=optimizer, loss="categorical_crossentropy", metrics=["acc"])
 
     return model
 
@@ -161,20 +161,33 @@ def remove_padding(data, profile_len, return_prob=False):
 
 # TODO rename variables (more consistent!)
 # TODO documentation
-def eval_lstm(x_train, x_valid, y_train, y_valid, profile_len_train, profile_len_valid,
-             batch_size, epochs, learning_rate, ann_type, rnn_size, dropout, dense_units, cv=None, plot_loss=False, file_name=None):
-    """ For experimenting purposes.
-    Best parameters found so far:
-    Learning Rate: 0.01 (smaller -> more epochs)
-    Batch Size: 1 (for training 32 might be okay anyway - more epochs in this case)
-    Dense Units for dense_lstm or dense_relu_lstm: 100
-    Architecture: First a Relu Dense Layer, then LSTM, then maybe bidirectional LSTM, then a last dense layer
-    Dropout: unclear
-    RNN size: unclear
+# best params so far:
+    # For experimenting purposes.
+    # Best parameters found so far:
+    # Learning Rate: 0.01 (smaller -> more epochs)
+    # Batch Size: 1 (for training 32 might be okay anyway - more epochs in this case)
+    # Dense Units for dense_lstm or dense_relu_lstm: 100
+    # Architecture: First a Relu Dense Layer, then LSTM, then maybe bidirectional LSTM, then a last dense layer
+    # Dropout: unclear
+    # RNN size: unclear
+def eval_ann(x_train, x_valid, y_train, y_valid, profile_len_train, profile_len_valid,
+             batch_size, epochs, ann_type, plot_loss=False, file_name=None, **params):
+    """ This function can evaluate a single ANN. The functions returns the evaluation results and plots the loss if wished.
 
     Parameters:
+        x_train (np.array): the input training data
+        x_valid (np.array): the input validation data
+        y_train (np.array): the target training data
+        y_valid (np.array): the target validation data
+        profile_len_train (list): contains all lengths of each profile in the training data
+        profile_len_valid (list): contains all lengths of each profile in the validation data
+        batch_size (int): batch size employed during ANN training
+        epochs (int): number of epochs run during ANN training
+        ann_type (str): describing the choosen ann type. Can be on of the following three: ["lstm", "blstm", "enc_dec"]
         plot_loss (bool): Indicates if plot should be plotted or not
         file_name (str): Name for the plot_loss plot ("_loss") will be added. Default = None means that the plot won't be saved.
+        **params (dict): The following parameters for the ANN architectures appear here:
+            rnn_size, dense_units, dropout, regularizer, attention, bidirectional, learning_rate
     Returns:
         dict: contains y_true_train, y_true_valid, y_pred_train, y_pred_valid, y_pred_prob_train, y_pred_prob_valid
     """
@@ -186,13 +199,13 @@ def eval_lstm(x_train, x_valid, y_train, y_valid, profile_len_train, profile_len
     output_shape = y_train.shape[-1] # labels_len
 
     if ann_type == "blstm":
-        model = blstm_architecture(input_shape=input_shape, output_shape=output_shape, rnn_size=rnn_size, dropout=dropout)
+        model = blstm_architecture(input_shape=input_shape, output_shape=output_shape, **params)
     elif ann_type == "lstm":
-        model = lstm_architecture(input_shape=input_shape, output_shape=output_shape, rnn_size=rnn_size, dropout=dropout)
+        model = lstm_architecture(input_shape=input_shape, output_shape=output_shape, **params)
     elif ann_type == "enc_dec":
-        model = enc_dec_architecture(input_shape=input_shape, output_shape=output_shape, rnn_size=rnn_size, dropout=dropout)
+        model = enc_dec_architecture(input_shape=input_shape, output_shape=output_shape, **params)
     else:
-        raise ValueError("Parameter \"ann_type\" in eval_lstm() must be one of the following: \"lstm\", \"blstm\".")
+        raise ValueError("Parameter \"ann_type\" in eval_ann() must be one of the following: \"lstm\", \"blstm\" or \"enc_dec\".")
 
     # fitting the model
     start_time = time.time()
@@ -306,7 +319,7 @@ def prepare_data(x, y, smp_idx_all, labels=None, max_smp_len=None):
 def tune_lstm(x_train, x_valid, y_train, y_valid, profile_len_train, profile_len_valid, **params):
     """ Tune the LSTM.
     **params:
-    batch_size, epochs, learning_rate, ann_type, rnn_size, dropout, dense_units
+    batch_size, epochs, learning_rate, ann_type, rnn_size, dropout, dense_units, attention, bidirectional, regularizer
     """
     # TODO catch these values from params
     ann_types = ["lstm", "blstm", "enc_dec"]
@@ -330,7 +343,7 @@ def tune_lstm(x_train, x_valid, y_train, y_valid, profile_len_train, profile_len
                             for ann_type in ann_types:
                                 print("Running model with the following specs:")
                                 print("Model Type {}, Batch size {}, Dropout {}, Learning Rate {}, RNN Size {}, No Dense Units, Epochs {}, Loss Plot {}: \n".format(ann_type, batch_size, dropout, learning_rate, rnn_size, epochs, i))
-                                model_results = eval_lstm(x_train=x_train, x_valid=x_valid, y_train=y_train, y_valid=y_valid,
+                                model_results = eval_ann(x_train=x_train, x_valid=x_valid, y_train=y_train, y_valid=y_valid,
                                                           profile_len_train=profile_len_train, profile_len_valid=profile_len_valid,
                                                           batch_size=batch_size, epochs=epochs, learning_rate=learning_rate,
                                                           ann_type=ann_type, rnn_size=rnn_size, dropout=dropout, dense_units=dense_units)
@@ -350,7 +363,7 @@ def tune_lstm(x_train, x_valid, y_train, y_valid, profile_len_train, profile_len
                                 print("Valid Bal Acc: ", balanced_accuracy(y_true=y_true_valid, y_pred=y_pred_valid))
                                 # increment i
                                 i = i + 1
-
+# TODO make this somewhere outside
 def print_tuning(file_name):
     """ Read out csv file with tuning results and print some information.
     Parameters:
@@ -399,37 +412,60 @@ def calculate_metrics_ann(results):
 
     return all_scores
 
-# TODO documentation
-# TODO separate lstm and blstm more clearly
-def ann(x_train, y_train, smp_idx_train, ann_type="lstm", name="LSTM", cv=0.2, tuning=False, visualize=False, **params):
-    """ LSTM model performing a sequence labeling task. Crossvalidation must respect the time series data!
-    ann_type must be one of: "lstm", "blstm", "enc_dec"
+def find_max_len(smp_idx, x_data):
+    """ Finds the maximum length of a profile in this dataset.
+    Parameters:
+        smp_idx (np.array): The smp indices for each data point.
+        x_data (np.array): The input data, the smp profiles.
     """
+    max_smp_len = 0
+    for smp in smp_idx.unique():
+        if len(x_data[smp_idx == smp]) > max_smp_len:
+            max_smp_len = len(x_data[smp_idx == smp])
+
+    return max_smp_len
+
+# TODO integrate name
+# TODO make tuning possible
+# TODO include RNN
+# TODO include ANN
+# TODO include print tuning and tuning function somewhere else:
     # read out csv and check results
+    # TODO delete this
     #print_tuning("plots/tables/lstm02.csv")
-
-
-    # TODO tuning should be done externally
-
+# TODO fix warning with incompatible shape
+def ann(x_train, y_train, smp_idx_train, ann_type="lstm", name="LSTM", cv=0.2, plot_loss=False, **params):
+    """ The wrapper function to run any ANN architecture provided in this file.
+    Parameters:
+        x_train (pd.DataFrame): the complete training data
+        y_train (pd.DataFrame): the complete target data
+        smp_idx_train (pd.Series): smp index for each training sample
+        ann_type (str): describing the choosen ann type. Can be on of the following three: ["lstm", "blstm", "enc_dec"]
+        name (str): how the model should be named
+        cv (float or list): float indicates that a simple percentual training-test split should be done.
+            Otherwise it must be an iteratable list of length k with tuples of np 1-d arrays (train_indices, test_indices).
+        plot_loss (bool): if the loss should be printed after training.
+        **params (dict): containing: batch_size, epochs, learning_rate, rnn_size, dropout, dense_units,
+            bidirectional, attention, regularizer, file_name
+    Returns:
+        dict: all the metrics calculated from the different crossvalidation splits. Each key is connected to list, where the results are stored.
+    """
     # get training and validation data from that
     if isinstance(cv, float):
-        # prepare the data
-        x_data, y_data, profile_len = prepare_data(x_train, y_train, smp_idx_train)
         # make the train and validation split
-        x_train, x_valid, y_train, y_valid, profile_len_train, profile_len_valid = train_test_split(x_data, y_data, profile_len, test_size=cv, random_state=42)
-        # TODO prepare data afterwards to circumvent problem with validation data
+        x_train, x_valid, y_train, y_valid, idx_train, idx_valid = train_test_split(x_train, y_train, smp_idx_train, test_size=cv, random_state=42)
 
-        # tune the model if wishes (and stop)
-        if tuning:
-            tune_lstm(x_train, x_valid, y_train, y_valid, profile_len_train, profile_len_valid, **params)
-            # TODO return tuning results
-            # TODO save tuning results or return them
-        # else we already know which model we would like to use
-        # TODO replace with **params
-        results = eval_lstm(x_train=x_train, x_valid=x_valid, y_train=y_train, y_valid=y_valid,
+        # prepare the data
+        max_smp_len_train = find_max_len(smp_idx=idx_train, x_data=x_train)
+        max_smp_len_valid = find_max_len(smp_idx=idx_valid, x_data=x_valid)
+
+        x_train, y_train, profile_len_train = prepare_data(x_train, y_train, idx_train, max_smp_len=max_smp_len_train, labels=list(y_train.unique()))
+        x_valid, y_valid, profile_len_valid = prepare_data(x_valid, y_valid, idx_valid, max_smp_len=max_smp_len_valid, labels=list(y_valid.unique()))
+
+        # we already know which model we would like to use:
+        results = eval_ann(x_train=x_train, x_valid=x_valid, y_train=y_train, y_valid=y_valid,
                                   profile_len_train=profile_len_train, profile_len_valid=profile_len_valid,
-                                  batch_size=32, epochs=50, learning_rate=0.01,
-                                  ann_type=ann_type, rnn_size=100, dropout=0, dense_units=0, plot_loss=True)
+                                  ann_type=ann_type, plot_loss=plot_loss, **params)
 
         # call metrics on model_results
         return calculate_metrics_ann(results)
@@ -442,6 +478,7 @@ def ann(x_train, y_train, smp_idx_train, ann_type="lstm", name="LSTM", cv=0.2, t
         # for each fold in the crossvalidation
         for k in cv:
             # find maximal smp profile length in complete dataset
+            #max_smp_len = find_max_len(smp_idx=smp_idx_train, x_data=x_train)
             max_smp_len = 0
             for smp in smp_idx_train.unique():
                 if len(x_train[smp_idx_train == smp]) > max_smp_len:
@@ -451,10 +488,9 @@ def ann(x_train, y_train, smp_idx_train, ann_type="lstm", name="LSTM", cv=0.2, t
             x_k_valid, y_k_valid, profile_len_k_valid = prepare_data(x_train.iloc[k[1]], y_train.iloc[k[1]], smp_idx_train.iloc[k[1]], max_smp_len=max_smp_len, labels=labels)
 
             # run the models with this cv split
-            k_results = eval_lstm(x_train=x_k_train, x_valid=x_k_valid, y_train=y_k_train, y_valid=y_k_valid,
+            k_results = eval_ann(x_train=x_k_train, x_valid=x_k_valid, y_train=y_k_train, y_valid=y_k_valid,
                                       profile_len_train=profile_len_k_train, profile_len_valid=profile_len_k_valid,
-                                      batch_size=6, epochs=50, learning_rate=0.01,
-                                      ann_type=ann_type, rnn_size=100, dropout=0.2, dense_units=100)
+                                      plot_loss=plot_loss, ann_type=ann_type, **params)
             if not keys_assigned:
                 all_results = {k: [] for k in k_results.keys()}
                 keys_assigned = True
@@ -469,7 +505,5 @@ def ann(x_train, y_train, smp_idx_train, ann_type="lstm", name="LSTM", cv=0.2, t
                     all_results["fit_time"].append(k_results[key])
 
         return calculate_metrics_ann(all_results)
-    # in the case of tuning
-    # TODO tuning in the case of crossvalidation?
 
-    # make a testing method possible
+    # TODO make a testing method possible

@@ -221,7 +221,7 @@ def mean_kfolds(scores):
     # use scikit learn StratifiedKFold on this data set!
     # transfer this split to the smp_idx (which smp timeseries is used in which fold?)
 # TODO check if each label is contained in the split. If not -> add another smp profile with this label into the split
-def cv_manual(data, target, k):
+def cv_manual(data, target, k, random_state=42):
     """ Performs a custom k-fold crossvalidation. Roughly 1/k % of the data is used a testing data,
     the rest is training data. This happens k times - each data chunk has been used as testing data once.
 
@@ -229,6 +229,7 @@ def cv_manual(data, target, k):
         data (pd.DataFrame): data on which crossvalidation should be performed
         target (pd.Series): labels for the data - needed in order to provide each fold with all labels
         k (int): number of folds for cross validation
+        random_state (int): random state to set a random seed
     Returns:
         list: iteratable list of length k with tuples of np 1-d arrays (train_indices, test_indices)
     """
@@ -236,7 +237,7 @@ def cv_manual(data, target, k):
     cv = []
     profiles = list(data["smp_idx"].unique()) # list of all smp profiles of data
     k_idx = np.resize(np.arange(1, k+1), 69) # k indices for the smp profiles
-    np.random.seed(42)
+    np.random.seed(random_state)
     np.random.shuffle(k_idx)
     all_labels = target.unique()
     # for each fold k, the corresponding smp profiles are used as test data

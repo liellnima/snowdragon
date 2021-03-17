@@ -19,7 +19,7 @@ from sklearn.decomposition import PCA
 from sklearn.tree import export_graphviz
 from sklearn.tree._tree import TREE_LEAF
 from sklearn.feature_selection import f_classif
-from sklearn.ensemble import ExtraTreesClassifier
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_selection import SelectKBest
 
 
@@ -149,7 +149,7 @@ def anova(smp, file_name=None, tablefmt='psql'):
     smp_filtered = smp[smp["label"] != 0]
     features = smp_filtered.drop("label", axis=1)
     target = smp_filtered["label"]
-    # feature extraction
+    # feature extraction with ANOVA (f_classif)
     test = SelectKBest(score_func=f_classif, k="all")
     fit = test.fit(features, target)
     results = pd.DataFrame({"Feature" : features.columns, "ANOVA-F-value" : fit.scores_, "P-value" : fit.pvalues_})
@@ -176,10 +176,17 @@ def forest_extractor(smp, file_name=None, tablefmt="psql", plot=False):
     x = smp_labelled.drop(["label", "smp_idx"], axis=1)
     y = smp_labelled["label"]
     # Build a forest and compute the impurity-based feature importances
-    forest = ExtraTreesClassifier(n_estimators=250,
+    forest = RandomForestClassifier(n_estimators=250,
                                   random_state=42)
     forest.fit(x, y)
     importances = forest.feature_importances_
+
+    if plot:
+        # Plot feature importances as pixels
+        plt.matshow(importances, cmap=plt.cm.hot)
+        plt.title("Feature importances with forests of trees")
+        plt.show()
+
     std = np.std([tree.feature_importances_ for tree in forest.estimators_], axis=0)
     indices = np.argsort(importances)[::-1]
     indices_names = [list(x.columns)[index] for index in indices]
@@ -511,7 +518,7 @@ def visualize_normalized_data(smp):
     # FEATURE "EXTRACTION"
     #anova(smp, "plots/tables/ANOVA_results.txt", tablefmt="psql") # latex_raw also possible
     # RANDOM FOREST FEATURE EXTRACTION
-    #forest_extractor(smp)
+    forest_extractor(smp)
     # SHOW ONE SMP PROFILE WITHOUT LABELS
     #smp_unlabelled(smp, smp_name=smp_profile_name)
     # SHOW ONE SMP PROFILE WITH LABELS
@@ -539,7 +546,7 @@ def visualize_original_data(smp):
     """
     # smp_profile_name = "S31H0368" #"S31H0607"
     # # HOW BALANCED IS THE LABELLED DATASET?
-    #plot_balancing(smp)
+    plot_balancing(smp)
     # # SHOW THE DATADISTRIBUTION OF ALL FEATURES
     # pairwise_features(smp, features=["label", "distance", "var_force", "mean_force", "delta_4", "lambda_4", "gradient"], samples=2000)
     # # SHOW HEATMAP OF ALL FEATURES (with what are the labels correlated the most?)
