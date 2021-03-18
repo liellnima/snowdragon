@@ -23,7 +23,7 @@ def self_training(x_train_all, y_train_all, cv_semisupervised, base_model, name=
         dict: results from cross validation, inclusive probability based crossvalidation
     """
     # TODO cv: use the same cv split but randomly assign the other unlabelled data pieces to the other cv folds
-    st_model = SelfTrainingClassifier(knn, verbose=True, max_iter=max_iter, k_best=k_best).fit(x_train_all, y_train_all)
+    st_model = SelfTrainingClassifier(base_model, verbose=True, max_iter=max_iter, k_best=k_best).fit(x_train_all, y_train_all)
     # predict_proba possible
     #y_pred = st_model.predict(x_train)
     return calculate_metrics_cv(model=st_model, X=x_train_all, y_true=y_train_all, cv=cv_semisupervised, name=name)
