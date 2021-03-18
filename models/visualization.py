@@ -518,7 +518,7 @@ def visualize_normalized_data(smp):
     # FEATURE "EXTRACTION"
     #anova(smp, "plots/tables/ANOVA_results.txt", tablefmt="psql") # latex_raw also possible
     # RANDOM FOREST FEATURE EXTRACTION
-    forest_extractor(smp)
+    #forest_extractor(smp)
     # SHOW ONE SMP PROFILE WITHOUT LABELS
     #smp_unlabelled(smp, smp_name=smp_profile_name)
     # SHOW ONE SMP PROFILE WITH LABELS
@@ -533,7 +533,7 @@ def visualize_normalized_data(smp):
 
     # PCA and TSNE
     #pca(smp)
-    #tsne(smp)
+    tsne(smp)
     #tsne_pca(smp, n=5)
 
 
