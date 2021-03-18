@@ -181,7 +181,7 @@ def preprocess_dataset(smp_file_name, output_file="preprocessed_data_dict.txt", 
         labels = smp["label"]
         indices = smp["smp_idx"]
         smp_x = smp.drop(["label", "smp_idx"], axis=1)
-        tsne_model = TSNE(n_components=tsne, perplexity=40, n_iter=300, random_state=42)
+        tsne_model = TSNE(n_components=tsne, verbose=1, perplexity=40, n_iter=300, random_state=42)
         tsne_results = tsne_model.fit_transform(smp_x)
         smp_with_tsne = {"label": y, "smp_idx": idx}
 
@@ -480,6 +480,7 @@ def main():
         with open(data_dict, "rb") as myFile:
             data = pickle.load(myFile)
 
+    # takes too long - not enough resources for this at the moment
     tsne_dict = None #"preprocessed_tsne_dict.txt"
     if tsne_dict is None:
         tsne_data = preprocess_dataset(smp_file_name="smp_all_03.npz", output_file="preprocessed_tsne_dict.txt", tsne=3)
