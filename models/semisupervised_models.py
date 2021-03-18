@@ -11,45 +11,45 @@ from sklearn.semi_supervised import SelfTrainingClassifier, LabelSpreading
 # TODO make return_train_score a parameter (not for self-training and label-spreading, but for the rest)
 
 # TODO add parameters for base estimator etc.
-def self_training(x_train, y_train, cv, base_model, name="SelfTrainingClassifier", **kwargs):
+def self_training(x_train_all, y_train_all, cv_semisupervised, base_model, name="SelfTrainingClassifier", k_best=100, max_iter=None, **kwargs):
     """ Self training - a semisupervised model.
     Parameters:
-        x_train (pd.DataFrame): contains both the features of labelled and unlabelled data.
-        y_train (pd.Series): contains the labels of the labelled and unlabelled data. Unlabelled data must have label -1.
-        cv (list): List of training and testing tuples which contain the indiced for the different folds.
+        x_train_all (pd.DataFrame): contains both the features of labelled and unlabelled data.
+        y_train_all (pd.Series): contains the labels of the labelled and unlabelled data. Unlabelled data must have label -1.
+        cv_semisupervised (list): List of training and testing tuples which contain the indiced for the different folds.
         base_model (model): model that has a fit function!
         name (str): Name/Description for the model.
     Returns:
         dict: results from cross validation, inclusive probability based crossvalidation
     """
     # TODO cv: use the same cv split but randomly assign the other unlabelled data pieces to the other cv folds
-    st_model = SelfTrainingClassifier(knn, verbose=True).fit(x_train, y_train)
+    st_model = SelfTrainingClassifier(knn, verbose=True, max_iter=max_iter, k_best=k_best).fit(x_train_all, y_train_all)
     # predict_proba possible
     #y_pred = st_model.predict(x_train)
-    return calculate_metrics_cv(model=st_model, X=x_train, y_true=y_train, cv=cv, name=name)
+    return calculate_metrics_cv(model=st_model, X=x_train_all, y_true=y_train_all, cv=cv_semisupervised, name=name)
 
 
-def label_spreading(x_train, y_train, cv, kernel="knn", alpha=0.2, name="LabelSpreading", **kwargs):
+def label_spreading(x_train_all, y_train_all, cv_semisupervised, kernel="knn", alpha=0.2, name="LabelSpreading", **kwargs):
     """ Label spreading - a semisupervised model.
     Parameters:
-        x_train (pd.DataFrame): contains both the features of labelled and unlabelled data.
-        y_train (pd.Series): contains the labels of the labelled and unlabelled data. Unlabelled data must have label -1.
-        cv (list): List of training and testing tuples which contain the indiced for the different folds.
-                kernel (str): can be either "rbf" or "knn"
+        x_train_all (pd.DataFrame): contains both the features of labelled and unlabelled data.
+        y_train_all (pd.Series): contains the labels of the labelled and unlabelled data. Unlabelled data must have label -1.
+        cv_semisupervised (list): List of training and testing tuples which contain the indiced for the different folds.
+        kernel (str): can be either "rbf" or "knn"
         alpha (float): clamping factor, between 0  and 1 - how strong should a datapoint adopt to its neighbor information? 0 mean not all, 1 means completely.
         name (str): Name/Description for the model.
     Returns:
         dict: results from cross validation, inclusive probability based crossvalidation
     """
     # TODO cv: use the same cv split but randomly assign the other unlabelled data pieces to the other cv folds
-    ls_model = LabelSpreading(kernel="knn", alpha=0.2, n_jobs=-1, max_iter=100).fit(x_train, y_train)
+    ls_model = LabelSpreading(kernel="knn", alpha=0.2, n_jobs=-1, max_iter=100).fit(x_train_all, y_train_all)
     #y_pred = ls_model.predict(x_train)
-    return calculate_metrics_cv(model=ls_model, X=x_train, y_true=y_train, cv=cv, name=name)
+    return calculate_metrics_cv(model=ls_model, X=x_train_all, y_true=y_train_all, cv=cv_semisupervised, name=name)
 
 
 # ATTENTION: log_loss and roc_auc or other probability based metrics cannot be calculated for kmeans (not well defined!)
 # https://towardsdatascience.com/cluster-then-predict-for-classification-tasks-142fdfdc87d6
-def kmeans(unlabelled_data, x_train, y_train, cv, num_clusters=5, find_num_clusters="both", plot=True, name="Kmeans", **kwargs):
+def kmeans(unlabelled_data, x_train, y_train, cv, num_clusters=5, find_num_clusters="both", plot=False, name="Kmeans", **kwargs):
     """ Semisupervised kmeans algorithm. Assigns most frequent snow label to cluster.
     Parameters:
         unlabelled_data: Data on which the clustering should take place
@@ -119,7 +119,7 @@ def kmeans(unlabelled_data, x_train, y_train, cv, num_clusters=5, find_num_clust
 
     return semisupervised_cv(km, unlabelled_data, x_train, y_train, num_clusters, cv, name=name)
 
-def gaussian_mix(unlabelled_data, x_train, y_train, cv, cov_type="tied", num_components=15, find_num_components="both", plot=True, name="GaussianMixture", **kwargs):
+def gaussian_mix(unlabelled_data, x_train, y_train, cv, cov_type="tied", num_components=15, find_num_components="both", plot=False, name="GaussianMixture", **kwargs):
     """ Semisupervised Gaussian Mixture Algorithm. Assigns most frequent snow label to gaussians.
     Parameters:
         unlabelled_data: Data on which the clustering should take place
