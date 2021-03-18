@@ -79,8 +79,9 @@ def random_forest(x_train, y_train, cv, name="RandomForest", resample=False,
 
     if only_model:
         return rf
+    # return rf, calculate_metrics_cv(model=rf, X=x_train, y_true=y_train, cv=cv, name=name)
 
-    return rf, calculate_metrics_cv(model=rf, X=x_train, y_true=y_train, cv=cv, name=name)
+    return calculate_metrics_cv(model=rf, X=x_train, y_true=y_train, cv=cv, name=name)
 
 def svm(x_train, y_train, cv, C=0.95, decision_function_shape="ovr", kernel="rbf", gamma="auto", name="SupportVectorMachine", **kwargs):
     """ Support Vector Machine with Radial Basis functions as kernel.
@@ -102,7 +103,7 @@ def svm(x_train, y_train, cv, C=0.95, decision_function_shape="ovr", kernel="rbf
               gamma = gamma,
               class_weight = "balanced",
               random_state = 24)
-    return calculate_metrics_cv(model=svm, X=x_train, y_true=y_train, cv=cv, name=name, **kwargs)
+    return calculate_metrics_cv(model=svm, X=x_train, y_true=y_train, cv=cv, name=name)
 
 
 # imbalanced data does not hurt knns
@@ -121,7 +122,7 @@ def knn(x_train, y_train, cv, n_neighbors=20, weights="distance", name="KNearest
     """
     knn = KNeighborsClassifier(n_neighbors = n_neighbors,
                                weights = "distance")
-    return calculate_metrics_cv(model=knn, X=x_train, y_true=y_train, cv=cv, name=name, **kwargs)
+    return calculate_metrics_cv(model=knn, X=x_train, y_true=y_train, cv=cv, name=name)
 
 # specifically for imbalanced data
 # https://imbalanced-learn.org/stable/generated/imblearn.ensemble.EasyEnsembleClassifier.html
@@ -140,4 +141,4 @@ def ada_boost(x_train, y_train, cv, n_estimators=100, sampling_strategy="not_maj
     eec = EasyEnsembleClassifier(n_estimators=n_estimators,
                                  sampling_strategy=sampling_strategy,
                                  random_state=42)
-    return calculate_metrics_cv(model=eec, X=x_train, y_true=y_train, cv=cv, name=name, **kwargs)
+    return calculate_metrics_cv(model=eec, X=x_train, y_true=y_train, cv=cv, name=name)
