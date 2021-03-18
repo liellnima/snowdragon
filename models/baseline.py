@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-def majority_class_baseline(x_train, y_train, cv, name="MajorityClassBaseline"):
+def majority_class_baseline(x_train, y_train, cv, name="MajorityClassBaseline", **kwargs):
     """ A model which always predicts the majority class of the data it was fit on to.
     Parameters:
         x_train: Data samples and features on which the model should train.
