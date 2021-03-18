@@ -1,3 +1,4 @@
+import pickle
 import pandas as pd
 import numpy as np
 
@@ -27,4 +28,24 @@ def reverse_normalize(data, features, min, max):
         pd.DataFrame: data with reversed features
     """
     data.loc[:, features] = data.loc[:, features].apply(lambda x: (x * (max - min)) + min)
+    return data
+
+def save_results(file_name, object):
+    """ Pickels an object.
+    Parameters:
+        file_name (str): under which filename the object should be saved
+        object (obj): some python object that can be pickled
+    """
+    with open(file_name, "wb") as myFile:
+        pickle.dump(object, myFile)
+
+def load_results(file_name):
+    """ Loads the data from a pickle file.
+    Parameters:
+        file_name (str): under which name the data was saved
+    Returns:
+        (obj): the data object
+    """
+    with open(file_name, "rb") as myFile:
+        data = pickle.load(myFile)
     return data
