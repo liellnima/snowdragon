@@ -7,6 +7,7 @@ import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 
+from tqdm import tqdm
 from tabulate import tabulate
 from tensorflow import keras
 from tensorflow.keras import Sequential
@@ -16,7 +17,7 @@ from tensorflow.keras.layers import Dense, LSTM, Dropout, Masking, Bidirectional
 from keras_self_attention import SeqSelfAttention
 
 
-def lstm_architecture(input_shape, output_shape, rnn_size=100, dropout=0, dense_units=100, learning_rate=0.01):
+def lstm_architecture(input_shape, output_shape, rnn_size=100, dropout=0, dense_units=100, learning_rate=0.01, **kwargs):
     """ The architecture of a lstm model. (Dense Layer, LSTM Layer, Dense Output Layer)
     Parameters:
         input_shape (tuple): contains part of the input shape of the data, namely the maximal length of time points and the number of features
@@ -37,7 +38,7 @@ def lstm_architecture(input_shape, output_shape, rnn_size=100, dropout=0, dense_
     model.add(LSTM(rnn_size, return_sequences=True))
     model.add(Dropout(dropout))
     model.add(Dense(units=output_shape, activation="relu"))
-    model.add(Activation("relu"))
+    model.add(Activation("softmax"))
 
     optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
     model.compile(optimizer=optimizer, loss="categorical_crossentropy", metrics=["acc"])
@@ -45,7 +46,7 @@ def lstm_architecture(input_shape, output_shape, rnn_size=100, dropout=0, dense_
     return model
 
 
-def blstm_architecture(input_shape, output_shape, rnn_size=100, dropout=0, dense_units=100, learning_rate=0.01):
+def blstm_architecture(input_shape, output_shape, rnn_size=100, dropout=0, dense_units=100, learning_rate=0.01, **kwargs):
     """ The architecture of a bidirectional lstm model. (Dense Layer, forward LSTM Layer, backward LSTM Layer, Dense Output Layer)
     Parameters:
         input_shape (tuple): contains part of the input shape of the data, namely the maximal length of time points and the number of features
@@ -80,7 +81,7 @@ def blstm_architecture(input_shape, output_shape, rnn_size=100, dropout=0, dense
 # https://lilianweng.github.io/lil-log/2018/06/24/attention-attention.html#whats-wrong-with-seq2seq-model
 # https://www.tensorflow.org/tutorials/text/nmt_with_attention
 # https://machinelearningmastery.com/encoder-decoder-attention-sequence-to-sequence-prediction-keras/
-def enc_dec_architecture(input_shape, output_shape, rnn_size=100, dropout=0.2, dense_units=0, learning_rate=0.001, attention=False, bidirectional=False, regularize=True):
+def enc_dec_architecture(input_shape, output_shape, rnn_size=100, dropout=0.2, dense_units=0, learning_rate=0.001, attention=False, bidirectional=False, regularize=True, **kwargs):
     """ An Encoder-Decoder Architecture - if wished with attention mechanism.
     Parameters:
         input_shape (tuple): contains part of the input shape of the data, namely the maximal length of time points and the number of features
@@ -171,7 +172,7 @@ def remove_padding(data, profile_len, return_prob=False):
     # Dropout: unclear
     # RNN size: unclear
 def eval_ann(x_train, x_valid, y_train, y_valid, profile_len_train, profile_len_valid,
-             batch_size, epochs, ann_type, plot_loss=False, file_name=None, **params):
+             ann_type, batch_size=32, epochs=15, plot_loss=False, file_name=None, **params):
     """ This function can evaluate a single ANN. The functions returns the evaluation results and plots the loss if wished.
 
     Parameters:
@@ -385,11 +386,12 @@ def print_tuning(file_name):
         print(results.groupby(param)["BalAccValid"].max())
         print(results.groupby(param)["BalAccTrain"].max())
 
-def calculate_metrics_ann(results):
+def calculate_metrics_ann(results, name=None):
     """ Calculates all the Metrics from METRICS and METRICS_PROB for a given dictionary.
     Parameters:
         results (dict): Dictionary with the following keys:
             fit_time, score_time, y_true_train, y_true_valid, y_pred_train, y_pred_valid, y_pred_prob_train, y_pred_prob_valid
+        name (str): Default=None means no column for names is added, otherwise set the model name with this.
     Returns:
         dict: with all scores from METRICS and METRICS_PROB for training and validation/testing data
     """
@@ -407,8 +409,15 @@ def calculate_metrics_ann(results):
             raise ValueError("""The train-test split you chose is most likely not stratified.
                 Some of the classes occuring in the training dataset do not occur in the testing dataset.
                 Try to fix this or calculate the metrics after crossvalidation.""")
+        elif str(e) == "Input contains NaN, infinity or a value too large for dtype('float32').":
+            print("Rerun experiments with different parameters, current model had nans as loss.")
+            for metric_prob in METRICS_PROB.values():
+                all_scores["train_" + metric_prob] = float("nan")
+                all_scores["test_" + metric_prob] = float("nan")
         else:
             raise
+    if name is not None:
+        all_scores["model"] = name
 
     return all_scores
 
@@ -468,7 +477,7 @@ def ann(x_train, y_train, smp_idx_train, ann_type="lstm", name="LSTM", cv=0.2, p
                                   ann_type=ann_type, plot_loss=plot_loss, **params)
 
         # call metrics on model_results
-        return calculate_metrics_ann(results)
+        return calculate_metrics_ann(results, name=name)
 
     else:
         # all results
@@ -476,7 +485,7 @@ def ann(x_train, y_train, smp_idx_train, ann_type="lstm", name="LSTM", cv=0.2, p
         keys_assigned = False
         labels = list(y_train.unique())
         # for each fold in the crossvalidation
-        for k in cv:
+        for k in tqdm(cv):
             # find maximal smp profile length in complete dataset
             #max_smp_len = find_max_len(smp_idx=smp_idx_train, x_data=x_train)
             max_smp_len = 0
@@ -504,6 +513,6 @@ def ann(x_train, y_train, smp_idx_train, ann_type="lstm", name="LSTM", cv=0.2, p
                 elif "fit_time" in key:
                     all_results["fit_time"].append(k_results[key])
 
-        return calculate_metrics_ann(all_results)
+        return calculate_metrics_ann(all_results, name=name)
 
     # TODO make a testing method possible
