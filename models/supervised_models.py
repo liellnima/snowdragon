@@ -37,7 +37,7 @@ def testing(model, x_train, y_train, x_test, y_test, smp_idx_train, smp_idx_test
 
 
 # TODO make return_train_score a parameter
-def random_forest(x_train, y_train, cv, name="RandomForest", visualize=False, only_model=False, class_weight="balanced", resample=False):
+def random_forest(x_train, y_train, cv, name="RandomForest", visualize=False, only_model=False, class_weight="balanced", resample=False, **kwargs):
     """ Random Forest.
     Parameters:
         x_train: Input data for training
@@ -76,7 +76,7 @@ def random_forest(x_train, y_train, cv, name="RandomForest", visualize=False, on
 
     return rf, calculate_metrics_cv(model=rf, X=x_train, y_true=y_train, cv=cv, name=name)
 
-def svm(x_train, y_train, cv, gamma="auto", name="SupportVectorMachine"):
+def svm(x_train, y_train, cv, gamma="auto", name="SupportVectorMachine", **kwargs):
     """ Support Vector Machine with Radial Basis functions as kernel.
     Parameters:
         x_train: Input data for training
@@ -92,11 +92,11 @@ def svm(x_train, y_train, cv, gamma="auto", name="SupportVectorMachine"):
               gamma = gamma,
               class_weight = "balanced",
               random_state = 24)
-    return calculate_metrics_cv(model=svm, X=x_train, y_true=y_train, cv=cv, name=name)
+    return calculate_metrics_cv(model=svm, X=x_train, y_true=y_train, cv=cv, name=name, **kwargs)
 
 
 # imbalanced data does not hurt knns
-def knn(x_train, y_train, cv, n_neighbors, name="KNearestNeighbours"):
+def knn(x_train, y_train, cv, n_neighbors, name="KNearestNeighbours", **kwargs):
     """ Support Vector Machine with Radial Basis functions as kernel.
     Parameters:
         x_train: Input data for training
@@ -109,11 +109,11 @@ def knn(x_train, y_train, cv, n_neighbors, name="KNearestNeighbours"):
     """
     knn = KNeighborsClassifier(n_neighbors = n_neighbors,
                                weights = "distance")
-    return calculate_metrics_cv(model=knn, X=x_train, y_true=y_train, cv=cv, name=name)
+    return calculate_metrics_cv(model=knn, X=x_train, y_true=y_train, cv=cv, name=name, **kwargs)
 
 # specifically for imbalanced data
 # https://imbalanced-learn.org/stable/generated/imblearn.ensemble.EasyEnsembleClassifier.html
-def ada_boost(x_train, y_train, cv, name="AdaBoost"):
+def ada_boost(x_train, y_train, cv, name="AdaBoost", **kwargs):
     """Bags AdaBoost learners which are trained on balanced bootstrap samples.
     Parameters:
         x_train: Input data for training
@@ -126,4 +126,4 @@ def ada_boost(x_train, y_train, cv, name="AdaBoost"):
     eec = EasyEnsembleClassifier(n_estimators=100,
                                  sampling_strategy="all",
                                  random_state=42)
-    return calculate_metrics_cv(model=eec, X=x_train, y_true=y_train, cv=cv, name=name)
+    return calculate_metrics_cv(model=eec, X=x_train, y_true=y_train, cv=cv, name=name, **kwargs)
