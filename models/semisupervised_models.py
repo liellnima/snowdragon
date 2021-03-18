@@ -1,4 +1,4 @@
-from models.cv_handler import semisupervised_cv, assign_clusters
+from models.cv_handler import semisupervised_cv, assign_clusters, calculate_metrics_cv
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -6,8 +6,46 @@ from tqdm import tqdm
 from sklearn.cluster import KMeans
 from sklearn.mixture import GaussianMixture, BayesianGaussianMixture
 from sklearn.metrics import silhouette_score, balanced_accuracy_score
+from sklearn.semi_supervised import SelfTrainingClassifier, LabelSpreading
 
-# TODO make return_train_score a parameter
+# TODO make return_train_score a parameter (not for self-training and label-spreading, but for the rest)
+
+# TODO add parameters for base estimator etc.
+def self_training(x_train, y_train, cv, base_model, name="SelfTrainingClassifier"):
+    """ Self training - a semisupervised model.
+    Parameters:
+        x_train (pd.DataFrame): contains both the features of labelled and unlabelled data.
+        y_train (pd.Series): contains the labels of the labelled and unlabelled data. Unlabelled data must have label -1.
+        cv (list): List of training and testing tuples which contain the indiced for the different folds.
+        base_model (model): model that has a fit function!
+        name (str): Name/Description for the model.
+    Returns:
+        dict: results from cross validation, inclusive probability based crossvalidation
+    """
+    # TODO cv: use the same cv split but randomly assign the other unlabelled data pieces to the other cv folds
+    st_model = SelfTrainingClassifier(knn, verbose=True).fit(x_train, y_train)
+    # predict_proba possible
+    #y_pred = st_model.predict(x_train)
+    return calculate_metrics_cv(model=st_model, X=x_train, y_true=y_train, cv=cv, name=name)
+
+
+def label_spreading(x_train, y_train, cv, kernel="knn", alpha=0.2, name="LabelSpreading"):
+    """ Label spreading - a semisupervised model.
+    Parameters:
+        x_train (pd.DataFrame): contains both the features of labelled and unlabelled data.
+        y_train (pd.Series): contains the labels of the labelled and unlabelled data. Unlabelled data must have label -1.
+        cv (list): List of training and testing tuples which contain the indiced for the different folds.
+                kernel (str): can be either "rbf" or "knn"
+        alpha (float): clamping factor, between 0  and 1 - how strong should a datapoint adopt to its neighbor information? 0 mean not all, 1 means completely.
+        name (str): Name/Description for the model.
+    Returns:
+        dict: results from cross validation, inclusive probability based crossvalidation
+    """
+    # TODO cv: use the same cv split but randomly assign the other unlabelled data pieces to the other cv folds
+    ls_model = LabelSpreading(kernel="knn", alpha=0.2, n_jobs=-1, max_iter=100).fit(x_train, y_train)
+    #y_pred = ls_model.predict(x_train)
+    return calculate_metrics_cv(model=ls_model, X=x_train, y_true=y_train, cv=cv, name=name)
+
 
 # ATTENTION: log_loss and roc_auc or other probability based metrics cannot be calculated for kmeans (not well defined!)
 # https://towardsdatascience.com/cluster-then-predict-for-classification-tasks-142fdfdc87d6
@@ -159,7 +197,7 @@ def bayesian_gaussian_mix(unlabelled_data, x_train, y_train, cv, cov_type="tied"
     Returns:
         dict: results of crossvalidation
     """
-    bgm = GaussianMixture(n_components=num_components, init_params="random", max_iter=150, covariance_type=cov_type, random_state=42)
+    bgm = BayesianGaussianMixture(n_components=num_components, init_params="random", max_iter=150, covariance_type=cov_type, random_state=42)
 
     return semisupervised_cv(bgm, unlabelled_data, x_train, y_train, num_components, cv, name=(name+"_"+cov_type))
 
