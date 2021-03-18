@@ -434,8 +434,6 @@ def find_max_len(smp_idx, x_data):
 
     return max_smp_len
 
-# TODO integrate name
-# TODO make tuning possible
 # TODO include RNN
 # TODO include ANN
 # TODO include print tuning and tuning function somewhere else:
@@ -443,7 +441,7 @@ def find_max_len(smp_idx, x_data):
     # TODO delete this
     #print_tuning("plots/tables/lstm02.csv")
 # TODO fix warning with incompatible shape
-def ann(x_train, y_train, smp_idx_train, ann_type="lstm", name="LSTM", cv=0.2, plot_loss=False, **params):
+def ann(x_train, y_train, smp_idx_train, ann_type="lstm", name="LSTM", cv_timeseries=0.2, plot_loss=False, plot_loss_name=None, **params):
     """ The wrapper function to run any ANN architecture provided in this file.
     Parameters:
         x_train (pd.DataFrame): the complete training data
@@ -451,18 +449,19 @@ def ann(x_train, y_train, smp_idx_train, ann_type="lstm", name="LSTM", cv=0.2, p
         smp_idx_train (pd.Series): smp index for each training sample
         ann_type (str): describing the choosen ann type. Can be on of the following three: ["lstm", "blstm", "enc_dec"]
         name (str): how the model should be named
-        cv (float or list): float indicates that a simple percentual training-test split should be done.
+        cv_timeseries (float or list): float indicates that a simple percentual training-test split should be done.
             Otherwise it must be an iteratable list of length k with tuples of np 1-d arrays (train_indices, test_indices).
         plot_loss (bool): if the loss should be printed after training.
+        plot_loss_name (str): Name for the plot_loss plot ("_loss") will be added. Default = None means that the plot won't be saved.
         **params (dict): containing: batch_size, epochs, learning_rate, rnn_size, dropout, dense_units,
-            bidirectional, attention, regularizer, file_name
+            bidirectional, attention, regularizer
     Returns:
         dict: all the metrics calculated from the different crossvalidation splits. Each key is connected to list, where the results are stored.
     """
     # get training and validation data from that
-    if isinstance(cv, float):
+    if isinstance(cv_timeseries, float):
         # make the train and validation split
-        x_train, x_valid, y_train, y_valid, idx_train, idx_valid = train_test_split(x_train, y_train, smp_idx_train, test_size=cv, random_state=42)
+        x_train, x_valid, y_train, y_valid, idx_train, idx_valid = train_test_split(x_train, y_train, smp_idx_train, test_size=cv_timeseries, random_state=42)
 
         # prepare the data
         max_smp_len_train = find_max_len(smp_idx=idx_train, x_data=x_train)
@@ -474,7 +473,7 @@ def ann(x_train, y_train, smp_idx_train, ann_type="lstm", name="LSTM", cv=0.2, p
         # we already know which model we would like to use:
         results = eval_ann(x_train=x_train, x_valid=x_valid, y_train=y_train, y_valid=y_valid,
                                   profile_len_train=profile_len_train, profile_len_valid=profile_len_valid,
-                                  ann_type=ann_type, plot_loss=plot_loss, **params)
+                                  ann_type=ann_type, plot_loss=plot_loss, file_name=plot_loss_name, **params)
 
         # call metrics on model_results
         return calculate_metrics_ann(results, name=name)
@@ -485,7 +484,7 @@ def ann(x_train, y_train, smp_idx_train, ann_type="lstm", name="LSTM", cv=0.2, p
         keys_assigned = False
         labels = list(y_train.unique())
         # for each fold in the crossvalidation
-        for k in tqdm(cv):
+        for k in tqdm(cv_timeseries):
             # find maximal smp profile length in complete dataset
             #max_smp_len = find_max_len(smp_idx=smp_idx_train, x_data=x_train)
             max_smp_len = 0
@@ -499,7 +498,7 @@ def ann(x_train, y_train, smp_idx_train, ann_type="lstm", name="LSTM", cv=0.2, p
             # run the models with this cv split
             k_results = eval_ann(x_train=x_k_train, x_valid=x_k_valid, y_train=y_k_train, y_valid=y_k_valid,
                                       profile_len_train=profile_len_k_train, profile_len_valid=profile_len_k_valid,
-                                      plot_loss=plot_loss, ann_type=ann_type, **params)
+                                      plot_loss=plot_loss, ann_type=ann_type, file_name=plot_loss_name, **params)
             if not keys_assigned:
                 all_results = {k: [] for k in k_results.keys()}
                 keys_assigned = True
