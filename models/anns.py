@@ -349,8 +349,6 @@ def tune_lstm(x_train, x_valid, y_train, y_valid, profile_len_train, profile_len
                                                           batch_size=batch_size, epochs=epochs, learning_rate=learning_rate,
                                                           ann_type=ann_type, rnn_size=rnn_size, dropout=dropout, dense_units=dense_units)
 
-                                # TODO attention metric calculation is necessary here
-
                                 result_list = [i, ann_type, batch_size, dropout, learning_rate, rnn_size, dense_units,
                                                model_results["train_balanced_accuracy"], model_results["test_balanced_accuracy"]]
                                 exit(0)
