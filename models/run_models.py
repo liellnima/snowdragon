@@ -18,7 +18,7 @@ from tabulate import tabulate
 
 # Other metrics: https://stats.stackexchange.com/questions/390725/suitable-performance-metric-for-an-unbalanced-multi-class-classification-problem
 from sklearn.model_selection import train_test_split, StratifiedKFold #, cross_validate, cross_val_score, cross_val_predict
-
+from sklearn.manifold import TSNE
 
 # TODO remove all the following imports!!!
 from sklearn.neighbors import KNeighborsClassifier
@@ -141,13 +141,15 @@ def normalize_mosaic(smp):
     smp = normalize(smp, "dist_ground", min=smp["dist_ground"].min(), max=smp["dist_ground"].max())
     return smp
 
-def preprocess_dataset(smp_file_name, visualize=False, sample_size_unlabelled=1000):
+def preprocess_dataset(smp_file_name, output_file="preprocessed_data_dict.txt", visualize=False, sample_size_unlabelled=1000, tsne=None):
     """ Preprocesses the complete smp data and returns what is needed for the models.
     Parameters:
         smp_file_name (str): where the complete smp data is saved
+        output_file (str): where the resulting dict should be saved
         visualize (bool): if the data should be visualized before and after normalization
         sample_size_unlabelled (int): how many unlabelled samples should be included in x_train_all and y_train_all
-
+        tsne (int): None means no dim reduction. int indicated that the data's dimensionality should be reduced with the help of tsne.
+            The number indicates how many dimensions should remain.
     Returns:
         (dict): "x_train", "y_train", " x_test" and "y_test" are the prepared and normalized training and test data.
                 "x_train_all" and "y_train_all" are both labelled and unlabelled data in one data set.
@@ -172,7 +174,23 @@ def preprocess_dataset(smp_file_name, visualize=False, sample_size_unlabelled=10
 
     # 5. Visualize the data after normalization
     if visualize: visualize_normalized_data(smp)
+    print(smp)
 
+    # if wished, make dimension reduction here!
+    if tsne is not None:
+        labels = smp["label"]
+        indices = smp["smp_idx"]
+        smp_x = smp.drop(["label", "smp_idx"], axis=1)
+        tsne_model = TSNE(n_components=tsne, perplexity=40, n_iter=300, random_state=42)
+        tsne_results = tsne_model.fit_transform(smp_x)
+        smp_with_tsne = {"label": y, "smp_idx": idx}
+
+        for i in range(tsne):
+            smp_with_tsne["tsne" + str(i)] = tsne_results[:, i]
+
+        smp = pd.DataFrame(smp_with_tsne)
+
+    print(smp)
     # 6. Prepare unlabelled data for two of the semisupervised modles:
     # prepare dataset of unlabelled data
     unlabelled_smp = smp.loc[(smp["label"] == 0)].copy()
@@ -209,18 +227,16 @@ def preprocess_dataset(smp_file_name, visualize=False, sample_size_unlabelled=10
     # what is needed for the models:
     # save this in a dictionary and save the dictionary as npz file
     prepared_data = {"x_train": x_train, "y_train": y_train, "x_test": x_test, "y_test": y_test,
-                     "x_train_all": x_train_all, "y_train_all": y_train_all, "unlabelled_smp_x": unlabelled_smp_x,
+                     "x_train_all": x_train_all, "y_train_all": y_train_all, "unlabelled_data": unlabelled_smp_x,
                      "cv": cv_stratified, "cv_semisupervised": cv_semisupervised, "cv_timeseries": cv_timeseries,
                      "smp_idx_train": smp_idx_train, "smp_idx_test": smp_idx_test}
 
-    with open("preprocessed_data_dict.txt", "wb") as myFile:
+    with open(output_file, "wb") as myFile:
         pickle.dump(prepared_data, myFile)
 
     return prepared_data
 
-# TODO put this in tuning
-# TODO make smp_all_03.npz a global variable
-def run_single_model(model_type, data, **params):
+def run_single_model(model_type, data, name=None, **params):
     """ Runs a single model. Returns the results for this run.
     Parameters:
         model_type (str): Can be one of the following:
@@ -229,61 +245,90 @@ def run_single_model(model_type, data, **params):
         data (dict): dictionary produced by preprocess_dataset containing all necessary information
         **params: contains all necessary parameters for the wished model
     """
+    if name is None:
+        name = model_type
 
     print("Starting Model {}...".format(model_type))
 
-    # # different cases for different models
-    # if model_type == "baseline":
-    #     scores = majority_class_baseline(**data, **params)
-    #
-    # elif model_type == "kmeans":
-    #     # params: num_clusters (5), find_num_clusters ("sil", "acc", "both")
-    #     scores = kmeans(cv=data["cv_semisupervised"], **data, **params)
-    #
-    # elif model_type == "gmm":
-    #     # params: num_components (15), find_num_clusters ("bic", "acc", "both"), cov_type ("tied", "diag", "spherical", "full")
-    #     # fixed: max_iter = 150, init_params="random" (could be also "k-means")
-    #     scores = gaussian_mix(cv=data["cv_semisupervised"], **data, **params)
-    #
-    # elif model_type == "bmm":
-    #     # params: num_components (15), cov_type ("tied", "diag", "spherical", "full")
-    #     # fixed: max_iter = 150, init_params="random" (could be also "k-means")
-    #     scores = bayesian_gaussian_mix(cv=data["cv_semisupervised"], **data, **params)
-    #
-    # elif model_type == "label_spreading":
-    #     # params: kernel (knn or rbf), alpha (0.2)
-    #     # fixed: max_iter = 100 (quite high compared to 30)
-    #     scores = label_spreading(cv=data["cv_semisupervised"], **data, **params)
-    #
-    # elif model_type == "self_trainer":
-    #     # params:
-    #     scores = self_training(cv=data["cv_semisupervised"], **data, **params)
-    #
-    # elif model_type == "rf":
-    #
-    # elif model_type == "svm":
-    #
-    # elif model_type == "knn":
-    #
-    # elif model_type == "easy_ensemble":
-    #
-    # elif model_type == "lstm":
-    #
-    # elif model_type == "blstm":
-    #
-    # elif model_type == "enc_dec":
-    #
-    # else:
-    #     print("No such model exists. Please choose one of the following models:\n")
-    #     print(""" baseline, kmeans, gmm, bmm, label_spreading, self_trainer,
-    #           rf, svm, knn, easy_ensemble, lstm, blstm, enc_dec""")
+    # different cases for different models
+    if model_type == "baseline":
+        scores = majority_class_baseline(**data, **params, name=name)
+
+    elif model_type == "kmeans":
+        # params: num_clusters (5), find_num_clusters ("sil", "acc", "both")
+        scores = kmeans(**data, **params, name=name)
+
+    elif model_type == "gmm":
+        # params: num_components (15), find_num_clusters ("bic", "acc", "both"), cov_type ("tied", "diag", "spherical", "full")
+        # fixed: max_iter = 150, init_params="random" (could be also "k-means")
+        scores = gaussian_mix(**data, **params, name=name)
+
+    elif model_type == "bmm":
+        # params: num_components (15), cov_type ("tied", "diag", "spherical", "full")
+        # fixed: max_iter = 150, init_params="random" (could be also "k-means")
+        scores = bayesian_gaussian_mix(**data, **params, name=name)
+
+    elif model_type == "label_spreading":
+        # params: kernel (knn or rbf), alpha (0.2)
+        # fixed: max_iter = 100 (quite high compared to 30)
+        scores = label_spreading(**data, **params, name=name)
+
+    elif model_type == "self_trainer":
+        if params["base_model"] is None:
+            params["base_model"] = KNeighborsClassifier(n_neighbors = 20, weights = "distance")
+        # params: criterion (threshold or k best -> set k or threshold), base_estimator (best model, but should be fast)
+        # fixed: max_iter (None means until all unlabelled samples are labelled)
+        scores = self_training(**data, **params, name=name)
+
+    elif model_type == "rf":
+        # params: n_estimators, criterion (entropy, gini), max_features (sqrt, log2),
+        #          max_samples (float, 0.6), resample (bool for balanced RF)
+        # fixed: bootstrap=True, class_weight=balanced
+        scores = random_forest(**data, **params, name=name)
+
+    elif model_type == "svm":
+        # params: decision_function_shape (ovr, ovo), gamma (scale, auto or float), kernel(linear, poly, rbf, sigmoid)
+        #         kernel -> fix also degree for polynomial kernel, C?
+        # fixed: class_weight=balanced, C=0.95
+        scores = svm(**data, **params, name=name)
+
+    elif model_type == "knn":
+        # params: n_neighbors (int, number of neighbors),
+        # fixed: weights (distance or uniform)
+        scores = knn(**data, **params, name=name)
+
+    elif model_type == "easy_ensemble":
+        # params: n_estimators
+        # fixed: sampling_strategy = not_majority or all -> find out
+        scores = ada_boost(**data, **params, name=name)
+
+    elif model_type == "lstm":
+        # params: batch_size, epochs, learning_rate, rnn_size, dropout, dense_units
+        # fixed: all the rest
+        scores = ann(**data, **params, ann_type="lstm", name=name)
+
+    elif model_type == "blstm":
+        # params: batch_size, epochs, learning_rate, rnn_size, dropout, dense_units
+        # fixed: all the rest
+        scores = ann(**data, **params, ann_type="blstm", name=name)
+
+    elif model_type == "enc_dec":
+        # params: batch_size, epochs, learning_rate, rnn_size, dropout, dense_units,
+        #         bidirectional, attention, regularizer
+        # fixed: all the rest
+        scores = ann(**data, **params, ann_type="enc_dec", name=name)
+
+    else:
+        print("No such model exists. Please choose one of the following models:\n")
+        print(""" baseline, kmeans, gmm, bmm, label_spreading, self_trainer,
+              rf, svm, knn, easy_ensemble, lstm, blstm, enc_dec""")
 
     scores = mean_kfolds(scores)
-    # naming the parameters employed
-    print(scores)
+
     print("...finished Model {}.\n".format(model_type))
 
     # just return the scores - saving is the job of another function
+    # also job for others: naming the parameters employed and print scores
     return scores
 
 def run_all_models(data, intermediate_file):
@@ -299,7 +344,7 @@ def run_all_models(data, intermediate_file):
     y_test = data["y_test"]
     x_train_all = data["x_train_all"]
     y_train_all = data["y_train_all"]
-    unlabelled_smp_x = data["unlabelled_smp_x"]
+    unlabelled_smp_x = data["unlabelled_data"]
     cv_stratified = data["cv"]
     cv_semisupervised = data["cv_semisupervised"]
     cv_timeseries = data["cv_timeseries"]
@@ -341,19 +386,19 @@ def run_all_models(data, intermediate_file):
     # TAKES A LOT OF TIME FOR COMPLETE DATA SET
     # D + E -> different data preparation necessary
 
-    # # D label spreading model
-    # print("Starting Label Spreading Model...")
-    # ls_scores = label_spreading(x_train=x_train_all, y_train=y_train_all, cv=cv_semisupervised, name="LabelSpreading_1000")
-    # all_scores.append(mean_kfolds(ls_scores))
-    # save_results(intermediate_file, all_scores)
-    # print("...finished Label Spreading Model.\n")
-    #
+    # D label spreading model
+    print("Starting Label Spreading Model...")
+    ls_scores = label_spreading(x_train=x_train_all, y_train=y_train_all, cv_semisupervised=cv_semisupervised, name="LabelSpreading_1000")
+    all_scores.append(mean_kfolds(ls_scores))
+    save_results(intermediate_file, all_scores)
+    print("...finished Label Spreading Model.\n")
+
     # # TODO it makes sense to use the best hyperparameter tuned models here!
     # # E self training model
     # print("Starting Self Training Classifier...")
     #svm = SVC(probability=True, gamma="auto")
     # knn = KNeighborsClassifier(n_neighbors = 20, weights = "distance")
-    # st_scores = self_training(x_train=x_train_all, y_train=y_train_all, cv=cv_semisupervised, base_model=knn, name="SelfTraining_1000")
+    # st_scores = self_training(x_train=x_train_all, y_train=y_train_all, cv_semisupervised=cv_semisupervised, base_model=knn, name="SelfTraining_1000")
     # all_scores.append(mean_kfolds(st_scores))
     # print("...finished Self Training Classifier.\n")
 
@@ -435,10 +480,22 @@ def main():
         with open(data_dict, "rb") as myFile:
             data = pickle.load(myFile)
 
-    #run_single_model(data)
-    #exit(0)
-    run_all_models(data, "all_results_test01_part03.txt")
-    all_scores = load_results("all_results_test01.txt")
+    tsne_dict = None #"preprocessed_tsne_dict.txt"
+    if tsne_dict is None:
+        tsne_data = preprocess_dataset(smp_file_name="smp_all_03.npz", output_file="preprocessed_tsne_dict.txt", tsne=3)
+    else:
+        with open(tsne_dict, "rb") as myFile:
+            tsne_data = pickle.load(myFile)
+
+
+    run_single_model(model_type="kmeans", data=tsne_data)
+    exit(0)
+
+    #run_all_models(data, "all_results_test01_part03.txt")
+    all_scores_01 = load_results("all_results_test01.txt")
+    all_scores_02 = load_results("all_results_test01_part02.txt")
+    all_scores_03 = load_results("all_results_test01_part03.txt")
+    all_scores = [*all_scores_01, *all_scores_02, *all_scores_03]
 
     # print the validation results
     all_scores = pd.DataFrame(all_scores).rename(columns={"test_balanced_accuracy": "test_bal_acc",
