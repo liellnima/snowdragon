@@ -247,7 +247,6 @@ def run_single_model(model_type, data, name=None, **params):
     """
     if name is None:
         name = model_type
-
     print("Starting Model {}...".format(model_type))
 
     # different cases for different models
