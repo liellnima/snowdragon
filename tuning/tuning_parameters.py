@@ -29,15 +29,18 @@ KNN_PARAMS={"n_neighbors": 20} # weights should be always distance
 # n_estimators=[10, 100, 500], sampling_strategy=["all", "not minority"]
 EASY_ENSEMBLE_PARAMS={"n_estimators": 100, "sampling_strategy": "not minority"}
 
-# batch_size=[1, 6, 32], epochs=[50, 100, 150], learning_rate=[0.01, 0.001], dropout=[0, 0.2], dense_units=[0, 100]
+# rnn size=[50, 100, 150]
+# batch_size=[32, 8], epochs=[100], learning_rate=[0.01, 0.001], dropout=[0, 0.2, 0.5], dense_units=[0, 100]
 LSTM_PARAMS={"batch_size": 32, "epochs": 15, "learning_rate": 0.01,
              "rnn_size": 100, "dense_units": 100, "dropout": 0.2}
 
-# batch_size=[1, 6, 32], epochs=[50, 100, 150], learning_rate=[0.01, 0.001], dropout=[0, 0.2], dense_units=[0, 100]
+# rnn size=[50, 100, 150]
+# batch_size=[32, 8], epochs=[100], learning_rate=[0.01, 0.001], dropout=[0, 0.2, 0.5], dense_units=[0, 100]
 BLSTM_PARAMS={"batch_size": 32, "epochs": 15, "learning_rate": 0.01,
               "rnn_size": 100, "dense_units": 100, "dropout": 0.2}
 
-# batch_size=[1, 6, 32], epochs=[50, 100, 150], learning_rate=[0.001, 0.0001], dropout=[0, 0.2], dense_units=[0, 100],
+# rnn size=[150]
+# batch_size=[32, 8], epochs=[100], learning_rate=[0.001, 0.0001], dropout=[0, 0.5], dense_units=[0, 100],
 # attention=[False, True], bidirectional=[True, False]
 ENC_DEC_PARAMS={"batch_size": 32, "epochs": 15, "learning_rate": 0.001,
                 "rnn_size": 100, "dense_units": 0, "dropout": 0.2,

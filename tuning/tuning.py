@@ -17,7 +17,7 @@ parser = argparse.ArgumentParser(description="Can be used for tuning, runs a sin
 parser.add_argument("output", type=str, help="Name of the csv output file where the results are saved. Must have a .csv ending.")
 
 # model and data arguments
-parser.add_argument("--data_file", default="preprocessed_data_dict.txt", type=str,
+parser.add_argument("--data_file", default="preprocessed_data_k5.txt", type=str,
                     help="Name of the file where the preprocessed data is stored.")
 parser.add_argument("--model_type", default="baseline", type=str,
                     help="""Must be one of the following models: \"baseline\",
@@ -48,8 +48,8 @@ parser.add_argument("--max_features", default=RF_PARAMS["max_features"], type=st
                     help="Can be either \"sqrt\" or \"log2\". Determines how many features should be bagged for the Random Forest.")
 parser.add_argument("--max_samples", default=RF_PARAMS["max_samples"], type=float,
                     help="Value between 0 and 1. Indicates how many percent of the data should be used in one decision tree.")
-parser.add_argument("--resample", default=RF_PARAMS["resample"], type=bool,
-                    help="Boolean to indicate if resampling for imbalanced data should be done in the Random Forest.")
+parser.add_argument("--resample", default=int(RF_PARAMS["resample"]), type=int,
+                    help="0 for false and 1 for true to indicate if resampling for imbalanced data should be done in the Random Forest.")
 parser.add_argument("--decision_function_shape", default=SVM_PARAMS["decision_function_shape"], type=str,
                     help="Can be either \"ovr\" or \"ovo\". Multiclass classification strategy for SVMs.")
 parser.add_argument("--gamma", default=SVM_PARAMS["gamma"], type=str,
@@ -70,25 +70,31 @@ parser.add_argument("--dense_units", default=BLSTM_PARAMS["dense_units"], type=i
                     help="How many dense units should be used in the feedforward layer before each RNN architecture. Can be set to 0 such that no feedforward layer is employed.")
 parser.add_argument("--dropout", default=BLSTM_PARAMS["dropout"], type=float,
                     help="Value between 0 and 1 indicating how many units (in percentage) should be randomly shut off during training to avoid overfitting.")
-parser.add_argument("--attention", default=ENC_DEC_PARAMS["attention"], type=bool,
-                    help="Boolean to indicate if attention mechanism should be used or not in the Encoder-Decoder network.")
-parser.add_argument("--bidirectional", default=ENC_DEC_PARAMS["bidirectional"], type=bool,
-                    help="Boolean to indicate if RNN layers in the Encoder-Decoder network should be bidirectional or not.")
-parser.add_argument("--regularize", default=ENC_DEC_PARAMS["regularize"], type=bool,
-                    help="Boolean to indicate if a fixed l1 and l2 regularizer should be employed")
-
+parser.add_argument("--attention", default=int(ENC_DEC_PARAMS["attention"]), type=int,
+                    help="0 for false and 1 for true to indicate if attention mechanism should be used or not in the Encoder-Decoder network.")
+parser.add_argument("--bidirectional", default=int(ENC_DEC_PARAMS["bidirectional"]), type=int,
+                    help="0 for false and 1 for true to indicate if RNN layers in the Encoder-Decoder network should be bidirectional or not.")
+parser.add_argument("--regularize", default=int(ENC_DEC_PARAMS["regularize"]), type=int,
+                    help="0 for false and 1 for true to indicate if a fixed l1 and l2 regularizer should be employed")
+parser.add_argument("--print_results", default=0, type=int,
+                    help="0 for do not print results and 1 for printing results. Does nothing else than printing results.")
 
 def main():
     """ Read in Parameters and tune a model with these parameters.
     """
     args = parser.parse_args()
     params = vars(args)
+
     # get the data file and the output file
     data_file_name = Path(params["data_file"])
-    output_file_name = params["output"]
+    save_in = params["output"]
+
+    if params["print_results"]:
+        results = pd.read_csv(save_in)
+        print(results)
+        exit(0)
 
     data = load_results(data_file_name)
-    save_in = output_file_name
 
     # load potential tsne dimension reduced data
     #tsne_data = load_results("preprocessed_tsne_dict.txt")
