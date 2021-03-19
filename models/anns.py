@@ -1,4 +1,3 @@
-
 from models.metrics import balanced_accuracy, recall, precision, roc_auc, my_log_loss, calculate_metrics_raw, METRICS, METRICS_PROB
 
 import os
@@ -212,7 +211,7 @@ def eval_ann(x_train, x_valid, y_train, y_valid, profile_len_train, profile_len_
 
     # fitting the model
     start_time = time.time()
-    history = model.fit(train_dataset, validation_data=valid_dataset, epochs=epochs, workers=-1, verbose=2)
+    history = model.fit(train_dataset, validation_data=valid_dataset, epochs=epochs, workers=-1, verbose=0)
     fit_time = time.time() - start_time
 
     # plot loss

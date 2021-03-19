@@ -55,7 +55,6 @@ def random_forest(x_train, y_train, cv, name="RandomForest", resample=False,
     Returns:
         model or (model, dict): tuple of the model itself and a dict containing results of models (or returns only model if indicated)
     """
-
     # class_weight (str): should be at least 'balanced'. 'balanced_subsample' should be better.
     if resample:
         rf = BalancedRandomForestClassifier(n_estimators = n_estimators,

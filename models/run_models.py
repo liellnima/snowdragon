@@ -211,7 +211,7 @@ def preprocess_dataset(smp_file_name, output_file="preprocessed_data_dict.txt", 
     y_train_all = pd.concat([y_train, unlabelled_y])
 
     # 8. Make crossvalidation split
-    k = 3
+    k = 10
     # Note: if we want to use StratifiedKFold, we can just hand over an integer to the functions
     cv_stratified = StratifiedKFold(n_splits=k, shuffle=True, random_state=42).split(x_train, y_train)
     cv_stratified = list(cv_stratified)
@@ -247,6 +247,7 @@ def run_single_model(model_type, data, name=None, **params):
     """
     if name is None:
         name = model_type
+
     print("Starting Model {}...".format(model_type))
 
     # different cases for different models
@@ -472,6 +473,8 @@ def run_all_models(data, intermediate_file):
 # data_dict (str): npz file name with dictionary or None, if no preprocessing file exists yet.
 # TODO one parameter should be the table format of the output
 def main():
+    data = preprocess_dataset(smp_file_name="smp_all_03.npz", output_file="preprocessed_data_k10.txt")
+    exit(0)
     data_dict = "preprocessed_data_dict.txt"
     if data_dict is None:
         data = preprocess_dataset(smp_file_name="smp_all_03.npz")
