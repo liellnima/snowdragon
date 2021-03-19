@@ -1,9 +1,11 @@
-from sklearn.model_selection import train_test_split
+
 from models.metrics import balanced_accuracy, recall, precision, roc_auc, my_log_loss, calculate_metrics_raw, METRICS, METRICS_PROB
 
+import os
 import time
-import pandas as pd
 import numpy as np
+import pandas as pd
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import tensorflow as tf
 import matplotlib.pyplot as plt
 
@@ -15,7 +17,7 @@ from tensorflow.keras import regularizers
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Dense, LSTM, Dropout, Masking, Bidirectional, Activation, Input, RepeatVector
 from keras_self_attention import SeqSelfAttention
-
+from sklearn.model_selection import train_test_split
 
 def lstm_architecture(input_shape, output_shape, rnn_size=100, dropout=0, dense_units=100, learning_rate=0.01, **kwargs):
     """ The architecture of a lstm model. (Dense Layer, LSTM Layer, Dense Output Layer)
