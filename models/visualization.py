@@ -4,6 +4,7 @@ from data_handling.data_preprocessing import idx_to_int
 from data_handling.data_parameters import LABELS, ANTI_LABELS, COLORS
 
 import os
+import math
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -500,6 +501,66 @@ def visualize_tree(rf, x_train, y_train, tree_idx=0, min_samples_leaf=1000, file
     os.system("dot -Tpng "+ file_name + ".dot -o " + file_name + ".png")
     os.system("rm " + file_name + ".dot")
 
+def all_in_one_plot(smp, show_indices=False, sort=True, file_name="plots/bogplots/all_in_one_labels.png"):
+    """ Creates a plot where all profiles are visible with their labels.
+    Plot can only be saved, not shown (GUI too slow for the plot).
+    Parameters:
+        smp (df.DataFrame): SMP preprocessed data
+        show_indices (bool): if the SMP profile indices should be displayed
+        sort (bool): if the SMP profiles should be sorted according to length
+        file_name (str): where the resulting picture should be saved
+    """
+    plt.rcParams.update({'font.size': 22})
+    # be aware that predictions from other models must be consistent with the labels we know
+    labelled_smp = smp[(smp["label"] != 0) & (smp["label"] != 2)]
+    smp_indices = list(labelled_smp["smp_idx"].unique())
+    bar_width = 0.9 / len(smp_indices)
+    x_ticks = np.linspace(bar_width/2, 1.0 - (bar_width/2), num=len(smp_indices))
+
+    # make a list where each entry is a collection of all labels (ordered) from a smp profile
+    # reverse order of the labels, since the last label should be printed first
+    smp_idx_labels = [labelled_smp[labelled_smp["smp_idx"] == smp_index]["label"][::-1] for smp_index in smp_indices]
+    # sort the smp indices list according to length
+    if sort:
+        lens = [len(smp_idx_profile) for smp_idx_profile in smp_idx_labels]
+        sort_indices = np.argsort(lens)
+        smp_indices = [smp_indices[ix] for ix in sort_indices]
+        smp_idx_labels = [smp_idx_labels[ix] for ix in sort_indices]
+
+    # maximal found distance for all profiles
+    max_distance = len(max(smp_idx_labels, key = lambda x: len(x)))
+    # numpy array with 0 where no label exists anymore
+    smp_idx_labels_filled = np.zeros([len(smp_idx_labels), max_distance])
+    for i,j in enumerate(smp_idx_labels):
+        smp_idx_labels_filled[i][0:len(j)] = j
+
+    # iterate through each mm of all profiles
+    # plot a 1mm bar and assign the label corresponding colors
+    for cur_mm in reversed(range(max_distance)):
+        label_colors = [COLORS[cur_label] if cur_label != 0 else "white" for cur_label in smp_idx_labels_filled[:, cur_mm]]
+        plt.bar(x_ticks, np.repeat(1 + cur_mm, len(smp_indices)), width=bar_width, color=label_colors)
+
+    # producing the legend for the labels
+    anti_colors = {ANTI_LABELS[key] : value for key, value in COLORS.items() if key in labelled_smp["label"].unique()}
+    markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='') for color in anti_colors.values()]
+    plt.yticks(range(0, max_distance, 100))
+    plt.legend(markers, anti_colors.keys(), numpoints=1, loc="upper left", markerscale=3)
+    plt.ylabel("Distance from Ground [mm]")
+    plt.title("SMP Profiles with Labels")
+
+    if show_indices:
+        labels = [str(int(smp_index)) for smp_index in smp_indices]
+        plt.xticks(labels=labels, ticks=x_ticks, rotation=90, fontsize=8)
+    else:
+        plt.xticks([])
+
+    plt.xlabel("SMP Profile Indices")
+    plt.xlim(0.0, 1.0)
+    plt.ylim(0, int(math.ceil(max_distance / 100.0)) * 100) # rounds up to next hundred
+    figure = plt.gcf()  # get current figure
+    figure.set_size_inches(27.2, 15.2) # set size of figure
+    plt.savefig(file_name, bbox_inches="tight", dpi=300)
+
 def visualize_normalized_data(smp):
     """ Visualization after normalization and summing up classes has been achieved.
     Parameters:
@@ -507,7 +568,7 @@ def visualize_normalized_data(smp):
     """
     # ATTENTION: don't print bogplots or single profiles! The results are just wrong after normalization!!!
 
-    smp_profile_name = "S31H0368"
+    #smp_profile_name = "S31H0368"
     # HOW BALANCED IS THE LABELLED DATASET?
     #plot_balancing(smp)
     # SHOW THE DATADISTRIBUTION OF ALL FEATURES
@@ -530,10 +591,11 @@ def visualize_normalized_data(smp):
     # bog_plot(smp)
     # bog_label_plot(smp) # does not work correctly
     # smp_labelled(smp, smp_name=2000367.0)
+    all_in_one_plot(smp, file_name="plots/bogplots/all_in_one_all_labels.png")
 
     # PCA and TSNE
     #pca(smp)
-    tsne(smp)
+    # tsne(smp)
     #tsne_pca(smp, n=5)
 
 
@@ -546,7 +608,7 @@ def visualize_original_data(smp):
     """
     # smp_profile_name = "S31H0368" #"S31H0607"
     # # HOW BALANCED IS THE LABELLED DATASET?
-    plot_balancing(smp)
+    # plot_balancing(smp)
     # # SHOW THE DATADISTRIBUTION OF ALL FEATURES
     # pairwise_features(smp, features=["label", "distance", "var_force", "mean_force", "delta_4", "lambda_4", "gradient"], samples=2000)
     # # SHOW HEATMAP OF ALL FEATURES (with what are the labels correlated the most?)
@@ -566,6 +628,7 @@ def visualize_original_data(smp):
     #bog_plot(smp)
     #bog_label_plot(smp) # does not work correctly
     #smp_labelled(smp, smp_name=2000367.0)
+    all_in_one_plot(smp)
 
     # PCA and TSNE
     #pca(smp)
