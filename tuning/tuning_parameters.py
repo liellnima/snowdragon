@@ -45,3 +45,14 @@ BLSTM_PARAMS={"batch_size": 32, "epochs": 15, "learning_rate": 0.01,
 ENC_DEC_PARAMS={"batch_size": 32, "epochs": 15, "learning_rate": 0.001,
                 "rnn_size": 100, "dense_units": 0, "dropout": 0.2,
                 "attention": False, "bidirectional": False, "regularize": False}
+
+FIELD_NAMES = ["model", "fit_time", "score_time", "train_balanced_accuracy", "test_balanced_accuracy",
+               "train_recall", "test_recall", "train_precision", "test_precision",
+               "train_roc_auc", "test_roc_auc", "train_log_loss", "test_log_loss",
+               "num_clusters", "find_num_clusters", "num_components", "cov_type",
+               "kernel", "alpha", "criterion", "n_estimators", "max_features",
+               "max_samples", "resample", "decision_function_shape", "gamma",
+               "n_neighbors", "sampling_strategy", "batch_size", "epochs",
+               "learning_rate", "rnn_size", "dense_units", "dropout", "attention",
+               "bidirectional", "regularize", "print_results", "output",
+               "data_file", "model_type", "name"]

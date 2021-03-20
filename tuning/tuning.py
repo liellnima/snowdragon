@@ -2,7 +2,8 @@ from models.run_models import run_single_model
 from models.helper_funcs import load_results
 from tuning.tuning_parameters import KMEANS_PARAMS, GMM_PARAMS, BMM_PARAMS, LABEL_SPREADING_PARAMS
 from tuning.tuning_parameters import SELF_TRAINER_PARAMS, RF_PARAMS, SVM_PARAMS, KNN_PARAMS, EASY_ENSEMBLE_PARAMS
-from tuning.tuning_parameters import LSTM_PARAMS, BLSTM_PARAMS, ENC_DEC_PARAMS
+from tuning.tuning_parameters import LSTM_PARAMS, BLSTM_PARAMS, ENC_DEC_PARAMS, FIELD_NAMES
+
 
 import argparse
 import pandas as pd
@@ -88,6 +89,7 @@ def main():
     # get the data file and the output file
     data_file_name = Path(params["data_file"])
     save_in = params["output"]
+    params["sampling_strategy"] = params["sampling_strategy"].replace("_", " ")
 
     if params["print_results"]:
         results = pd.read_csv(save_in)
@@ -102,13 +104,14 @@ def main():
     # Running the model
     scores = run_single_model(data=data, **params)
     scores_and_params = {**params, **scores}
+    # TODO SORT dictionary somehow
+    #exit(0)
 
     # Saving the results if wished
     if save_in is not None:
         file_exists = Path(save_in).is_file()
         with open(save_in, 'a+') as csvfile:
-            fieldnames = list(scores_and_params.keys())
-            writer = DictWriter(csvfile, fieldnames=fieldnames)
+            writer = DictWriter(csvfile, fieldnames=FIELD_NAMES)
             if not file_exists:
                 writer.writeheader()
             writer.writerow(scores_and_params)

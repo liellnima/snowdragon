@@ -174,7 +174,7 @@ def preprocess_dataset(smp_file_name, output_file="preprocessed_data_dict.txt", 
 
     # 5. Visualize the data after normalization
     if visualize: visualize_normalized_data(smp)
-    print(smp)
+    exit(0)
 
     # if wished, make dimension reduction here!
     if tsne is not None:
@@ -324,6 +324,10 @@ def run_single_model(model_type, data, name=None, **params):
               rf, svm, knn, easy_ensemble, lstm, blstm, enc_dec""")
 
     scores = mean_kfolds(scores)
+    if not "train_roc_auc" in scores: scores["train_roc_auc"] = float("nan")
+    if not "test_roc_auc" in scores: scores["test_roc_auc"] = float("nan")
+    if not "train_log_loss" in scores: scores["train_log_loss"] = float("nan")
+    if not "test_log_loss" in scores: scores["test_log_loss"] = float("nan")
 
     print("...finished Model {}.\n".format(model_type))
 
@@ -331,7 +335,7 @@ def run_single_model(model_type, data, name=None, **params):
     # also job for others: naming the parameters employed and print scores
     return scores
 
-def run_all_models(data, intermediate_file):
+def run_all_models(data, intermediate_file=None):
     """ All models are run here - the parameters are set manually within the function.
     Parameters:
         data (dict): dictionary produced by preprocess_dataset containing all necessary information
@@ -354,19 +358,21 @@ def run_all_models(data, intermediate_file):
     # 9. Call the models
     all_scores = []
 
-    # # A Baseline - majority class predicition
-    # print("Starting Baseline Model...")
-    # baseline_scores = majority_class_baseline(x_train, y_train, cv_stratified)
-    # all_scores.append(mean_kfolds(baseline_scores))
-    # save_results(intermediate_file, all_scores)
-    # print("...finished Baseline Model.\n")
+    # A Baseline - majority class predicition
+    print("Starting Baseline Model...")
+    baseline_scores = majority_class_baseline(x_train, y_train, cv_stratified)
+    all_scores.append(mean_kfolds(baseline_scores))
+    print(mean_kfolds(baseline_scores))
+    if intermediate_file is not None: save_results(intermediate_file, all_scores)
+    print("...finished Baseline Model.\n")
+
     #
     # # B kmeans clustering (does not work well)
     # # BEST cluster selection criterion: no difference, you can use either acc or sil (use sil in this case!)
     # print("Starting K-Means Model...")
     # kmeans_scores = kmeans(unlabelled_smp_x, x_train, y_train, cv_stratified, num_clusters=10, find_num_clusters="acc", plot=False)
     # all_scores.append(mean_kfolds(kmeans_scores))
-    # save_results(intermediate_file, all_scores)
+    # if intermediate_file is not None: save_results(intermediate_file, all_scores)
     # print("...finished K-Means Model.\n")
     #
     # # C mixture model clustering ("diag" works best at the moment)
@@ -374,24 +380,24 @@ def run_all_models(data, intermediate_file):
     # print("Starting Gaussian Mixture Model...")
     # gm_acc_diag = gaussian_mix(unlabelled_smp_x, x_train, y_train, cv_stratified, cov_type="diag", find_num_components="acc", plot=False)
     # all_scores.append(mean_kfolds(gm_acc_diag))
-    # save_results(intermediate_file, all_scores)
+    # if intermediate_file is not None: save_results(intermediate_file, all_scores)
     # print("...finished Gaussian Mixture Model.\n")
     #
     # print("Starting Baysian Gaussian Mixture Model...")
     # bgm_acc_diag = bayesian_gaussian_mix(unlabelled_smp_x, x_train, y_train, cv_stratified, cov_type="diag")
     # all_scores.append(mean_kfolds(bgm_acc_diag))
-    # save_results(intermediate_file, all_scores)
+    # if intermediate_file is not None: save_results(intermediate_file, all_scores)
     # print("...finished Bayesian Gaussian Mixture Model.\n")
 
     # TAKES A LOT OF TIME FOR COMPLETE DATA SET
     # D + E -> different data preparation necessary
 
     # D label spreading model
-    print("Starting Label Spreading Model...")
-    ls_scores = label_spreading(x_train=x_train_all, y_train=y_train_all, cv_semisupervised=cv_semisupervised, name="LabelSpreading_1000")
-    all_scores.append(mean_kfolds(ls_scores))
-    save_results(intermediate_file, all_scores)
-    print("...finished Label Spreading Model.\n")
+    # print("Starting Label Spreading Model...")
+    # ls_scores = label_spreading(x_train=x_train_all, y_train=y_train_all, cv_semisupervised=cv_semisupervised, name="LabelSpreading_1000")
+    # all_scores.append(mean_kfolds(ls_scores))
+    # if intermediate_file is not None: save_results(intermediate_file, all_scores)
+    # print("...finished Label Spreading Model.\n")
 
     # # TODO it makes sense to use the best hyperparameter tuned models here!
     # # E self training model
@@ -400,13 +406,14 @@ def run_all_models(data, intermediate_file):
     # knn = KNeighborsClassifier(n_neighbors = 20, weights = "distance")
     # st_scores = self_training(x_train=x_train_all, y_train=y_train_all, cv_semisupervised=cv_semisupervised, base_model=knn, name="SelfTraining_1000")
     # all_scores.append(mean_kfolds(st_scores))
+    # if intermediate_file is not None: save_results(intermediate_file, all_scores)
     # print("...finished Self Training Classifier.\n")
 
     # # F random forests (works)
     # print("Starting Random Forest Model ...")
     # rf, rf_scores = random_forest(x_train, y_train, cv_stratified, visualize=False)
     # all_scores.append(mean_kfolds(rf_scores))
-    # save_results(intermediate_file, all_scores)
+    # if intermediate_file is not None: save_results(intermediate_file, all_scores)
     # #rf = random_forest(x_train, y_train, cv_stratified, visualize=False, only_model=True)
     # #rf_test_scores = testing(rf, x_train, y_train, x_test, y_test, smp_idx_train, smp_idx_test)
     # print("...finished Random Forest Model.\n")
@@ -416,41 +423,41 @@ def run_all_models(data, intermediate_file):
     # print("Starting Support Vector Machine...")
     # svm_scores = svm(x_train, y_train, cv_stratified, gamma="auto")
     # all_scores.append(mean_kfolds(svm_scores))
-    # save_results(intermediate_file, all_scores)
+    # if intermediate_file is not None: save_results(intermediate_file, all_scores)
     # print("...finished Support Vector Machine.\n")
     #
     # H knn (works with weights=distance)
     print("Starting K-Nearest Neighbours Model...")
     knn_scores = knn(x_train, y_train, cv_stratified, n_neighbors=20)
     all_scores.append(mean_kfolds(knn_scores))
-    save_results(intermediate_file, all_scores)
+    if intermediate_file is not None: save_results(intermediate_file, all_scores)
     print("...finished K-Nearest Neighbours Model.\n")
     #
-    # I adaboost
-    print("Starting AdaBoost Model...")
-    ada_scores = ada_boost(x_train, y_train, cv_stratified)
-    all_scores.append(mean_kfolds(ada_scores))
-    save_results(intermediate_file, all_scores)
-    print("...finished AdaBoost Model.\n")
-
-    # J LSTM
-    print("Starting LSTM Model...")
-    lstm_scores = ann(x_train, y_train, smp_idx_train, ann_type="lstm", cv=cv_timeseries, name="LSTM",
-                      batch_size=32, epochs=10, rnn_size=25, dense_units=25, dropout=0.2, learning_rate=0.01)
-    print(lstm_scores)
-    all_scores.append(mean_kfolds(lstm_scores))
-    save_results(intermediate_file, all_scores)
-    print("...finished LSTM Model.\n")
-
-    # K BLSTM
-    print("Starting BLSTM Model...")
-    #  cv can be a float, or a cv split
-    blstm_scores = ann(x_train, y_train, smp_idx_train, ann_type="blstm", cv=cv_timeseries, name="BLSTM",
-                       batch_size=32, epochs=10, rnn_size=25, dense_units=25, dropout=0.2, learning_rate=0.01)
-    print(blstm_scores)
-    all_scores.append(mean_kfolds(blstm_scores))
-    save_results(intermediate_file, all_scores)
-    print("...finished BLSTM Model.\n")
+    # # I adaboost
+    # print("Starting AdaBoost Model...")
+    # ada_scores = ada_boost(x_train, y_train, cv_stratified)
+    # all_scores.append(mean_kfolds(ada_scores))
+    # if intermediate_file is not None: save_results(intermediate_file, all_scores)
+    # print("...finished AdaBoost Model.\n")
+    #
+    # # J LSTM
+    # print("Starting LSTM Model...")
+    # lstm_scores = ann(x_train, y_train, smp_idx_train, ann_type="lstm", cv=cv_timeseries, name="LSTM",
+    #                   batch_size=32, epochs=10, rnn_size=25, dense_units=25, dropout=0.2, learning_rate=0.01)
+    # print(lstm_scores)
+    # all_scores.append(mean_kfolds(lstm_scores))
+    # if intermediate_file is not None: save_results(intermediate_file, all_scores)
+    # print("...finished LSTM Model.\n")
+    #
+    # # K BLSTM
+    # print("Starting BLSTM Model...")
+    # #  cv can be a float, or a cv split
+    # blstm_scores = ann(x_train, y_train, smp_idx_train, ann_type="blstm", cv=cv_timeseries, name="BLSTM",
+    #                    batch_size=32, epochs=10, rnn_size=25, dense_units=25, dropout=0.2, learning_rate=0.01)
+    # print(blstm_scores)
+    # all_scores.append(mean_kfolds(blstm_scores))
+    # if intermediate_file is not None: save_results(intermediate_file, all_scores)
+    # print("...finished BLSTM Model.\n")
 
     # batch_size=6, epochs=50, learning_rate=0.01, plot_loss=plot_loss
     # ann_type=ann_type, rnn_size=100, dropout=0.2, dense_units=100
@@ -459,46 +466,45 @@ def run_all_models(data, intermediate_file):
     # ann_type=ann_type, rnn_size=100, dropout=0, dense_units=0, plot_loss=plot_loss
 
     # J Encoder-Decoder
-    print("Starting Encoder-Decoder Model...")
-    #  cv can be a float, or a cv split
-    encdec_scores = ann(x_train, y_train, smp_idx_train, ann_type="enc_dec", cv=cv_timeseries, name="ENC_DEC",
-                       batch_size=32, epochs=10, rnn_size=25, dense_units=0, dropout=0.2, learning_rate=0.001,
-                       attention=True, bidirectional=False)
-    print(encdec_scores)
-    all_scores.append(mean_kfolds(encdec_scores))
-    save_results(intermediate_file, all_scores)
-    print("...finished Encoder-Decoder Model.\n")
+    # print("Starting Encoder-Decoder Model...")
+    # #  cv can be a float, or a cv split
+    # encdec_scores = ann(x_train, y_train, smp_idx_train, ann_type="enc_dec", cv=cv_timeseries, name="ENC_DEC",
+    #                    batch_size=32, epochs=10, rnn_size=25, dense_units=0, dropout=0.2, learning_rate=0.001,
+    #                    attention=True, bidirectional=False)
+    # print(encdec_scores)
+    # all_scores.append(mean_kfolds(encdec_scores))
+    # if intermediate_file is not None: save_results(intermediate_file, all_scores)
+    # print("...finished Encoder-Decoder Model.\n")
 
 # parameters for this:
 # data_dict (str): npz file name with dictionary or None, if no preprocessing file exists yet.
 # TODO one parameter should be the table format of the output
 def main():
-    data = preprocess_dataset(smp_file_name="smp_all_03.npz", output_file="preprocessed_data_k10.txt")
-    exit(0)
-    data_dict = "preprocessed_data_dict.txt"
+    data_dict = None
     if data_dict is None:
-        data = preprocess_dataset(smp_file_name="smp_all_03.npz")
+        data = preprocess_dataset(smp_file_name="smp_all_03.npz", output_file="preprocessed_data_test.txt", visualize=True)
     else:
         with open(data_dict, "rb") as myFile:
             data = pickle.load(myFile)
 
     # takes too long - not enough resources for this at the moment
-    tsne_dict = None #"preprocessed_tsne_dict.txt"
-    if tsne_dict is None:
-        tsne_data = preprocess_dataset(smp_file_name="smp_all_03.npz", output_file="preprocessed_tsne_dict.txt", tsne=3)
-    else:
-        with open(tsne_dict, "rb") as myFile:
-            tsne_data = pickle.load(myFile)
+    # tsne_dict = None #"preprocessed_tsne_dict.txt"
+    # if tsne_dict is None:
+    #     tsne_data = preprocess_dataset(smp_file_name="smp_all_03.npz", output_file="preprocessed_tsne_dict.txt", tsne=3)
+    # else:
+    #     with open(tsne_dict, "rb") as myFile:
+    #         tsne_data = pickle.load(myFile)
 
 
-    run_single_model(model_type="kmeans", data=tsne_data)
-    exit(0)
+    # run_single_model(model_type="kmeans", data=tsne_data)
+    # exit(0)
+    intermediate_results = "testing_evaluation01.txt"
+    run_all_models(data, intermediate_results)
 
-    #run_all_models(data, "all_results_test01_part03.txt")
-    all_scores_01 = load_results("all_results_test01.txt")
-    all_scores_02 = load_results("all_results_test01_part02.txt")
-    all_scores_03 = load_results("all_results_test01_part03.txt")
-    all_scores = [*all_scores_01, *all_scores_02, *all_scores_03]
+    all_scores = load_results(intermediate_results)
+    # all_scores_02 = load_results("all_results_test01_part02.txt")
+    # all_scores_03 = load_results("all_results_test01_part03.txt")
+    # all_scores = [*all_scores_01, *all_scores_02, *all_scores_03]
 
     # print the validation results
     all_scores = pd.DataFrame(all_scores).rename(columns={"test_balanced_accuracy": "test_bal_acc",
@@ -513,11 +519,11 @@ def main():
                                                          "test_log_loss": "test_ll"})
     print(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
 
-    with open('plots/tables/models_160smp_test01.txt', 'w') as f:
-        f.write(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
-
-    with open('plots/tables/models_160smp_test01_latex.txt', 'w') as f:
-        f.write(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='latex_raw'))
+    # with open('plots/tables/models_160smp_test01.txt', 'w') as f:
+    #     f.write(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
+    #
+    # with open('plots/tables/models_160smp_test01_latex.txt', 'w') as f:
+    #     f.write(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='latex_raw'))
 
     # Visualize the results
     # STILL MISSING

@@ -56,7 +56,7 @@ done
 
 # easy ensemble
 for n_estimators in 10 100 500 1000; do
-  for sampling_strategy in "all" "not minority"; do
+  for sampling_strategy in "all" "not_minority"; do
     python -m tuning.tuning $1 --model_type easy_ensemble --n_estimators $n_estimators --sampling_strategy $sampling_strategy
   done
 done
