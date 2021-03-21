@@ -1,7 +1,5 @@
 from models.cv_handler import calculate_metrics_cv
 from models.visualization import visualize_tree
-from models.visualization import smp_labelled
-from models.helper_funcs import reverse_normalize
 
 import pandas as pd
 from sklearn.svm import SVC
@@ -11,32 +9,9 @@ from imblearn.ensemble import EasyEnsembleClassifier
 from imblearn.ensemble import BalancedRandomForestClassifier
 
 
-def testing(model, x_train, y_train, x_test, y_test, smp_idx_train, smp_idx_test):
-    """ Performs testing on a model. Model is fit on training data and evaluated on testing data. Prediction inklusive.
-    """
-    model.fit(x_train, y_train)
-    y_pred = model.predict(x_test)
-
-    for smp_name in smp_idx_test.unique():
-        smp = pd.DataFrame({"mean_force": x_test["mean_force"], "distance": x_test["distance"], "label": y_test, "smp_idx": smp_idx_test})
-        smp = reverse_normalize(smp, "mean_force", min=0, max=45)
-        smp = reverse_normalize(smp, "distance", min=0, max=1187)
-        smp.info()
-        smp_wanted = smp[smp["smp_idx"] == smp_name]
-
-        smp_labelled(smp_wanted, smp_name)
-        smp_pred = smp.copy()
-        smp_pred["label"] = y_pred
-        smp_wanted_pred = smp_pred[smp_pred["smp_idx"] == smp_name]
-        smp_labelled(smp_wanted_pred, smp_name)
-
-    exit(0)
-
-
-    # pick out a certain smp profile in the test set:
-
-
 # TODO make return_train_score a parameter
+
+
 def random_forest(x_train, y_train, cv, name="RandomForest", resample=False,
                   n_estimators=10, criterion="entropy", max_samples=0.6, max_features="sqrt", visualize=False, only_model=False, **kwargs):
     """ Random Forest.
@@ -53,7 +28,7 @@ def random_forest(x_train, y_train, cv, name="RandomForest", resample=False,
         visualize (bool): whether a single decision tree from the forest should be plotted
         only_model (bool): if True returns only the model
     Returns:
-        model or (model, dict): tuple of the model itself and a dict containing results of models (or returns only model if indicated)
+        model or dict: only the model itself or a dict containing results of the crossvalidated models
     """
     # class_weight (str): should be at least 'balanced'. 'balanced_subsample' should be better.
     if resample:
