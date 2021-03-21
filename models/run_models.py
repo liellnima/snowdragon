@@ -6,9 +6,9 @@ from models.cv_handler import cv_manual, mean_kfolds
 from models.supervised_models import svm, random_forest, ada_boost, knn
 from models.semisupervised_models import kmeans, gaussian_mix, bayesian_gaussian_mix, label_spreading, self_training
 from models.baseline import majority_class_baseline
-from models.supervised_models import testing
 from models.helper_funcs import normalize, save_results, load_results
 from models.anns import ann
+from models.evaluation import testing
 
 import pickle
 import random
@@ -29,6 +29,8 @@ from data_handling.data_preprocessing import remove_negatives
 
 # TODO plot confusion matrix beautifully (multilabel_confusion_matrix)
 # TODO plot ROC AUC curve beautifully (roc_curve(y_true, y_pred))
+
+# TODO put most of those functions here in helper_funcs
 
 def my_train_test_split(smp, test_size=0.2, train_size=0.8, return_smp_idx=True):
     """ Splits data into training and testing data
@@ -324,6 +326,7 @@ def run_single_model(model_type, data, name=None, **params):
               rf, svm, knn, easy_ensemble, lstm, blstm, enc_dec""")
 
     scores = mean_kfolds(scores)
+
     if not "train_roc_auc" in scores: scores["train_roc_auc"] = float("nan")
     if not "test_roc_auc" in scores: scores["test_roc_auc"] = float("nan")
     if not "train_log_loss" in scores: scores["train_log_loss"] = float("nan")
@@ -335,6 +338,8 @@ def run_single_model(model_type, data, name=None, **params):
     # also job for others: naming the parameters employed and print scores
     return scores
 
+# TODO make a validation_all_models and evaluate_all_models function
+# think about using run_single_model and creating a eval_single_model for this
 def run_all_models(data, intermediate_file=None):
     """ All models are run here - the parameters are set manually within the function.
     Parameters:
@@ -358,13 +363,13 @@ def run_all_models(data, intermediate_file=None):
     # 9. Call the models
     all_scores = []
 
-    # A Baseline - majority class predicition
-    print("Starting Baseline Model...")
-    baseline_scores = majority_class_baseline(x_train, y_train, cv_stratified)
-    all_scores.append(mean_kfolds(baseline_scores))
-    print(mean_kfolds(baseline_scores))
-    if intermediate_file is not None: save_results(intermediate_file, all_scores)
-    print("...finished Baseline Model.\n")
+    # # A Baseline - majority class predicition
+    # print("Starting Baseline Model...")
+    # baseline_scores = majority_class_baseline(x_train, y_train, cv_stratified)
+    # all_scores.append(mean_kfolds(baseline_scores))
+    # print(mean_kfolds(baseline_scores))
+    # if intermediate_file is not None: save_results(intermediate_file, all_scores)
+    # print("...finished Baseline Model.\n")
 
     #
     # # B kmeans clustering (does not work well)
@@ -409,14 +414,15 @@ def run_all_models(data, intermediate_file=None):
     # if intermediate_file is not None: save_results(intermediate_file, all_scores)
     # print("...finished Self Training Classifier.\n")
 
-    # # F random forests (works)
-    # print("Starting Random Forest Model ...")
-    # rf, rf_scores = random_forest(x_train, y_train, cv_stratified, visualize=False)
-    # all_scores.append(mean_kfolds(rf_scores))
-    # if intermediate_file is not None: save_results(intermediate_file, all_scores)
-    # #rf = random_forest(x_train, y_train, cv_stratified, visualize=False, only_model=True)
-    # #rf_test_scores = testing(rf, x_train, y_train, x_test, y_test, smp_idx_train, smp_idx_test)
-    # print("...finished Random Forest Model.\n")
+    # F random forests (works)
+    print("Starting Random Forest Model ...")
+    #rf_scores = random_forest(x_train, y_train, cv_stratified, visualize=False)
+    #all_scores.append(mean_kfolds(rf_scores))
+    #if intermediate_file is not None: save_results(intermediate_file, all_scores)
+    # model evaluation
+    rf_model = random_forest(x_train, y_train, cv_stratified, visualize=False, only_model=True)
+    rf_test_scores = testing(rf_model, x_train, y_train, x_test, y_test, smp_idx_train, smp_idx_test, visualization=False)
+    print("...finished Random Forest Model.\n")
     # #
     # # G Support Vector Machines
     # # works with very high gamma (overfitting) -> "auto" yields 0.75, still good and no overfitting
@@ -427,11 +433,11 @@ def run_all_models(data, intermediate_file=None):
     # print("...finished Support Vector Machine.\n")
     #
     # H knn (works with weights=distance)
-    print("Starting K-Nearest Neighbours Model...")
-    knn_scores = knn(x_train, y_train, cv_stratified, n_neighbors=20)
-    all_scores.append(mean_kfolds(knn_scores))
-    if intermediate_file is not None: save_results(intermediate_file, all_scores)
-    print("...finished K-Nearest Neighbours Model.\n")
+    # print("Starting K-Nearest Neighbours Model...")
+    # knn_scores = knn(x_train, y_train, cv_stratified, n_neighbors=20)
+    # all_scores.append(mean_kfolds(knn_scores))
+    # if intermediate_file is not None: save_results(intermediate_file, all_scores)
+    # print("...finished K-Nearest Neighbours Model.\n")
     #
     # # I adaboost
     # print("Starting AdaBoost Model...")
@@ -480,7 +486,7 @@ def run_all_models(data, intermediate_file=None):
 # data_dict (str): npz file name with dictionary or None, if no preprocessing file exists yet.
 # TODO one parameter should be the table format of the output
 def main():
-    data_dict = None
+    data_dict = "preprocessed_data_k5.txt"
     if data_dict is None:
         data = preprocess_dataset(smp_file_name="smp_all_03.npz", output_file="preprocessed_data_test.txt", visualize=True)
     else:
@@ -500,6 +506,7 @@ def main():
     # exit(0)
     intermediate_results = "testing_evaluation01.txt"
     run_all_models(data, intermediate_results)
+    exit(0)
 
     all_scores = load_results(intermediate_results)
     # all_scores_02 = load_results("all_results_test01_part02.txt")
