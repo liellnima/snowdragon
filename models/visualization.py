@@ -12,7 +12,6 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 import matplotlib.ticker as ticker
 
-
 from scipy import stats
 from tabulate import tabulate
 from sklearn.manifold import TSNE
@@ -22,6 +21,7 @@ from sklearn.tree._tree import TREE_LEAF
 from sklearn.feature_selection import f_classif
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_selection import SelectKBest
+from sklearn.metrics import roc_curve, auc
 
 
 def smp_unlabelled(smp, smp_name):
@@ -560,6 +560,111 @@ def all_in_one_plot(smp, show_indices=False, sort=True, file_name="plots/bogplot
     figure = plt.gcf()  # get current figure
     figure.set_size_inches(27.2, 15.2) # set size of figure
     plt.savefig(file_name, bbox_inches="tight", dpi=300)
+
+
+def plot_confusion_matrix(confusion_matrix, labels, name=""):
+    """ Plot confusion matrix with relative prediction frequencies per label as heatmap.
+    Parameters:
+        confusion_matrix (nested list): 2d nested list with frequencies
+        labels (list): list of tags or labels that should be used for the plot.
+            Must be in the same order like the label order of the confusion matrix.
+        name (str): Name of the model for the plot
+
+    """
+    plt.rcParams.update({"font.size": 12})
+    # "accuracy per label" so to say (diagonal at least is acc)
+    bal_accs = [[cell/sum(row) for cell in row] for row in confusion_matrix]
+
+    # absolute counts and percentages
+    counts = ["{0:0.0f}".format(value) for value in confusion_matrix.flatten()]
+    sum_count = sum(confusion_matrix.flatten())
+    str_accs = [r"$ \bf {0:0.3f} $".format(value) for row in bal_accs for value in row]
+    percentages = [" ({0:.2f})".format(value) for value in confusion_matrix.flatten()/np.sum(confusion_matrix)]
+    percentages = [" ({0:.1%})".format(value) for value in confusion_matrix.flatten()/np.sum(confusion_matrix)]
+    # annotations inside the boxes
+    box_annots = [f"{v3}\n\n{v1}{v2}".strip() for v1, v2, v3 in zip(counts, percentages, str_accs)]
+    box_annots = np.asarray(box_annots).reshape(confusion_matrix.shape[0], confusion_matrix.shape[1])
+
+    # Total accuracy: summed up diagonal / tot obs
+    accuracy  = np.trace(confusion_matrix) / float(np.sum(confusion_matrix))
+    stats_text = "\n\nAccuracy={:0.3f}".format(accuracy)
+
+    # plot the matrix
+    g = sns.heatmap(bal_accs, annot=box_annots, fmt="", cmap="Blues", cbar=True,
+                    xticklabels=labels, yticklabels=labels, vmin=0, vmax=1,
+                    cbar_kws={"label": "\nPrediction Frequency per Label"})
+    # change font size of cbar axis
+    g.figure.axes[-1].yaxis.label.set_size(14)
+
+    plt.ylabel("True Label", fontsize=14)
+    plt.xlabel("Predicted Label" + stats_text, fontsize=14)
+    plt.title("Confusion Matrix of {} Model \n".format(name), fontsize=17)
+    plt.show()
+
+def plot_roc_curve(y_trues, y_prob_preds, labels, name=""):
+    """ Plotting ROC curves for all labels of a multiclass classification problem.
+    Inspired from: https://scikit-learn.org/stable/auto_examples/model_selection/plot_roc.html
+    Parameters:
+        y_trues
+        y_prob_preds
+        labels
+    """
+    plt.rcParams.update({"font.size": 12})
+    n_classes = len(labels)
+
+    # Compute ROC curve and ROC area for each class
+    false_pos_rate = dict()
+    true_pos_rate = dict()
+    roc_auc = dict()
+    # calculate the one-hot-encoding for y_trues
+    y_trues_dummies = pd.get_dummies(y_trues, drop_first=False).values
+    for i in range(n_classes):
+        false_pos_rate[i], true_pos_rate[i], _ = roc_curve(y_trues_dummies[:, i], y_prob_preds[:, i])
+        roc_auc[i] = auc(false_pos_rate[i], true_pos_rate[i])
+
+    # Compute micro-average ROC curve and ROC area
+    false_pos_rate["micro"], true_pos_rate["micro"], _ = roc_curve(y_trues_dummies.ravel(), y_prob_preds.ravel())
+    roc_auc["micro"] = auc(false_pos_rate["micro"], true_pos_rate["micro"])
+
+    # First aggregate all false positive rates
+    all_fpr = np.unique(np.concatenate([false_pos_rate[i] for i in range(n_classes)]))
+
+    # Then interpolate all ROC curves at these points
+    mean_tpr = np.zeros_like(all_fpr)
+    for i in range(n_classes):
+        mean_tpr += np.interp(all_fpr, false_pos_rate[i], true_pos_rate[i])
+
+    # Finally average it and compute AUC
+    mean_tpr /= n_classes
+
+    false_pos_rate["macro"] = all_fpr
+    true_pos_rate["macro"] = mean_tpr
+    roc_auc["macro"] = auc(false_pos_rate["macro"], true_pos_rate["macro"])
+
+    # Plot all ROC curves
+    plt.figure()
+    plt.plot(false_pos_rate["micro"], true_pos_rate["micro"],
+             label="micro-average ROC curve (area = {0:0.2f})".format(roc_auc["micro"]),
+             color="deeppink", linestyle=':', linewidth=4)
+
+    plt.plot(false_pos_rate["macro"], true_pos_rate["macro"],
+             label="macro-average ROC curve (area = {0:0.2f})".format(roc_auc["macro"]),
+             color="blueviolet", linestyle=':', linewidth=4)
+
+    colors = [COLORS[label] for label in labels]
+    for i, color, label in zip(range(n_classes), colors, labels):
+        plt.plot(false_pos_rate[i], true_pos_rate[i], color=color, lw=2,
+                 label="ROC curve of class {0} (area = {1:0.2f})".format(ANTI_LABELS[label], roc_auc[i]))
+
+    plt.plot([0, 1], [0, 1], "k--", lw=2)
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel("False Positive Rate", fontsize=15)
+    plt.ylabel("True Positive Rate", fontsize=15)
+    plt.title("Receiver Operating Characteristics for Model {}\n".format(name), fontsize=18)
+    plt.legend(loc="lower right", fontsize=14)
+    plt.show()
+
 
 def visualize_normalized_data(smp):
     """ Visualization after normalization and summing up classes has been achieved.
