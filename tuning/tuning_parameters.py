@@ -46,6 +46,13 @@ ENC_DEC_PARAMS={"batch_size": 32, "epochs": 15, "learning_rate": 0.001,
                 "rnn_size": 100, "dense_units": 0, "dropout": 0.2,
                 "attention": False, "bidirectional": False, "regularize": False}
 
+BEST_PARAMS = {"kmeans": KMEANS_PARAMS, "gmm": GMM_PARAMS, "bmm": BMM_PARAMS,
+                "label_spreading": LABEL_SPREADING_PARAMS,
+                "self_trainer": SELF_TRAINER_PARAMS, "rf": RF_PARAMS,
+                "svm": SVM_PARAMS, "knn": KNN_PARAMS,
+                "easy_ensemble": EASY_ENSEMBLE_PARAMS,
+                "lstm": LSTM_PARAMS, "blstm": BLSTM_PARAMS, "enc_dec": ENC_DEC_PARAMS}
+
 FIELD_NAMES = ["model", "fit_time", "score_time", "train_balanced_accuracy", "test_balanced_accuracy",
                "train_recall", "test_recall", "train_precision", "test_precision",
                "train_roc_auc", "test_roc_auc", "train_log_loss", "test_log_loss",
