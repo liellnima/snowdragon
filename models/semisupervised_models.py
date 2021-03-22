@@ -11,7 +11,7 @@ from sklearn.semi_supervised import SelfTrainingClassifier, LabelSpreading
 # TODO make return_train_score a parameter (not for self-training and label-spreading, but for the rest)
 
 # TODO add parameters for base estimator etc.
-def self_training(x_train_all, y_train_all, cv_semisupervised, base_model, name="SelfTrainingClassifier", k_best=100, max_iter=None, **kwargs):
+def self_training(x_train_all, y_train_all, cv_semisupervised, base_model, name="SelfTrainingClassifier", k_best=100, max_iter=None, only_model=False, **kwargs):
     """ Self training - a semisupervised model.
     Parameters:
         x_train_all (pd.DataFrame): contains both the features of labelled and unlabelled data.
@@ -19,6 +19,7 @@ def self_training(x_train_all, y_train_all, cv_semisupervised, base_model, name=
         cv_semisupervised (list): List of training and testing tuples which contain the indiced for the different folds.
         base_model (model): model that has a fit function!
         name (str): Name/Description for the model.
+        only_model (bool): if True returns only the model
     Returns:
         dict: results from cross validation, inclusive probability based crossvalidation
     """
@@ -26,10 +27,13 @@ def self_training(x_train_all, y_train_all, cv_semisupervised, base_model, name=
     st_model = SelfTrainingClassifier(base_model, verbose=True, max_iter=max_iter, k_best=k_best).fit(x_train_all, y_train_all)
     # predict_proba possible
     #y_pred = st_model.predict(x_train)
+    if only_model:
+        return st_model
+
     return calculate_metrics_cv(model=st_model, X=x_train_all, y_true=y_train_all, cv=cv_semisupervised, name=name)
 
 
-def label_spreading(x_train_all, y_train_all, cv_semisupervised, kernel="knn", alpha=0.2, name="LabelSpreading", **kwargs):
+def label_spreading(x_train_all, y_train_all, cv_semisupervised, kernel="knn", alpha=0.2, name="LabelSpreading", only_model=False, **kwargs):
     """ Label spreading - a semisupervised model.
     Parameters:
         x_train_all (pd.DataFrame): contains both the features of labelled and unlabelled data.
@@ -38,18 +42,23 @@ def label_spreading(x_train_all, y_train_all, cv_semisupervised, kernel="knn", a
         kernel (str): can be either "rbf" or "knn"
         alpha (float): clamping factor, between 0  and 1 - how strong should a datapoint adopt to its neighbor information? 0 mean not all, 1 means completely.
         name (str): Name/Description for the model.
+        only_model (bool): if True returns only the model
     Returns:
         dict: results from cross validation, inclusive probability based crossvalidation
     """
     # TODO cv: use the same cv split but randomly assign the other unlabelled data pieces to the other cv folds
     ls_model = LabelSpreading(kernel="knn", alpha=0.2, n_jobs=-1, max_iter=100).fit(x_train_all, y_train_all)
     #y_pred = ls_model.predict(x_train)
+
+    if only_model:
+        return ls_model
+
     return calculate_metrics_cv(model=ls_model, X=x_train_all, y_true=y_train_all, cv=cv_semisupervised, name=name)
 
 
 # ATTENTION: log_loss and roc_auc or other probability based metrics cannot be calculated for kmeans (not well defined!)
 # https://towardsdatascience.com/cluster-then-predict-for-classification-tasks-142fdfdc87d6
-def kmeans(unlabelled_data, x_train, y_train, cv, num_clusters=5, find_num_clusters="both", plot=False, name="Kmeans", **kwargs):
+def kmeans(unlabelled_data, x_train, y_train, cv, num_clusters=5, find_num_clusters="both", plot=False, name="Kmeans", only_model=False, **kwargs):
     """ Semisupervised kmeans algorithm. Assigns most frequent snow label to cluster.
     Parameters:
         unlabelled_data: Data on which the clustering should take place
@@ -62,6 +71,7 @@ def kmeans(unlabelled_data, x_train, y_train, cv, num_clusters=5, find_num_clust
             Default: None - in this case only the kmeans model with num_clusters cluster is run
         plot (bool): whether silhouette coefficient or balanced accuracy should be plot
         name (str): Name/Description for the model
+        only_model (bool): if True returns only the model
     Returns:
         dict: results from cross validation
     """
@@ -117,9 +127,12 @@ def kmeans(unlabelled_data, x_train, y_train, cv, num_clusters=5, find_num_clust
 
     km = KMeans(n_clusters=num_clusters, init="random", n_init=num_clusters, random_state=42)
 
+    if only_model:
+        return ls_model
+
     return semisupervised_cv(km, unlabelled_data, x_train, y_train, num_clusters, cv, name=name)
 
-def gaussian_mix(unlabelled_data, x_train, y_train, cv, cov_type="tied", num_components=15, find_num_components="both", plot=False, name="GaussianMixture", **kwargs):
+def gaussian_mix(unlabelled_data, x_train, y_train, cv, cov_type="tied", num_components=15, find_num_components="both", plot=False, name="GaussianMixture", only_model=False, **kwargs):
     """ Semisupervised Gaussian Mixture Algorithm. Assigns most frequent snow label to gaussians.
     Parameters:
         unlabelled_data: Data on which the clustering should take place
@@ -133,6 +146,7 @@ def gaussian_mix(unlabelled_data, x_train, y_train, cv, cov_type="tied", num_com
             Default: None - in this case only the kmeans model with num_clusters cluster is run
         plot (bool): whether the bic and balanced accuracy should be plot
         name (str): Name/Description for the model
+        only_model (bool): if True returns only the model
     Returns:
         dict: results of crossvalidation
     """
@@ -181,9 +195,13 @@ def gaussian_mix(unlabelled_data, x_train, y_train, cv, cov_type="tied", num_com
                 plt.show()
 
     gm = GaussianMixture(n_components=n_components, init_params="random", max_iter=150, covariance_type=cov_type, random_state=42)
+
+    if only_model:
+        return ls_model
+
     return semisupervised_cv(gm, unlabelled_data, x_train, y_train, n_gaussians, cv, name=(name+"_"+cov_type))
 
-def bayesian_gaussian_mix(unlabelled_data, x_train, y_train, cv, cov_type="tied", num_components=15, name="BayesianGaussianMixture", **kwargs):
+def bayesian_gaussian_mix(unlabelled_data, x_train, y_train, cv, cov_type="tied", num_components=15, name="BayesianGaussianMixture", only_model=False, **kwargs):
     """ Semisupervised Variational Bayesian estimation of a Gaussian Mixture Algorithm. Assigns most frequent snow label to gaussians.
     Find automatically the right number of
     Parameters:
@@ -194,10 +212,14 @@ def bayesian_gaussian_mix(unlabelled_data, x_train, y_train, cv, cov_type="tied"
         cov_type (str): type of covariance used for gaussian mixture model - one of: "tied", "diag", "spherical", "full"
         num_components (int): number of distributions maximally used for the model
         name (str): Name/Description for the model
+        only_model (bool): if True returns only the model
     Returns:
         dict: results of crossvalidation
     """
     bgm = BayesianGaussianMixture(n_components=num_components, init_params="random", max_iter=150, covariance_type=cov_type, random_state=42)
+
+    if only_model:
+        return ls_model
 
     return semisupervised_cv(bgm, unlabelled_data, x_train, y_train, num_components, cv, name=(name+"_"+cov_type))
 
