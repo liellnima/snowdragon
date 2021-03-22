@@ -173,7 +173,7 @@ def remove_padding(data, profile_len, return_prob=False):
     # Dropout: unclear
     # RNN size: unclear
 def eval_ann(x_train, x_valid, y_train, y_valid, profile_len_train, profile_len_valid,
-             ann_type, batch_size=32, epochs=15, plot_loss=False, file_name=None, **params):
+             ann_type, only_model=False, batch_size=32, epochs=15, plot_loss=False, file_name=None, **params):
     """ This function can evaluate a single ANN. The functions returns the evaluation results and plots the loss if wished.
 
     Parameters:
@@ -183,6 +183,7 @@ def eval_ann(x_train, x_valid, y_train, y_valid, profile_len_train, profile_len_
         y_valid (np.array): the target validation data
         profile_len_train (list): contains all lengths of each profile in the training data
         profile_len_valid (list): contains all lengths of each profile in the validation data
+        only_model(bool): If True only the model is returned
         batch_size (int): batch size employed during ANN training
         epochs (int): number of epochs run during ANN training
         ann_type (str): describing the choosen ann type. Can be on of the following three: ["lstm", "blstm", "enc_dec"]
@@ -192,6 +193,7 @@ def eval_ann(x_train, x_valid, y_train, y_valid, profile_len_train, profile_len_
             rnn_size, dense_units, dropout, regularizer, attention, bidirectional, learning_rate
     Returns:
         dict: contains y_true_train, y_true_valid, y_pred_train, y_pred_valid, y_pred_prob_train, y_pred_prob_valid
+        or model: the ANN model
     """
     # make it tensor data and batch it
     train_dataset = tf.data.Dataset.from_tensor_slices((x_train, y_train)).batch(batch_size)
@@ -209,6 +211,8 @@ def eval_ann(x_train, x_valid, y_train, y_valid, profile_len_train, profile_len_
     else:
         raise ValueError("Parameter \"ann_type\" in eval_ann() must be one of the following: \"lstm\", \"blstm\" or \"enc_dec\".")
 
+    if only_model:
+        return model
     # fitting the model
     start_time = time.time()
     history = model.fit(train_dataset, validation_data=valid_dataset, epochs=epochs, workers=-1, verbose=0)
@@ -440,7 +444,7 @@ def find_max_len(smp_idx, x_data):
     # TODO delete this
     #print_tuning("plots/tables/lstm02.csv")
 # TODO fix warning with incompatible shape
-def ann(x_train, y_train, smp_idx_train, ann_type="lstm", name="LSTM", cv_timeseries=0.2, plot_loss=False, plot_loss_name=None, **params):
+def ann(x_train, y_train, smp_idx_train, ann_type="lstm", name="LSTM", cv_timeseries=0.2, only_model=False, plot_loss=False, plot_loss_name=None, **params):
     """ The wrapper function to run any ANN architecture provided in this file.
     Parameters:
         x_train (pd.DataFrame): the complete training data
@@ -450,15 +454,17 @@ def ann(x_train, y_train, smp_idx_train, ann_type="lstm", name="LSTM", cv_timese
         name (str): how the model should be named
         cv_timeseries (float or list): float indicates that a simple percentual training-test split should be done.
             Otherwise it must be an iteratable list of length k with tuples of np 1-d arrays (train_indices, test_indices).
+        only_model (bool): If True, only the ANN model is returned
         plot_loss (bool): if the loss should be printed after training.
         plot_loss_name (str): Name for the plot_loss plot ("_loss") will be added. Default = None means that the plot won't be saved.
         **params (dict): containing: batch_size, epochs, learning_rate, rnn_size, dropout, dense_units,
             bidirectional, attention, regularizer
     Returns:
         dict: all the metrics calculated from the different crossvalidation splits. Each key is connected to list, where the results are stored.
+        or model: the ann model (if only_model = True)
     """
     # get training and validation data from that
-    if isinstance(cv_timeseries, float):
+    if isinstance(cv_timeseries, float) or only_model:
         # make the train and validation split
         x_train, x_valid, y_train, y_valid, idx_train, idx_valid = train_test_split(x_train, y_train, smp_idx_train, test_size=cv_timeseries, random_state=42)
 
@@ -471,8 +477,10 @@ def ann(x_train, y_train, smp_idx_train, ann_type="lstm", name="LSTM", cv_timese
 
         # we already know which model we would like to use:
         results = eval_ann(x_train=x_train, x_valid=x_valid, y_train=y_train, y_valid=y_valid,
-                                  profile_len_train=profile_len_train, profile_len_valid=profile_len_valid,
-                                  ann_type=ann_type, plot_loss=plot_loss, file_name=plot_loss_name, **params)
+                           profile_len_train=profile_len_train, profile_len_valid=profile_len_valid,
+                           ann_type=ann_type, only_model=only_model, plot_loss=plot_loss, file_name=plot_loss_name, **params)
+        if only_model:
+            return results
 
         # call metrics on model_results
         return calculate_metrics_ann(results, name=name)
@@ -496,8 +504,8 @@ def ann(x_train, y_train, smp_idx_train, ann_type="lstm", name="LSTM", cv_timese
 
             # run the models with this cv split
             k_results = eval_ann(x_train=x_k_train, x_valid=x_k_valid, y_train=y_k_train, y_valid=y_k_valid,
-                                      profile_len_train=profile_len_k_train, profile_len_valid=profile_len_k_valid,
-                                      plot_loss=plot_loss, ann_type=ann_type, file_name=plot_loss_name, **params)
+                                 profile_len_train=profile_len_k_train, profile_len_valid=profile_len_k_valid,
+                                 plot_loss=plot_loss, ann_type=ann_type, file_name=plot_loss_name, **params)
             if not keys_assigned:
                 all_results = {k: [] for k in k_results.keys()}
                 keys_assigned = True
