@@ -11,6 +11,8 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 import matplotlib.ticker as ticker
+# important setting to scale the pictures correctly
+plt.rcParams.update({"figure.dpi": 250})
 
 from scipy import stats
 from tabulate import tabulate
@@ -39,6 +41,8 @@ def smp_unlabelled(smp, smp_name):
     plt.title("{} SMP Profile Distance (1mm layers) and Force".format(smp_name))
     ax.set_xlabel("Snow Depth [mm]")
     ax.set_ylabel("Mean Force [N]")
+    ax.set_xlim(0, len(smp_profile)-1)
+    ax.set_ylim(0)
     plt.show()
 
 def smp_labelled(smp, smp_name, title=None):
@@ -57,7 +61,7 @@ def smp_labelled(smp, smp_name, title=None):
     smp_profile = smp[smp["smp_idx"] == smp_wanted]
     ax = sns.lineplot(smp_profile["distance"], smp_profile["mean_force"])
     if title is None:
-        plt.title("{} SMP Profile Distance (1mm layers) and Force".format(smp_name))
+        plt.title("{} SMP Profile Distance (1mm layers) and Force\n".format(smp_name))
     else:
         plt.title(title)
     last_label_num = 1
@@ -76,9 +80,136 @@ def smp_labelled(smp, smp_name, title=None):
 
     anti_colors = {ANTI_LABELS[key] : value for key, value in COLORS.items() if key in smp_profile["label"].unique()}
     markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='') for color in anti_colors.values()]
-    plt.legend(markers, anti_colors.keys(), numpoints=1, loc="center left", bbox_to_anchor=(1.04, 0.5))
+    plt.legend(markers, anti_colors.keys(), numpoints=1, loc="lower right")
     ax.set_xlabel("Snow Depth [mm]")
     ax.set_ylabel("Mean Force [N]")
+    ax.set_xlim(0, len(smp_profile)-1)
+    ax.set_ylim(0)
+    plt.tight_layout()
+    plt.show()
+
+def smp_pair(smp_true, smp_pred, smp_name, title=None, grid=True):
+    """ Visualizes the prediced and the observed smp profile in one plot.
+    The observation is a bar above/inside the predicted smp profile
+    Parameters:
+        smp_true (pd.DataFrame): Only one SMP profile -the observed one-, which is already filtered out.
+        smp_pred (pd.DataFrame): Only one SMP profile -the predicted one-, which is already filtered out.
+        smp_name (num or str): Name of the SMP profile that is observed and predicted.
+        title (str): Title of the plot.
+        grid (bool): If a grid should be plotted over the plot.
+    """
+    if isinstance(smp_name, str):
+        smp_wanted = idx_to_int(smp_name)
+    else:
+        smp_wanted = smp_name
+
+    # create two subplots with 1:10 ratio
+    fig, axs = plt.subplots(2, sharex=True, gridspec_kw={'height_ratios': [1, 10]})
+
+    # plot the observed smp profile by plotting only background for each label
+    last_label_num = 1
+    last_distance = -1
+    for label_num, distance in zip(smp_true["label"], smp_true["distance"]):
+        if (label_num != last_label_num):
+            background = axs[0].axvspan(last_distance, distance-1, color=COLORS[last_label_num], alpha=0.5)
+            last_label_num = label_num
+            last_distance = distance-1
+        if distance == smp_true.iloc[len(smp_true)-1]["distance"]:
+            axs[0].axvspan(last_distance, distance, color=COLORS[label_num], alpha=0.5)
+    axs[0].set_xlim(0, len(smp_pred))
+    axs[0].set_yticks([])
+
+    # plot the predicted smp profile - with line and background colors
+    axs[1] = sns.lineplot(smp_pred["distance"], smp_pred["mean_force"], ax=axs[1])
+    last_label_num = 1
+    last_distance = -1
+    for label_num, distance in zip(smp_pred["label"], smp_pred["distance"]):
+        if (label_num != last_label_num):
+            background = axs[1].axvspan(last_distance, distance-1, color=COLORS[last_label_num], alpha=0.5)
+            last_label_num = label_num
+            last_distance = distance-1
+        if distance == smp_pred.iloc[len(smp_pred)-1]["distance"]:
+            axs[1].axvspan(last_distance, distance, color=COLORS[label_num], alpha=0.5)
+    axs[1].set_xlim(0, len(smp_pred)-1)
+    axs[1].set_ylim(0)
+
+    # set legend, and axis labels for prediction
+    all_labels = list(set([*smp_true["label"].unique(), *smp_pred["label"].unique()]))
+    anti_colors = {ANTI_LABELS[key] : value for key, value in COLORS.items() if key in all_labels}
+    markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='') for color in anti_colors.values()]
+    plt.legend(markers, anti_colors.keys(), numpoints=1, loc="lower right")
+    axs[1].set_xlabel("Snow Depth [mm]")
+    axs[1].set_ylabel("Mean Force [N]")
+
+    # frame around observation
+    for frame_axis in ['top','bottom','left','right']:
+        axs[0].spines[frame_axis].set_linewidth(1.25)
+        axs[0].spines[frame_axis].set_color("black")
+
+    # add a grid and remove ticks from observation
+    for ax in axs:
+        ax.label_outer()
+        if grid: ax.grid(color="white")
+
+    # add title
+    if title is None:
+        plt.suptitle("Observed and Predicted SMP Profile {}\n".format(smp_name))
+    else:
+        plt.suptitle(title)
+
+    # adjust spacing, especially between the plots
+    plt.tight_layout()
+    fig.subplots_adjust(hspace=0.002)
+
+    # show plot
+    plt.show()
+
+def smp_pair_both(smp_true, smp_pred, smp_name, title=None):
+    """ Visualizes the prediced and the observed smp profile both in one plot.
+    Parameters:
+        smp_true (pd.DataFrame): Only one SMP profile -the observed one-, which is already filtered out.
+        smp_pred (pd.DataFrame): Only one SMP profile -the predicted one-, which is already filtered out.
+        smp_name (num or str): Name of the SMP profile that is observed and predicted.
+        title (str): Title of the plot.
+    """
+    if isinstance(smp_name, str):
+        smp_wanted = idx_to_int(smp_name)
+    else:
+        smp_wanted = smp_name
+
+    smps = [smp_true, smp_pred]
+
+    fig, axs = plt.subplots(2, sharex=True, sharey=True)
+
+    for ax, smp in zip(axs, smps):
+        ax = sns.lineplot(smp["distance"], smp["mean_force"], ax=ax)
+        last_label_num = 1
+        last_distance = -1
+        # going through labels and distance
+        for label_num, distance in zip(smp["label"], smp["distance"]):
+            if (label_num != last_label_num):
+                # assign new background for each label
+                background = ax.axvspan(last_distance, distance-1, color=COLORS[last_label_num], alpha=0.5)
+                last_label_num = label_num
+                last_distance = distance-1
+
+            if distance == smp.iloc[len(smp)-1]["distance"]:
+                ax.axvspan(last_distance, distance, color=COLORS[label_num], alpha=0.5)
+        ax.set_xlim(0, len(smp)-1)
+        ax.set_ylim(0)
+        ax.set(ylabel=None)
+
+    all_labels = list(set([*smp_true["label"].unique(), *smp_pred["label"].unique()]))
+    anti_colors = {ANTI_LABELS[key] : value for key, value in COLORS.items() if key in all_labels}
+    markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='') for color in anti_colors.values()]
+    fig.legend(markers, anti_colors.keys(), numpoints=1, loc="upper right")
+    if title is None:
+        plt.suptitle("Observed and Predicted SMP Profile {}\n".format(smp_name))
+    else:
+        plt.suptitle(title)
+    fig.text(0.015,0.5, "Mean Force [N]", ha="center", va="center", rotation=90)
+    plt.xlabel("Snow Depth [mm]")
+    plt.tight_layout()
     plt.show()
 
 def smp_features(smp, smp_name, features):
@@ -253,41 +384,6 @@ def plot_balancing(smp):
     ax.set_xticklabels(x_labels, rotation=90)
     ax2.set_ylim(0,100)
     ax.set_ylim(0,len(labelled_smp))
-    plt.show()
-
-# TODO why does rounded grains do not appear more often? this is certainly wrong -> happens only after normalization
-# TODO this produces in any case wrong results: if not normalized data -> still some parts missing! example: 20001918, 2000367
-def bog_label_plot(smp):
-    """ Creates a bog plot for the given smp profiles. Makes the labels visible.
-    Parameters:
-        smp (pd.DataFrame): dataframe containing smp profiles
-    """
-    labelled_smp = smp[(smp["label"] != 0) & (smp["label"] != 2)]
-    distance_between_smp = 0.5
-    day_id = 1
-    smp_indices = labelled_smp["smp_idx"].unique()
-    # color related dicts
-    anti_colors = {ANTI_LABELS[key] : value for key, value in COLORS.items() if key in labelled_smp["label"].unique()}
-    my_colors = {key : value for key, value in COLORS.items() if key in labelled_smp["label"].unique()}
-
-    for i, curr_smp_idx in zip(range(len(smp_indices)), smp_indices):
-        smp_profile = labelled_smp[labelled_smp["smp_idx"] == curr_smp_idx]
-        Y = smp_profile["label"]
-        z = smp_profile["distance"]
-        x1 = i * distance_between_smp
-        x2 = (i+1) * distance_between_smp
-        colors_list = [value for key, value in my_colors.items() if key >= min(Y) and key <= max(Y)]
-        plt.contourf([x1, x2], z, np.array([Y,Y]).transpose(), cmap=colors.ListedColormap(colors_list))
-
-    plt.xlabel('Snow Micro Pen Profiles')
-    plt.ylabel('Depth (mm)')
-    plt.gca().invert_yaxis()
-    plt.tight_layout()
-    plt.xticks(range(int(len(smp_indices)/2)+1), smp_indices[0::2], rotation=90, fontsize=5)
-    markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='') for color in anti_colors.values()]
-    plt.legend(markers, anti_colors.keys(), numpoints=1)
-    plt.title("All Labelled SMP Profiles with Assigned Labels")
-    plt.grid()
     plt.show()
 
 def bog_plot(smp):
@@ -501,13 +597,14 @@ def visualize_tree(rf, x_train, y_train, tree_idx=0, min_samples_leaf=1000, file
     os.system("dot -Tpng "+ file_name + ".dot -o " + file_name + ".png")
     os.system("rm " + file_name + ".dot")
 
-def all_in_one_plot(smp, show_indices=False, sort=True, file_name="plots/bogplots/all_in_one_labels.png"):
+def all_in_one_plot(smp, show_indices=False, sort=True, title=None, file_name="plots/bogplots/all_in_one_labels.png"):
     """ Creates a plot where all profiles are visible with their labels.
     Plot can only be saved, not shown (GUI too slow for the plot).
     Parameters:
         smp (df.DataFrame): SMP preprocessed data
         show_indices (bool): if the SMP profile indices should be displayed
         sort (bool): if the SMP profiles should be sorted according to length
+        title (str): Title of the plot
         file_name (str): where the resulting picture should be saved
     """
     plt.rcParams.update({'font.size': 22})
@@ -546,7 +643,8 @@ def all_in_one_plot(smp, show_indices=False, sort=True, file_name="plots/bogplot
     plt.yticks(range(0, max_distance, 100))
     plt.legend(markers, anti_colors.keys(), numpoints=1, loc="upper left", markerscale=3)
     plt.ylabel("Distance from Ground [mm]")
-    plt.title("SMP Profiles with Labels")
+    if title is None: title = "SMP Profiles with Labels"
+    plt.title(title)
 
     if show_indices:
         labels = [str(int(smp_index)) for smp_index in smp_indices]
@@ -571,7 +669,6 @@ def plot_confusion_matrix(confusion_matrix, labels, name=""):
         name (str): Name of the model for the plot
 
     """
-    plt.rcParams.update({"font.size": 12})
     # "accuracy per label" so to say (diagonal at least is acc)
     bal_accs = [[cell/sum(row) for cell in row] for row in confusion_matrix]
 
@@ -592,13 +689,14 @@ def plot_confusion_matrix(confusion_matrix, labels, name=""):
     # plot the matrix
     g = sns.heatmap(bal_accs, annot=box_annots, fmt="", cmap="Blues", cbar=True,
                     xticklabels=labels, yticklabels=labels, vmin=0, vmax=1,
-                    cbar_kws={"label": "\nPrediction Frequency per Label"})
+                    cbar_kws={"label": "\nPrediction Frequency per Label"},
+                    annot_kws={"fontsize":7})
     # change font size of cbar axis
-    g.figure.axes[-1].yaxis.label.set_size(14)
+    #g.figure.axes[-1].yaxis.label.set_size(14)
 
-    plt.ylabel("True Label", fontsize=14)
-    plt.xlabel("Predicted Label" + stats_text, fontsize=14)
-    plt.title("Confusion Matrix of {} Model \n".format(name), fontsize=17)
+    plt.ylabel("True Label")
+    plt.xlabel("Predicted Label" + stats_text)
+    plt.title("Confusion Matrix of {} Model \n".format(name))
     plt.show()
 
 def plot_roc_curve(y_trues, y_prob_preds, labels, name=""):
@@ -609,7 +707,6 @@ def plot_roc_curve(y_trues, y_prob_preds, labels, name=""):
         y_prob_preds
         labels
     """
-    plt.rcParams.update({"font.size": 12})
     n_classes = len(labels)
 
     # Compute ROC curve and ROC area for each class
@@ -659,10 +756,10 @@ def plot_roc_curve(y_trues, y_prob_preds, labels, name=""):
     plt.plot([0, 1], [0, 1], "k--", lw=2)
     plt.xlim([0.0, 1.0])
     plt.ylim([0.0, 1.05])
-    plt.xlabel("False Positive Rate", fontsize=15)
-    plt.ylabel("True Positive Rate", fontsize=15)
-    plt.title("Receiver Operating Characteristics for Model {}\n".format(name), fontsize=18)
-    plt.legend(loc="lower right", fontsize=14)
+    plt.xlabel("False Positive Rate")
+    plt.ylabel("True Positive Rate")
+    plt.title("Receiver Operating Characteristics for Model {}\n".format(name))
+    plt.legend(loc="lower right", prop={'size': 7})
     plt.show()
 
 
