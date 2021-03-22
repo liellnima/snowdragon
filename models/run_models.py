@@ -9,26 +9,23 @@ from models.baseline import majority_class_baseline
 from models.helper_funcs import normalize, save_results, load_results
 from models.anns import ann
 from models.evaluation import testing
+from tuning.tuning_parameters import BEST_PARAMS
 
 import pickle
 import random
 import numpy as np
 import pandas as pd
-from tabulate import tabulate
 
+from tabulate import tabulate
+from sklearn.manifold import TSNE
 # Other metrics: https://stats.stackexchange.com/questions/390725/suitable-performance-metric-for-an-unbalanced-multi-class-classification-problem
 from sklearn.model_selection import train_test_split, StratifiedKFold #, cross_validate, cross_val_score, cross_val_predict
-from sklearn.manifold import TSNE
-
 # TODO remove all the following imports!!!
 from sklearn.neighbors import KNeighborsClassifier
 from models.metrics import balanced_accuracy
 from models.cv_handler import calculate_metrics_cv
 from data_handling.data_preprocessing import remove_negatives
 # from sklearn.multioutput import MultiOutputClassifier
-
-# TODO plot confusion matrix beautifully (multilabel_confusion_matrix)
-# TODO plot ROC AUC curve beautifully (roc_curve(y_true, y_pred))
 
 # TODO put most of those functions here in helper_funcs
 
@@ -238,6 +235,66 @@ def preprocess_dataset(smp_file_name, output_file="preprocessed_data_dict.txt", 
 
     return prepared_data
 
+def get_single_model(model_type, data, **params):
+    """ Get a single model. Returns the model.
+    Parameters:
+        model_type (str): Can be one of the following:
+            "baseline", "kmeans", "gmm", "bmm", "label_spreading", "self_trainer",
+             "rf", "svm", "knn", "easy_ensemble", "lstm", "blstm", "enc_dec"
+        data (dict): dictionary produced by preprocess_dataset containing all necessary information
+        **params: contains all necessary parameters for the wished model
+    Returns:
+        model
+    """
+    # different cases for different models
+    if model_type == "baseline":
+        model = majority_class_baseline(**data, **params)
+
+    elif model_type == "kmeans":
+        model = kmeans(**data, **params)
+
+    elif model_type == "gmm":
+        model = gaussian_mix(**data, **params)
+
+    elif model_type == "bmm":
+        model = bayesian_gaussian_mix(**data, **params)
+
+    elif model_type == "label_spreading":
+        model = label_spreading(**data, **params, only_model=True)
+
+    elif model_type == "self_trainer":
+        if params["base_model"] is None:
+            params["base_model"] = KNeighborsClassifier(n_neighbors = 20, weights = "distance")
+        model = self_training(**data, **params, only_model=True)
+
+    elif model_type == "rf":
+        model = random_forest(**data, **params, only_model=True)
+
+    elif model_type == "svm":
+        model = svm(**data, **params, only_model=True)
+
+    elif model_type == "knn":
+        model = knn(**data, **params, only_model=True)
+
+    elif model_type == "easy_ensemble":
+        model = ada_boost(**data, **params, only_model=True)
+
+    elif model_type == "lstm":
+        model = ann(**data, **params, ann_type="lstm", only_model=True)
+
+    elif model_type == "blstm":
+        model = ann(**data, **params, ann_type="blstm", only_model=True)
+
+    elif model_type == "enc_dec":
+        model = ann(**data, **params, ann_type="enc_dec", only_model=True)
+
+    else:
+        print("No such model exists. Please choose one of the following models:\n")
+        print(""" baseline, kmeans, gmm, bmm, label_spreading, self_trainer,
+              rf, svm, knn, easy_ensemble, lstm, blstm, enc_dec""")
+
+    return model
+
 def run_single_model(model_type, data, name=None, **params):
     """ Runs a single model. Returns the results for this run.
     Parameters:
@@ -338,6 +395,78 @@ def run_single_model(model_type, data, name=None, **params):
     # also job for others: naming the parameters employed and print scores
     return scores
 
+# TODO save all plots in a folder!
+# TODO save metrics intermediately!
+def evaluate_all_models(data, file_scores=None, file_scores_lables=None, **params):
+    """ Evaluating each model. Parameters for models are given in params.
+    Results can be saved intermediately in a file.
+    Parameters:
+        data (dict): dictionary produced by preprocess_dataset containing all necessary information
+        **params: A list for all necessary parameters for the models.
+    """
+    # set plotting variables:
+    # no special labels order (default ascending) and name must be set individually
+    # bog plots are omitted for the moment (takes quite long)
+    plotting = {"annot": "eval", "roc_curve": True, "confusion_matrix": True,
+                "one_plot": True, "pair_plots": True, "only_preds": True,
+                "plot_list": [2000487]}
+
+    # unpack all necessary values from the preprocessing dictionary
+    x_train = data["x_train"]
+    y_train = data["y_train"]
+    x_test = data["x_test"]
+    y_test = data["y_test"]
+    x_train_all = data["x_train_all"]
+    y_train_all = data["y_train_all"]
+    unlabelled_smp_x = data["unlabelled_data"]
+    cv_stratified = data["cv"]
+    cv_semisupervised = data["cv_semisupervised"]
+    cv_timeseries = data["cv_timeseries"]
+    smp_idx_train = data["smp_idx_train"]
+    smp_idx_test = data["smp_idx_test"]
+
+    all_scores = []
+    all_scores_per_label = []
+
+    # Baseline
+    #scores = testing(model=None, x_train, y_train, x_test, y_test, smp_idx_train, smp_idx_test, pred_type="baseline", name=name, **plotting)
+
+    # All handcrafted semisupervised models
+    # TODO create predict function for them in evaluation!
+    # scores = testing(model, x_train, y_train, x_test, y_test, smp_idx_train, smp_idx_test, pred_type="semi", name=name, **plotting)
+
+    # ANNs
+    # NOT WORKING
+    # All ANN models
+    supervised_models = ["lstm"]
+    supervised_names = ["LSTM"]
+    # scores = testing(model, x_train, y_train, x_test, y_test, smp_idx_train, smp_idx_test, pred_type="ann", name=name, **plotting)
+
+    for model_type, name in zip(supervised_models, supervised_names):
+        print("Evaluating {} Model ...\n".format(name))
+        model = get_single_model(model_type=model_type, data=data, **BEST_PARAMS[model_type])
+        print(model)
+        print("...finished {} Model.\n".format(name))
+
+    exit(0)
+
+    # WORKING
+    # All scikit learn models
+    supervised_models = ["rf", "svm", "knn", "easy_ensemble", "self_trainer", "label_spreading"]
+    supervised_names = ["Random Forest", "Support Vector Machine", "K-nearest Neighbors", "Easy Ensemble", "Self Trainer", "Label Spreading"]
+
+    for model_type, name in zip(supervised_models, supervised_names):
+        print("Evaluating {} Model ...\n".format(name))
+        model = get_single_model(model_type=model_type, data=data, **BEST_PARAMS[model_type])
+        scores = testing(model, x_train, y_train, x_test, y_test,
+                            smp_idx_train, smp_idx_test, name=name, **plotting)
+        all_scores.append(scores[0])
+        all_scores_per_label.append(scores[1])
+        if file_scores is not None: save_results(file_scores, all_scores)
+        if file_scores_lables is not None: save_results(file_scores_lables, all_scores_per_label)
+        print("...finished {} Model.\n".format(name))
+
+
 # TODO make a validation_all_models and evaluate_all_models function
 # think about using run_single_model and creating a eval_single_model for this
 def run_all_models(data, intermediate_file=None):
@@ -421,7 +550,9 @@ def run_all_models(data, intermediate_file=None):
     #if intermediate_file is not None: save_results(intermediate_file, all_scores)
     # model evaluation
     rf_model = random_forest(x_train, y_train, cv_stratified, visualize=False, only_model=True)
-    rf_test_scores = testing(rf_model, x_train, y_train, x_test, y_test, smp_idx_train, smp_idx_test, visualization=False)
+    rf_test_scores = testing(rf_model, x_train, y_train, x_test, y_test, smp_idx_train, smp_idx_test, name="RandomForest",
+                             plot_list=[2000487], one_plot=True, pair_plots=True, only_preds=True, only_trues=True)
+
     print("...finished Random Forest Model.\n")
     # #
     # # G Support Vector Machines
@@ -504,8 +635,9 @@ def main():
 
     # run_single_model(model_type="kmeans", data=tsne_data)
     # exit(0)
-    intermediate_results = "testing_evaluation01.txt"
-    run_all_models(data, intermediate_results)
+    #intermediate_results = "testing_evaluation01.txt"
+    #run_all_models(data, intermediate_results)
+    evaluate_all_models(data)
     exit(0)
 
     all_scores = load_results(intermediate_results)
