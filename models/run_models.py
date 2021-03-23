@@ -7,7 +7,7 @@ from models.supervised_models import svm, random_forest, ada_boost, knn
 from models.semisupervised_models import kmeans, gaussian_mix, bayesian_gaussian_mix, label_spreading, self_training
 from models.baseline import majority_class_baseline
 from models.helper_funcs import normalize, save_results, load_results
-from models.anns import ann
+from models.anns import ann, get_ann_model
 from models.evaluation import testing
 from tuning.tuning_parameters import BEST_PARAMS
 
@@ -280,13 +280,13 @@ def get_single_model(model_type, data, **params):
         model = ada_boost(**data, **params, only_model=True)
 
     elif model_type == "lstm":
-        model = ann(**data, **params, ann_type="lstm", only_model=True)
+        model = get_ann_model(**data, **params, ann_type="lstm")
 
     elif model_type == "blstm":
-        model = ann(**data, **params, ann_type="blstm", only_model=True)
+        model = get_ann_model(**data, **params, ann_type="blstm")
 
     elif model_type == "enc_dec":
-        model = ann(**data, **params, ann_type="enc_dec", only_model=True)
+        model = get_ann_model(**data, **params, ann_type="enc_dec")
 
     else:
         print("No such model exists. Please choose one of the following models:\n")
@@ -408,7 +408,7 @@ def evaluate_all_models(data, file_scores=None, file_scores_lables=None, **param
     # no special labels order (default ascending) and name must be set individually
     # bog plots are omitted for the moment (takes quite long)
     plotting = {"annot": "eval", "roc_curve": True, "confusion_matrix": True,
-                "one_plot": True, "pair_plots": True, "only_preds": True,
+                "one_plot": True, "pair_plots": True, "only_preds": True, "only_trues": True,
                 "plot_list": [2000487]}
 
     # unpack all necessary values from the preprocessing dictionary
@@ -441,25 +441,29 @@ def evaluate_all_models(data, file_scores=None, file_scores_lables=None, **param
     supervised_models = ["lstm"]
     supervised_names = ["LSTM"]
     # scores = testing(model, x_train, y_train, x_test, y_test, smp_idx_train, smp_idx_test, pred_type="ann", name=name, **plotting)
-
     for model_type, name in zip(supervised_models, supervised_names):
         print("Evaluating {} Model ...\n".format(name))
         model = get_single_model(model_type=model_type, data=data, **BEST_PARAMS[model_type])
-        print(model)
-        print("...finished {} Model.\n".format(name))
+        # we also have to hand over some additional ann parameters
+        scores = testing(model, x_train, y_train, x_test, y_test, smp_idx_train,
+                         smp_idx_test, name=name, type="keras",
+                         **plotting, **BEST_PARAMS[model_type])
 
     exit(0)
 
     # WORKING
     # All scikit learn models
-    supervised_models = ["rf", "svm", "knn", "easy_ensemble", "self_trainer", "label_spreading"]
-    supervised_names = ["Random Forest", "Support Vector Machine", "K-nearest Neighbors", "Easy Ensemble", "Self Trainer", "Label Spreading"]
+    #supervised_models = ["rf", "svm", "knn", "easy_ensemble", "self_trainer", "label_spreading"]
+    #supervised_names = ["Random Forest", "Support Vector Machine", "K-nearest Neighbors", "Easy Ensemble", "Self Trainer", "Label Spreading"]
+
+    supervised_models = ["rf"]
+    supervised_names = ["Random Forest"]
 
     for model_type, name in zip(supervised_models, supervised_names):
         print("Evaluating {} Model ...\n".format(name))
         model = get_single_model(model_type=model_type, data=data, **BEST_PARAMS[model_type])
         scores = testing(model, x_train, y_train, x_test, y_test,
-                            smp_idx_train, smp_idx_test, name=name, **plotting)
+                         smp_idx_train, smp_idx_test, name=name, **plotting)
         all_scores.append(scores[0])
         all_scores_per_label.append(scores[1])
         if file_scores is not None: save_results(file_scores, all_scores)
