@@ -1,43 +1,164 @@
-from models.visualization import smp_labelled, plot_confusion_matrix, plot_roc_curve
-from models.visualization import smp_pair_both, smp_pair, all_in_one_plot
-from models.helper_funcs import reverse_normalize
-from models.metrics import calculate_metrics_raw, calculate_metrics_per_label
 from models.metrics import METRICS, METRICS_PROB
+from models.helper_funcs import reverse_normalize
 from data_handling.data_parameters import ANTI_LABELS
+from models.semisupervised_models import assign_clusters
 from models.anns import fit_ann_model, predict_ann_model
+from models.baseline import fit_baseline, predict_baseline
+from models.metrics import calculate_metrics_raw, calculate_metrics_per_label
+from models.visualization import smp_pair_both, smp_pair, all_in_one_plot
+from models.visualization import smp_labelled, plot_confusion_matrix, plot_roc_curve
 
 import time
 import numpy as np
 import pandas as pd
 
+from pathlib import Path
 from tabulate import tabulate
-# for the moment only for the pure scikit based functions
-# excluded for the moment: anns, baseline, cluster-then-predict algos
-# Problems anns: wrong labels
-# problems baseline: no prediction possible at the moment
-# Problems cluster-then-predict: yet unclear
-# later TODO split up in prediction, metrics and plotting?
 
-# TODO save or print loss for ANNs?
-# TODO make saving of plots possible
-def testing(model, x_train, y_train, x_test, y_test, smp_idx_train, smp_idx_test,
-            annot="test", name="Model", labels_order=None, roc_curve=False,
-            confusion_matrix=False, bog_plot_preds=None, bog_plot_trues=None,
-            one_plot=False, pair_plots=False, plot_list=None, only_trues=False,
-            only_preds=False, type="scikit", **fit_params):
-    """ Performs testing on a model. Model is fit on training data and evaluated on testing data. Prediction inclusive.
+# Longterm TODO: make more of the parameters optional!
+
+def predicting(model, x_train, y_train, x_test, y_test, smp_idx_train, smp_idx_test, unlabelled_data, impl_type, **fit_params):
+    """ Used from evaluation to predict the labels and label probabilities for
+    all the different models.
     Parameters:
-        model (model): Model on which .fit and .predict can be called.
+        model (model): Model on which .fit and .predict can be called. (or baseline )
         x_train (pd.DataFrame): Training input data.
         y_train (pd.Series): Training target data - the desired output.
         x_test (pd.DataFrame): Testing input data.
         y_test (pd.Series): Testing target data.
         smp_idx_train (pd.Series): SMP indices for the tranining data.
         smp_idx_test (pd.Series): SMP indices for the testint data.
+        unlabelled_data (pd.DataFrame): Unlabelled Data used for semi-supervised
+            learning.
+        impl_type (str): Default \"scikit\". Indicates which type of model must be
+            used during prediction and fitting. The following types exists:
+            \"scikit\" (most models), \"baseline\", \"keras\" (for all ann models),
+            \"semi_manual\" (kmeans, gmm, bmm)
+        **fit_params: These are additional parameters which are given to the
+            fit call. This is important e.g. for anns, since epochs and
+            batch size must be be specified during fitting.
+    Returns:
+        (np.ndarray, np.ndarray, float, float): y_pred, y_pred_prob, fit_time, score_time.
+            tuple of two np.ndarrays (length_of_xtest,) (length_of_xtest, num_of_labels)
+            and two floats
+    """
+    # set y_pred_prob to None in case the probabilities can't be predicted
+    y_pred_prob = None
+
+    # fitting and prediction based on the model implementation type
+    if impl_type == "scikit":
+        # fitting the model
+        start_time = time.time()
+        model.fit(x_train, y_train)
+        fit_time = time.time() - start_time
+        # predicting
+        start_time = time.time()
+        y_pred = model.predict(x_test)
+        score_time = time.time() - start_time
+        # predicting probability
+        if hasattr(model, "predict_proba"): y_pred_prob = model.predict_proba(x_test)
+
+    elif impl_type == "keras":
+        # fitting the model
+        start_time = time.time()
+        fit_ann_model(model, x_train, y_train, smp_idx_train, **fit_params)
+        fit_time = time.time() - start_time
+        # predicting + predicting probability
+        start_time = time.time()
+        y_pred, y_pred_prob = predict_ann_model(model, x_test, y_test, smp_idx_test, predict_proba=True, **fit_params)
+        score_time = time.time() - start_time
+
+    elif impl_type == "baseline":
+        # fitting the model
+        start_time = time.time()
+        majority_vote = fit_baseline(y_train)
+        fit_time = time.time() - start_time
+        # predicting + predicting probability
+        start_time = time.time()
+        y_pred = predict_baseline(majority_vote, x_test)
+        score_time = time.time() - start_time
+
+    elif impl_type == "semi_manual":
+        # fitting the model
+        start_time = time.time()
+        # concat unlabelled and labelled data and fit it
+        model = model.fit(pd.concat([unlabelled_data, x_train]))
+        fit_time = time.time() - start_time
+
+        # determine the number of clusters/components
+        if hasattr(model, "cluster_centers_"):
+            num_components = model.cluster_centers_.shape[0]
+        elif hasattr(model, "weights_"):
+            num_components = model.weights_.shape[0]
+        # prediction
+        start_time = time.time()
+        test_clusters = model.predict(x_test)
+        y_pred = assign_clusters(y_test, test_clusters, num_components)
+        score_time = time.time() - start_time
+
+    else:
+        raise ValueError("""This Model implementation types does not exist.
+        Choose one of the following: \"scikit\" (for rf, svm, knn, easy_ensemble, self_trainer),
+        \"semi_manual\" (for kmean, gmm, bmm), \"keras\" (for lstm, blsm, enc_dec),
+        or \"baseline\" (for the majority vote baseline)""")
+
+    return y_pred, y_pred_prob, fit_time, score_time
+
+def metrics_testing(y_test, y_pred, y_pred_prob, fit_time, score_time, labels_order, annot="test", name="Model"):
+    """ Calculates and prints metrics.
+    Parameters:
+        y_test (pd.Series): Testing target data.
+        y_pred (np.array): Predictions of the y_test data.
+        y_pred_prob (np.ndarray): 2dim array with probability predictions of y_test.
+            Can be also None.
+        fit_time (float): fitting time
+        score_time (float): scoring time
+        labels_order (list): list where a wished labels order is given.
         annot (str): How the metrics results should be annotated.
         name (str): Name of the Model.
-        labels_order (list): list where a wished labels order is given. If None
-            the labels will be sorted automatically ascending.
+    Returns:
+        (dict, dict): tuple of dictionaries. The first one contains the general metrics,
+            the second one contains the metrics calculated per metric.
+    """
+    # calculate usual metrics
+    scores = calculate_metrics_raw(y_test, y_pred, metrics=METRICS, cv=False, name=name, annot=annot)
+    scores[annot+"_fit_time"] = fit_time
+    scores[annot+"_score_time"] = score_time
+
+    # check if probability pred scores exist, if yes add those scores
+    if y_pred_prob is not None:
+        prob_scores = calculate_metrics_raw(y_test, y_pred_prob, metrics=METRICS_PROB, cv=False, name=name, annot=annot)
+        scores = {**scores, **prob_scores}
+
+    # calculate metrics per label and confusion matrix
+    metrics_per_label = calculate_metrics_per_label(y_test, y_pred, name=name, annot=annot, labels_order=labels_order)
+    # print all metrics beautifully (makes only sense on a larger scale)
+    print("\nScores \n")
+    print(pd.Series(scores))
+    print("\nScores per label for Model {}\n".format(name))
+    scores_per_label = {key:value for key, value in metrics_per_label.items() if (key != annot+"_confusion_matrix") & (key != "model")}
+    scores_per_label = pd.DataFrame.from_dict(scores_per_label, orient="index", columns=[ANTI_LABELS[i] for i in labels_order])
+    print(tabulate(scores_per_label, headers="keys", tablefmt="psql"))
+
+    return scores, metrics_per_label
+
+def plot_testing(y_pred, y_pred_prob, metrics_per_label, x_test, y_test,
+                 smp_idx_test, labels_order, annot="test", name="Model",
+                 roc_curve=False, confusion_matrix=False, bog_plot_preds=None,
+                 bog_plot_trues=None, one_plot=False, pair_plots=False,
+                 only_trues=False, only_preds=False, plot_list=None,
+                 save_folder=None, **kwargs):
+    """ Plots visualization for predictions and metrics.
+    Parameters:
+        y_pred (np.array): all predictions of the x_test
+        y_pred_prob (np.ndarray): contains probability predictions for x_test
+        metrics_per_label (dict): contains metrics, such as the confusion matrix
+        x_test (pd.DataFrame): Testing input data.
+        y_test (pd.Series): Testing target data.
+        smp_idx_test (pd.Series): SMP indices for the testing data.
+        labels_order (list): list where a wished labels order is given.
+        annot (str): How the metrics results should be annotated.
+        name (str): Name of the Model.
         roc_curve (bool): If the roc curve should be plotted.
         confusion_matrix (bool): If the confusion matrix should be plotted.
         bog_plot_preds (str): Default None, means no bogplot is produced. If str
@@ -55,82 +176,28 @@ def testing(model, x_train, y_train, x_test, y_test, smp_idx_train, smp_idx_test
         plot_list (list): Default None. If not None, this is a list of smp names.
             All wished plots are only produced for the named smp profiles.
             (No strings! Must be floats or numeric inside the list!)
-        type (str): Default \"scikit\". Indicates which type of model must be
-            used during prediction and fitting. The following types exists:
-            \"scikit\" (most models), \"baseline\", \"keras\" (for all ann models),
-            \"semi_manual\" (kmeans, gmm, bmm)
-        **fit_params: These are additional parameters which are given to the
-            fit call. This is important e.g. for anns, since epochs and
-            batch size must be be specified during fitting.
-    Returns:
-        tuple: (Metrics of the results, Metrics per label and confusion matrix)
+        save_folder (str): Default None means that the plots are not saved.
+            If this is a string, the plots will be saved in this folder.
     """
-    if labels_order is None:
-        labels_order = np.sort(np.unique(y_test))
-
-    # fitting and prediction based on the model implementation type
-    if type == "scikit":
-        # fitting the model
-        start_time = time.time()
-        model.fit(x_train, y_train)
-        fit_time = time.time() - start_time
-        # predicting
-        start_time = time.time()
-        y_pred = model.predict(x_test)
-        score_time = time.time() - start_time
-        # predicting probability
-        if hasattr(model, "predict_proba"): y_pred_prob = model.predict_proba(x_test)
-
-    elif type == "keras":
-        # fitting the model
-        start_time = time.time()
-        fit_ann_model(model, x_train, y_train, smp_idx_train, **fit_params)
-        fit_time = time.time() - start_time
-        # predicting
-        start_time = time.time()
-        y_pred, y_pred_prob = predict_ann_model(model, x_test, y_test, smp_idx_test, predict_proba=True, **fit_params)
-        score_time = time.time() - start_time
-
-    elif type == "baseline":
-        print("Nothing here yet\n")
-    elif type == "semi_manual":
-        print("Nothing here yet\n")
-    else:
-        # TODO raise an exception
-        print("Nope, this model implementation type does not exist.")
-
-    # calculate usual metrics
-    scores = calculate_metrics_raw(y_test, y_pred, metrics=METRICS, cv=False, name=name, annot=annot)
-    scores[annot+"_fit_time"] = fit_time
-    scores[annot+"_score_time"] = score_time
-    print(scores)
-    exit(0)
-
-    # check if probability prediction is possible, if yes add those scores
-    # if the probability scores exist -> merge them
-    if hasattr(model, "predict_proba"):
-        prob_scores = calculate_metrics_raw(y_test, y_pred_prob, metrics=METRICS_PROB, cv=False, name=name, annot=annot)
-        # merge them with the other scores
-        scores = {**scores, **prob_scores}
-
-
-    # calculate metrics per label and confusion matrix
-    metrics_per_label = calculate_metrics_per_label(y_test, y_pred, name=name, annot=annot, labels_order=labels_order)
-    # print all metrics beautifully (makes only sense on a larger scale)
-    print("\nScores \n")
-    print(pd.Series(scores))
-    print("\nScores per label for Model {}\n".format(name))
-    scores_per_label = {key:value for key, value in metrics_per_label.items() if (key != annot+"_confusion_matrix") & (key != "model")}
-    scores_per_label = pd.DataFrame.from_dict(scores_per_label, orient="index", columns=[ANTI_LABELS[i] for i in labels_order])
-    print(tabulate(scores_per_label, headers="keys", tablefmt="psql"))
+    # TODO test all of this!
+    if save_folder is not None:
+        save_folder_path = Path(save_folder)
+        # check if dir exists and create it if not
+        if not save_folder_path.is_dir():
+            save_folder_path.mkdir(parents=True, exist_ok=True)
+            # create subdirs as well
+            Path(save_folder_path + "/trues").mkdir(parents=True, exist_ok=True)
+            Path(save_folder_path + "/preds").mkdir(parents=True, exist_ok=True)
+            Path(save_folder_path + "/pairs").mkdir(parents=True, exist_ok=True)
+            Path(save_folder_path + "/onesies").mkdir(parents=True, exist_ok=True)
 
     # print confusion matrix
     if confusion_matrix:
         tags = [ANTI_LABELS[label] for label in labels_order]
-        plot_confusion_matrix(metrics_per_label[annot + "_" + "confusion_matrix"], labels=tags, name=name)
+        plot_confusion_matrix(metrics_per_label[annot + "_" + "confusion_matrix"], labels=tags, name=name, save_file=save_folder + "/confusion_matrix.png")
     # print roc auc curve
-    if roc_curve and hasattr(model, "predict_proba"):
-        plot_roc_curve(y_test, y_pred_prob, labels_order, name=name)
+    if roc_curve and (y_pred_prob is not None):
+        plot_roc_curve(y_test, y_pred_prob, labels_order, name=name, save_file=save_folder + "/roc_curve.png")
 
     smp_trues = []
     smp_preds = []
@@ -155,32 +222,88 @@ def testing(model, x_train, y_train, x_test, y_test, smp_idx_train, smp_idx_test
     # plot all the true profiles
     if only_trues:
         for smp_name, smp_true in zip(smp_names, smp_trues):
-            smp_labelled(smp_true, smp_name, title="{} SMP Profile Observed\n".format(smp_name))
+            smp_name = int(smp_name)
+            smp_labelled(smp_true, smp_name, title="{} SMP Profile Observed\n".format(smp_name), save_file=save_folder + "/trues/smp_" + smp_name + ".png")
 
     # plot all the predicted profiles
     if only_preds:
         for smp_name, smp_pred in zip(smp_names, smp_preds):
-            smp_labelled(smp_pred, smp_name, title="{} SMP Profile Predicted with Model {}\n".format(smp_name, name))
+            smp_name = int(smp_name)
+            smp_labelled(smp_pred, smp_name, title="{} SMP Profile Predicted with Model {}\n".format(smp_name, name), save_file=save_folder + "/preds/smp_" + smp_name + ".png")
 
     # plot all pairs of true and observed profiles
     if pair_plots:
         for smp_name, smp_true, smp_pred in zip(smp_names, smp_trues, smp_preds):
-             smp_pair_both(smp_true, smp_pred, smp_name, title="Observed and with {} Predicted SMP Profile {}\n".format(name, smp_name))
+            smp_name = int(smp_name)
+            smp_pair_both(smp_true, smp_pred, smp_name, title="Observed and with {} Predicted SMP Profile {}\n".format(name, smp_name), save_file=save_folder + "/pairs/smp_" + smp_name + ".png")
 
     # one plot: observation as bar above everything
     if one_plot:
         for smp_name, smp_true, smp_pred in zip(smp_names, smp_trues, smp_preds):
-            smp_pair(smp_true, smp_pred, smp_name, title="Observed and with {} Predicted SMP Profile {}\n".format(name, smp_name))
+            smp_name = int(smp_name)
+            smp_pair(smp_true, smp_pred, smp_name, title="Observed and with {} Predicted SMP Profile {}\n".format(name, smp_name), save_file=save_folder + "/onesies/smp_" + smp_name + ".png")
 
     # put all smps together in one plot
     if bog_plot_trues is not None:
         all_smp_trues = pd.concat(smp_trues)
         all_in_one_plot(all_smp_trues, show_indices=False, sort=True,
-                        title="All Observed SMP Profiles of the Testing Data", file_name=bog_plot_trues)
+                        title="All Observed SMP Profiles of the Testing Data", file_name=save_folder + "/bogplot_trues.png")
+
     if bog_plot_preds is not None:
         all_smp_preds = pd.concat(smp_preds)
         all_in_one_plot(all_smp_preds, show_indices=False, sort=True,
-                        title="All SMP Profiles Predicted with {}.".format(name), file_name=bog_plot_preds)
+                        title="All SMP Profiles Predicted with {}.".format(name), file_name=save_folder + "/bogplot_preds.png")
+
+# TODO save or print loss for ANNs?
+# TODO make saving of plots possible
+def testing(model, x_train, y_train, x_test, y_test, smp_idx_train, smp_idx_test,
+            unlabelled_data=None, annot="test", name="Model", labels_order=None,
+            impl_type="scikit", save_folder=None, **plot_and_fit_params):
+    """ Performs testing on a model. Model is fit on training data and evaluated on testing data. Prediction inclusive.
+    Parameters:
+        model (model): Model on which .fit and .predict can be called. (or baseline )
+        x_train (pd.DataFrame): Training input data.
+        y_train (pd.Series): Training target data - the desired output.
+        x_test (pd.DataFrame): Testing input data.
+        y_test (pd.Series): Testing target data.
+        smp_idx_train (pd.Series): SMP indices for the tranining data.
+        smp_idx_test (pd.Series): SMP indices for the testing data.
+        unlabelled_data (pd.DataFrame): Unlabelled Data used for semi-supervised
+            learning.
+        annot (str): How the metrics results should be annotated.
+        name (str): Name of the Model.
+        labels_order (list): list where a wished labels order is given. If None
+            the labels will be sorted automatically ascending. If ANN models with
+            predicting probabilities are used, the order must be ascending.
+        impl_type (str): Default \"scikit\". Indicates which type of model must be
+            used during prediction and fitting. The following types exists:
+            \"scikit\" (most models), \"baseline\", \"keras\" (for all ann models),
+            \"semi_manual\" (kmeans, gmm, bmm)
+        **plot_and_fit_params: contains:
+            **plotting: contains booleans about plotting. And a param for saving
+                the plots and a list to indicate the wished smp profiles for
+                which plotting should be done. See plot_testing.
+            **fit_params: These are additional parameters which are given to the
+                fit call. This is important e.g. for anns, since epochs and
+                batch size must be be specified during fitting.
+    Returns:
+        tuple: (Metrics of the results, Metrics per label and confusion matrix)
+    """
+    if labels_order is None:
+        labels_order = np.sort(np.unique(y_test))
+
+    # make predictions for models. y_pred_prob is None if not possible
+    y_pred, y_pred_prob, fit_time, score_time = predicting(model, x_train,
+                y_train, x_test, y_test, smp_idx_train, smp_idx_test,
+                unlabelled_data, impl_type, **plot_and_fit_params)
+
+    # print metrics
+    scores, metrics_per_label = metrics_testing(y_test, y_pred, y_pred_prob,
+                fit_time, score_time, labels_order, annot, name)
+
+    # plot everything
+    plot_testing(y_pred, y_pred_prob, metrics_per_label, x_test, y_test,
+                smp_idx_test, labels_order, annot, name, **plot_and_fit_params)
 
     # metrics must be saved from the calling function
     return (scores, metrics_per_label)
