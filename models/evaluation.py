@@ -4,6 +4,7 @@ from models.helper_funcs import reverse_normalize
 from models.metrics import calculate_metrics_raw, calculate_metrics_per_label
 from models.metrics import METRICS, METRICS_PROB
 from data_handling.data_parameters import ANTI_LABELS
+from models.anns import fit_ann_model, predict_ann_model
 
 import time
 import numpy as np
@@ -17,12 +18,13 @@ from tabulate import tabulate
 # Problems cluster-then-predict: yet unclear
 # later TODO split up in prediction, metrics and plotting?
 
+# TODO save or print loss for ANNs?
 # TODO make saving of plots possible
 def testing(model, x_train, y_train, x_test, y_test, smp_idx_train, smp_idx_test,
             annot="test", name="Model", labels_order=None, roc_curve=False,
             confusion_matrix=False, bog_plot_preds=None, bog_plot_trues=None,
             one_plot=False, pair_plots=False, plot_list=None, only_trues=False,
-            only_preds=False):
+            only_preds=False, type="scikit", **fit_params):
     """ Performs testing on a model. Model is fit on training data and evaluated on testing data. Prediction inclusive.
     Parameters:
         model (model): Model on which .fit and .predict can be called.
@@ -53,31 +55,64 @@ def testing(model, x_train, y_train, x_test, y_test, smp_idx_train, smp_idx_test
         plot_list (list): Default None. If not None, this is a list of smp names.
             All wished plots are only produced for the named smp profiles.
             (No strings! Must be floats or numeric inside the list!)
+        type (str): Default \"scikit\". Indicates which type of model must be
+            used during prediction and fitting. The following types exists:
+            \"scikit\" (most models), \"baseline\", \"keras\" (for all ann models),
+            \"semi_manual\" (kmeans, gmm, bmm)
+        **fit_params: These are additional parameters which are given to the
+            fit call. This is important e.g. for anns, since epochs and
+            batch size must be be specified during fitting.
     Returns:
         tuple: (Metrics of the results, Metrics per label and confusion matrix)
     """
     if labels_order is None:
         labels_order = np.sort(np.unique(y_test))
 
-    # fitting the model
-    start_time = time.time()
-    model.fit(x_train, y_train)
-    fit_time = time.time() - start_time
-    # predicting
-    start_time = time.time()
-    y_pred = model.predict(x_test)
-    score_time = time.time() - start_time
+    # fitting and prediction based on the model implementation type
+    if type == "scikit":
+        # fitting the model
+        start_time = time.time()
+        model.fit(x_train, y_train)
+        fit_time = time.time() - start_time
+        # predicting
+        start_time = time.time()
+        y_pred = model.predict(x_test)
+        score_time = time.time() - start_time
+        # predicting probability
+        if hasattr(model, "predict_proba"): y_pred_prob = model.predict_proba(x_test)
+
+    elif type == "keras":
+        # fitting the model
+        start_time = time.time()
+        fit_ann_model(model, x_train, y_train, smp_idx_train, **fit_params)
+        fit_time = time.time() - start_time
+        # predicting
+        start_time = time.time()
+        y_pred, y_pred_prob = predict_ann_model(model, x_test, y_test, smp_idx_test, predict_proba=True, **fit_params)
+        score_time = time.time() - start_time
+
+    elif type == "baseline":
+        print("Nothing here yet\n")
+    elif type == "semi_manual":
+        print("Nothing here yet\n")
+    else:
+        # TODO raise an exception
+        print("Nope, this model implementation type does not exist.")
+
     # calculate usual metrics
     scores = calculate_metrics_raw(y_test, y_pred, metrics=METRICS, cv=False, name=name, annot=annot)
     scores[annot+"_fit_time"] = fit_time
     scores[annot+"_score_time"] = score_time
+    print(scores)
+    exit(0)
 
-    # check if probability prediction is possible and do it if yes
+    # check if probability prediction is possible, if yes add those scores
+    # if the probability scores exist -> merge them
     if hasattr(model, "predict_proba"):
-        y_pred_prob = model.predict_proba(x_test)
         prob_scores = calculate_metrics_raw(y_test, y_pred_prob, metrics=METRICS_PROB, cv=False, name=name, annot=annot)
         # merge them with the other scores
         scores = {**scores, **prob_scores}
+
 
     # calculate metrics per label and confusion matrix
     metrics_per_label = calculate_metrics_per_label(y_test, y_pred, name=name, annot=annot, labels_order=labels_order)
@@ -88,7 +123,7 @@ def testing(model, x_train, y_train, x_test, y_test, smp_idx_train, smp_idx_test
     scores_per_label = {key:value for key, value in metrics_per_label.items() if (key != annot+"_confusion_matrix") & (key != "model")}
     scores_per_label = pd.DataFrame.from_dict(scores_per_label, orient="index", columns=[ANTI_LABELS[i] for i in labels_order])
     print(tabulate(scores_per_label, headers="keys", tablefmt="psql"))
-    
+
     # print confusion matrix
     if confusion_matrix:
         tags = [ANTI_LABELS[label] for label in labels_order]
