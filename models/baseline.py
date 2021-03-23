@@ -5,6 +5,25 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
+def fit_baseline(y_train):
+    """ Returns majority class of y_train.
+    Parameters:
+        y_train (pd.Series): labels of training data
+    Returns:
+        num or str: the label that occurs most often
+    """
+    return y_train.mode()[0]
+
+def predict_baseline(majority_fit, x_test):
+    """ Returns a prediction for the testing data. (Majority vote during training).
+    Parameters:
+        majority_fit (num or str): from fit_baseline - the majority vote
+        x_test (pd.Dataframe): the testing data
+    Returns:
+        np.ndarray: contains the predictions
+    """
+    return np.repeat(majority_fit, len(x_test))
+
 def majority_class_baseline(x_train, y_train, cv, name="MajorityClassBaseline", **kwargs):
     """ A model which always predicts the majority class of the data it was fit on to.
     Parameters:
