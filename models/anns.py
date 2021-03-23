@@ -173,7 +173,7 @@ def remove_padding(data, profile_len, return_prob=False):
     # Dropout: unclear
     # RNN size: unclear
 def eval_ann(x_train, x_valid, y_train, y_valid, profile_len_train, profile_len_valid,
-             ann_type, only_model=False, batch_size=32, epochs=15, plot_loss=False, file_name=None, **params):
+             ann_type, batch_size=32, epochs=15, plot_loss=False, file_name=None, **params):
     """ This function can evaluate a single ANN. The functions returns the evaluation results and plots the loss if wished.
 
     Parameters:
@@ -183,7 +183,6 @@ def eval_ann(x_train, x_valid, y_train, y_valid, profile_len_train, profile_len_
         y_valid (np.array): the target validation data
         profile_len_train (list): contains all lengths of each profile in the training data
         profile_len_valid (list): contains all lengths of each profile in the validation data
-        only_model(bool): If True only the model is returned
         batch_size (int): batch size employed during ANN training
         epochs (int): number of epochs run during ANN training
         ann_type (str): describing the choosen ann type. Can be on of the following three: ["lstm", "blstm", "enc_dec"]
@@ -211,8 +210,6 @@ def eval_ann(x_train, x_valid, y_train, y_valid, profile_len_train, profile_len_
     else:
         raise ValueError("Parameter \"ann_type\" in eval_ann() must be one of the following: \"lstm\", \"blstm\" or \"enc_dec\".")
 
-    if only_model:
-        return model
     # fitting the model
     start_time = time.time()
     history = model.fit(train_dataset, validation_data=valid_dataset, epochs=epochs, workers=-1, verbose=0)
@@ -226,12 +223,17 @@ def eval_ann(x_train, x_valid, y_train, y_valid, profile_len_train, profile_len_
         plt.ylabel("Loss")
         plt.xlabel("Epochs")
         plt.legend(["train", "validation"], loc='upper left')
-        plt.show()
+        #plt.show()
         # if you save the plot:
+        # if file_name is not None:
+        #     file_name = file_name + "_loss"
+        #     plt.save_fig(file_name)
+        #     plt.close(fig)
         if file_name is not None:
-            file_name = file_name + "_loss"
-            plt.save_fig(file_name)
-            plt.close(fig)
+            plt.savefig(file_name)
+            plt.close()
+        else:
+            plt.show()
 
     # predicting
     train_pred = model.predict(train_dataset)
@@ -437,6 +439,100 @@ def find_max_len(smp_idx, x_data):
 
     return max_smp_len
 
+def get_ann_model(x_train, y_train, smp_idx_train, ann_type="lstm", **params):
+    """ Returns the wished ann model. Is ready for fitting.
+    Parameters:
+        x_train (pd.DataFrame): the complete training data
+        y_train (pd.DataFrame): the complete target data
+        smp_idx_train (pd.Series): smp index for each training sample
+        ann_type (str): describing the choosen ann type.
+            Can be on of the following three: ["lstm", "blstm", "enc_dec"]
+        **params (dict): containing: rnn_size, dropout, dense_units,
+            bidirectional, attention, regularizer
+    Returns:
+        model (keras): keras model whih can be trained and used for prediction
+    """
+    # prepare the data
+    max_smp_len_train = find_max_len(smp_idx=smp_idx_train, x_data=x_train)
+    x_train, y_train, profile_len_train = prepare_data(x_train, y_train, smp_idx_train, max_smp_len=max_smp_len_train, labels=list(y_train.unique()))
+    input_shape = (x_train.shape[1], x_train.shape[2])  # (tp_len, features_len)
+    output_shape = y_train.shape[-1] # labels_len
+
+    if ann_type == "blstm":
+        model = blstm_architecture(input_shape=input_shape, output_shape=output_shape, **params)
+    elif ann_type == "lstm":
+        model = lstm_architecture(input_shape=input_shape, output_shape=output_shape, **params)
+    elif ann_type == "enc_dec":
+        model = enc_dec_architecture(input_shape=input_shape, output_shape=output_shape, **params)
+    else:
+        raise ValueError("Parameter \"ann_type\" in eval_ann() must be one of the following: \"lstm\", \"blstm\" or \"enc_dec\".")
+
+    return model
+
+def fit_ann_model(model, x_train, y_train, smp_idx_train, batch_size=32, epochs=50, plot_loss=False, file_name=None, **kwargs):
+    """ Fitting a given ANN model to the training data.
+    Parameters:
+    """
+    # make the training data to tensor data and batch it
+    max_smp_len_train = find_max_len(smp_idx=smp_idx_train, x_data=x_train)
+    x_train, y_train, profile_len_train = prepare_data(x_train, y_train, smp_idx_train, max_smp_len=max_smp_len_train, labels=list(y_train.unique()))
+    train_dataset = tf.data.Dataset.from_tensor_slices((x_train, y_train)).batch(batch_size)
+
+    # fitting the model
+    history = model.fit(train_dataset, epochs=epochs, workers=-1, verbose=2)
+    # plot loss
+    if plot_loss:
+        plt.plot(history.history["loss"])
+        plt.title("Model Training Loss")
+        plt.ylabel("Loss")
+        plt.xlabel("Epochs")
+        # if you save the plot:
+        if file_name is not None:
+            plt.savefig(file_name)
+            plt.close()
+        else:
+            plt.show()
+
+
+def predict_ann_model(model, x_valid, y_valid, smp_idx_valid, predict_proba=False, batch_size=32, **kwargs):
+    """ Predicting labels of a given ANN model. It is assumed that all existing labels
+    also occur in y_valid. (If not, change code such that org_labels contains all labels).
+
+    Parameters:
+        model (keras.model): Keras model which was already fit on training data
+        x_valid (pd.DataFrame): input validation or testing data
+        y_valid (pd.Series): is not used during prediction but is necessary for
+            data preparation!
+        smp_idx_valid (pd.Series): all smp indices for the given data set
+        predict_proba (bool): If True also the probability predictions are returned.
+            Default is False, in which case only the plain preds are returned.
+        batch_size (int): Batch size used for prediction. Should be same like
+            for training
+        **kwargs
+    Returns:
+        list: predictions of the given ANN model
+        or tuple: (predictions, probability predictions) of ANN model
+    """
+    org_labels = sorted(list(y_valid.unique()))
+    print("Original Labels", org_labels)
+    # make the validation data to tensor data and batch it
+    max_smp_len_valid = find_max_len(smp_idx=smp_idx_valid, x_data=x_valid)
+    x_valid, y_valid, profile_len_valid = prepare_data(x_valid, y_valid, smp_idx_valid, max_smp_len=max_smp_len_valid, labels=list(y_valid.unique()))
+    valid_dataset = tf.data.Dataset.from_tensor_slices(x_valid).batch(batch_size)
+    # predicting
+    valid_pred = model.predict(valid_dataset)
+    # remove the paddings and separate between probability predictions and direct predictions
+    y_pred_valid = remove_padding(valid_pred, profile_len_valid)
+    y_pred_prob_valid = remove_padding(valid_pred, profile_len_valid, return_prob=True)
+    # reverse the label names again from one-hot-encoding
+    # (0 -> 3, 1 -> 4, 2 -> 5, 3 -> 6, 4 -> 12, 5 -> 16, 6 -> 17)
+    y_pred_valid_labels = [org_labels[pred] for pred in y_pred_valid]
+
+    if not predict_proba:
+        return y_pred_valid_labels
+
+    return y_pred_valid_labels, y_pred_prob_valid
+
 # TODO include RNN
 # TODO include ANN
 # TODO include print tuning and tuning function somewhere else:
@@ -444,7 +540,7 @@ def find_max_len(smp_idx, x_data):
     # TODO delete this
     #print_tuning("plots/tables/lstm02.csv")
 # TODO fix warning with incompatible shape
-def ann(x_train, y_train, smp_idx_train, ann_type="lstm", name="LSTM", cv_timeseries=0.2, only_model=False, plot_loss=False, plot_loss_name=None, **params):
+def ann(x_train, y_train, smp_idx_train, ann_type="lstm", name="LSTM", cv_timeseries=0.2, plot_loss=False, plot_loss_name=None, **params):
     """ The wrapper function to run any ANN architecture provided in this file.
     Parameters:
         x_train (pd.DataFrame): the complete training data
@@ -454,7 +550,6 @@ def ann(x_train, y_train, smp_idx_train, ann_type="lstm", name="LSTM", cv_timese
         name (str): how the model should be named
         cv_timeseries (float or list): float indicates that a simple percentual training-test split should be done.
             Otherwise it must be an iteratable list of length k with tuples of np 1-d arrays (train_indices, test_indices).
-        only_model (bool): If True, only the ANN model is returned
         plot_loss (bool): if the loss should be printed after training.
         plot_loss_name (str): Name for the plot_loss plot ("_loss") will be added. Default = None means that the plot won't be saved.
         **params (dict): containing: batch_size, epochs, learning_rate, rnn_size, dropout, dense_units,
@@ -464,7 +559,7 @@ def ann(x_train, y_train, smp_idx_train, ann_type="lstm", name="LSTM", cv_timese
         or model: the ann model (if only_model = True)
     """
     # get training and validation data from that
-    if isinstance(cv_timeseries, float) or only_model:
+    if isinstance(cv_timeseries, float):
         # make the train and validation split
         x_train, x_valid, y_train, y_valid, idx_train, idx_valid = train_test_split(x_train, y_train, smp_idx_train, test_size=cv_timeseries, random_state=42)
 
@@ -478,9 +573,7 @@ def ann(x_train, y_train, smp_idx_train, ann_type="lstm", name="LSTM", cv_timese
         # we already know which model we would like to use:
         results = eval_ann(x_train=x_train, x_valid=x_valid, y_train=y_train, y_valid=y_valid,
                            profile_len_train=profile_len_train, profile_len_valid=profile_len_valid,
-                           ann_type=ann_type, only_model=only_model, plot_loss=plot_loss, file_name=plot_loss_name, **params)
-        if only_model:
-            return results
+                           ann_type=ann_type, plot_loss=plot_loss, file_name=plot_loss_name, **params)
 
         # call metrics on model_results
         return calculate_metrics_ann(results, name=name)
