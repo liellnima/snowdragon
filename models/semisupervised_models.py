@@ -128,7 +128,7 @@ def kmeans(unlabelled_data, x_train, y_train, cv, num_clusters=5, find_num_clust
     km = KMeans(n_clusters=num_clusters, init="random", n_init=num_clusters, random_state=42)
 
     if only_model:
-        return ls_model
+        return km
 
     return semisupervised_cv(km, unlabelled_data, x_train, y_train, num_clusters, cv, name=name)
 
@@ -197,7 +197,7 @@ def gaussian_mix(unlabelled_data, x_train, y_train, cv, cov_type="tied", num_com
     gm = GaussianMixture(n_components=n_components, init_params="random", max_iter=150, covariance_type=cov_type, random_state=42)
 
     if only_model:
-        return ls_model
+        return gm
 
     return semisupervised_cv(gm, unlabelled_data, x_train, y_train, n_gaussians, cv, name=(name+"_"+cov_type))
 
@@ -219,7 +219,7 @@ def bayesian_gaussian_mix(unlabelled_data, x_train, y_train, cv, cov_type="tied"
     bgm = BayesianGaussianMixture(n_components=num_components, init_params="random", max_iter=150, covariance_type=cov_type, random_state=42)
 
     if only_model:
-        return ls_model
+        return bgm
 
     return semisupervised_cv(bgm, unlabelled_data, x_train, y_train, num_components, cv, name=(name+"_"+cov_type))
 
