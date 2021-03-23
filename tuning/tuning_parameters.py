@@ -1,3 +1,6 @@
+# for compatability
+BASELINE_PARAMS={}
+
 # num_cluster = [15, 30], find_num_clusters = ["acc", "sil"], with and without tsne
 KMEANS_PARAMS={"num_clusters": 15 , "find_num_clusters": "acc"}
 
@@ -51,7 +54,8 @@ BEST_PARAMS = {"kmeans": KMEANS_PARAMS, "gmm": GMM_PARAMS, "bmm": BMM_PARAMS,
                 "self_trainer": SELF_TRAINER_PARAMS, "rf": RF_PARAMS,
                 "svm": SVM_PARAMS, "knn": KNN_PARAMS,
                 "easy_ensemble": EASY_ENSEMBLE_PARAMS,
-                "lstm": LSTM_PARAMS, "blstm": BLSTM_PARAMS, "enc_dec": ENC_DEC_PARAMS}
+                "lstm": LSTM_PARAMS, "blstm": BLSTM_PARAMS, "enc_dec": ENC_DEC_PARAMS,
+                "baseline": BASELINE_PARAMS}
 
 FIELD_NAMES = ["model", "fit_time", "score_time", "train_balanced_accuracy", "test_balanced_accuracy",
                "train_recall", "test_recall", "train_precision", "test_precision",
