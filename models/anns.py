@@ -473,6 +473,7 @@ def fit_ann_model(model, x_train, y_train, smp_idx_train, batch_size=32, epochs=
     """ Fitting a given ANN model to the training data.
     Parameters:
     """
+    epochs=5
     # make the training data to tensor data and batch it
     max_smp_len_train = find_max_len(smp_idx=smp_idx_train, x_data=x_train)
     x_train, y_train, profile_len_train = prepare_data(x_train, y_train, smp_idx_train, max_smp_len=max_smp_len_train, labels=list(y_train.unique()))
@@ -514,19 +515,21 @@ def predict_ann_model(model, x_valid, y_valid, smp_idx_valid, predict_proba=Fals
         or tuple: (predictions, probability predictions) of ANN model
     """
     org_labels = sorted(list(y_valid.unique()))
-    print("Original Labels", org_labels)
     # make the validation data to tensor data and batch it
     max_smp_len_valid = find_max_len(smp_idx=smp_idx_valid, x_data=x_valid)
     x_valid, y_valid, profile_len_valid = prepare_data(x_valid, y_valid, smp_idx_valid, max_smp_len=max_smp_len_valid, labels=list(y_valid.unique()))
     valid_dataset = tf.data.Dataset.from_tensor_slices(x_valid).batch(batch_size)
     # predicting
     valid_pred = model.predict(valid_dataset)
+
     # remove the paddings and separate between probability predictions and direct predictions
     y_pred_valid = remove_padding(valid_pred, profile_len_valid)
     y_pred_prob_valid = remove_padding(valid_pred, profile_len_valid, return_prob=True)
     # reverse the label names again from one-hot-encoding
     # (0 -> 3, 1 -> 4, 2 -> 5, 3 -> 6, 4 -> 12, 5 -> 16, 6 -> 17)
     y_pred_valid_labels = [org_labels[pred] for pred in y_pred_valid]
+    # make y_pred_prob_valid a list of lists
+    y_pred_prob_valid = np.stack(y_pred_prob_valid, axis=0)
 
     if not predict_proba:
         return y_pred_valid_labels
