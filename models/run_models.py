@@ -248,16 +248,17 @@ def get_single_model(model_type, data, **params):
     """
     # different cases for different models
     if model_type == "baseline":
-        model = majority_class_baseline(**data, **params)
+        #model = majority_class_baseline(**data, **params)
+        model = None
 
     elif model_type == "kmeans":
-        model = kmeans(**data, **params)
+        model = kmeans(**data, **params, only_model=True)
 
     elif model_type == "gmm":
-        model = gaussian_mix(**data, **params)
+        model = gaussian_mix(**data, **params, only_model=True)
 
     elif model_type == "bmm":
-        model = bayesian_gaussian_mix(**data, **params)
+        model = bayesian_gaussian_mix(**data, **params, only_model=True)
 
     elif model_type == "label_spreading":
         model = label_spreading(**data, **params, only_model=True)
@@ -407,68 +408,74 @@ def evaluate_all_models(data, file_scores=None, file_scores_lables=None, **param
     # set plotting variables:
     # no special labels order (default ascending) and name must be set individually
     # bog plots are omitted for the moment (takes quite long)
-    plotting = {"annot": "eval", "roc_curve": True, "confusion_matrix": True,
+    plotting = {"annot": "eval", "roc_curve": True, "confusion_matrix":True,
                 "one_plot": True, "pair_plots": True, "only_preds": True, "only_trues": True,
                 "plot_list": [2000487]}
 
-    # unpack all necessary values from the preprocessing dictionary
-    x_train = data["x_train"]
-    y_train = data["y_train"]
-    x_test = data["x_test"]
-    y_test = data["y_test"]
-    x_train_all = data["x_train_all"]
-    y_train_all = data["y_train_all"]
-    unlabelled_smp_x = data["unlabelled_data"]
-    cv_stratified = data["cv"]
-    cv_semisupervised = data["cv_semisupervised"]
-    cv_timeseries = data["cv_timeseries"]
-    smp_idx_train = data["smp_idx_train"]
-    smp_idx_test = data["smp_idx_test"]
+    folders = {"rf": "plots/evaluation/rf",
+               "svm": "plots/evaluation/svm",
+               "knn": "plots/evaluation/knn",
+               "easy_ensemble": "plots/evaluation/easy_ensemble",
+               "self_trainer": "plots/evaluation/self_trainer",
+               "label_spreading": "plots/evaluation/label_spreading",
+               "lstm": "plots/evaluation/lstm",
+               "blstm": "plots/evaluation/blstm",
+               "enc_dec": "plots/evaluation/enc_dec",
+               "baseline": "plots/evaluation/baseline",
+               "kmeans": "plots/evaluation/kmeans",
+               "gmm": "plots/evaluation/gmm", "bmm": "plots/evaluation/bmm"}
 
+    # TODO find fast params for BMM
+
+    type_implementation = {"rf": "scikit", "svm": "scikit", "knn": "scikit",
+                           "easy_ensemble": "scikit", "self_trainer": "scikit",
+                           "label_spreading": "scikit", "lstm": "keras",
+                           "blstm": "keras", "enc_dec": "keras",
+                           "baseline": "baseline", "kmeans": "semi_manual",
+                           "gmm": "semi_manual", "bmm": "semi_manual"}
+
+    supervised_models = ["baseline", "kmeans", "gmm", "bmm",
+                        "rf", "svm", "knn", "easy_ensemble",
+                        "self_trainer", "label_spreading",
+                        "lstm", "blstm", "enc_dec"]
+    supervised_names = ["Majority Vote", "K-means", "Gaussian Mixture Model", "Bayesian Gaussian Mixture Model",
+                        "Random Forest", "Support Vector Machine", "K-nearest Neighbors", "Easy Ensemble",
+                        "Self Trainer", "Label Spreading",
+                        "LSTM", "BLSTM", "Encoder Decoder"]
     all_scores = []
     all_scores_per_label = []
 
-    # Baseline
-    #scores = testing(model=None, x_train, y_train, x_test, y_test, smp_idx_train, smp_idx_test, pred_type="baseline", name=name, **plotting)
-
-    # All handcrafted semisupervised models
-    # TODO create predict function for them in evaluation!
-    # scores = testing(model, x_train, y_train, x_test, y_test, smp_idx_train, smp_idx_test, pred_type="semi", name=name, **plotting)
-
-    # ANNs
-    # NOT WORKING
-    # All ANN models
-    supervised_models = ["lstm"]
-    supervised_names = ["LSTM"]
-    # scores = testing(model, x_train, y_train, x_test, y_test, smp_idx_train, smp_idx_test, pred_type="ann", name=name, **plotting)
-    for model_type, name in zip(supervised_models, supervised_names):
-        print("Evaluating {} Model ...\n".format(name))
-        model = get_single_model(model_type=model_type, data=data, **BEST_PARAMS[model_type])
-        # we also have to hand over some additional ann parameters
-        scores = testing(model, x_train, y_train, x_test, y_test, smp_idx_train,
-                         smp_idx_test, name=name, type="keras",
-                         **plotting, **BEST_PARAMS[model_type])
-
-    exit(0)
-
-    # WORKING
-    # All scikit learn models
-    #supervised_models = ["rf", "svm", "knn", "easy_ensemble", "self_trainer", "label_spreading"]
-    #supervised_names = ["Random Forest", "Support Vector Machine", "K-nearest Neighbors", "Easy Ensemble", "Self Trainer", "Label Spreading"]
-
-    supervised_models = ["rf"]
-    supervised_names = ["Random Forest"]
+    # supervised_models = ["baseline"]
+    # supervised_names = ["Majority Vote"]
 
     for model_type, name in zip(supervised_models, supervised_names):
         print("Evaluating {} Model ...\n".format(name))
-        model = get_single_model(model_type=model_type, data=data, **BEST_PARAMS[model_type])
-        scores = testing(model, x_train, y_train, x_test, y_test,
-                         smp_idx_train, smp_idx_test, name=name, **plotting)
+        model = get_single_model(model_type=model_type, data=data,
+                                 **BEST_PARAMS[model_type])
+        # usual case
+        if (model_type != "label_spreading") and (model_type != "self_trainer"):
+            scores = testing(model, **data, name=name,
+                             impl_type=type_implementation[model_type],
+                             save_folder=folders[model_type],
+                             **plotting, **BEST_PARAMS[model_type])
+        # if the semi supervised sciktit models are used, x_train and y_train
+        # must be x_train_all and y_train_all
+        else:
+            scores = testing(model, data["x_train_all"], data["y_train_all"],
+                             data["x_test"], data["y_test"],
+                             data["smp_idx_train"], data["smp_idx_test"],
+                             name=name, impl_type=type_implementation[model_type],
+                             save_folder=folders[model_type], **plotting,
+                             **BEST_PARAMS[model_type])
+
         all_scores.append(scores[0])
         all_scores_per_label.append(scores[1])
         if file_scores is not None: save_results(file_scores, all_scores)
         if file_scores_lables is not None: save_results(file_scores_lables, all_scores_per_label)
         print("...finished {} Model.\n".format(name))
+
+        # TODO print all scores
+        # TODO save plots
 
 
 # TODO make a validation_all_models and evaluate_all_models function
