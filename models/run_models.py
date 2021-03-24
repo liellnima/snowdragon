@@ -396,8 +396,6 @@ def run_single_model(model_type, data, name=None, **params):
     # also job for others: naming the parameters employed and print scores
     return scores
 
-# TODO save all plots in a folder!
-# TODO save metrics intermediately!
 def evaluate_all_models(data, file_scores=None, file_scores_lables=None, **params):
     """ Evaluating each model. Parameters for models are given in params.
     Results can be saved intermediately in a file.
@@ -408,9 +406,9 @@ def evaluate_all_models(data, file_scores=None, file_scores_lables=None, **param
     # set plotting variables:
     # no special labels order (default ascending) and name must be set individually
     # bog plots are omitted for the moment (takes quite long)
-    plotting = {"annot": "eval", "roc_curve": True, "confusion_matrix":True,
-                "one_plot": True, "pair_plots": True, "only_preds": True, "only_trues": True,
-                "plot_list": [2000487]}
+    plotting = {"annot": "eval", "roc_curve": True, "confusion_matrix": True,
+                "one_plot": True, "pair_plots": True, "only_preds": True, "only_trues": False,
+                "plot_list": None, "bog_plot_preds": "plots/evaluation/"}
 
     folders = {"rf": "plots/evaluation/rf",
                "svm": "plots/evaluation/svm",
@@ -426,7 +424,6 @@ def evaluate_all_models(data, file_scores=None, file_scores_lables=None, **param
                "gmm": "plots/evaluation/gmm", "bmm": "plots/evaluation/bmm"}
 
     # TODO find fast params for BMM
-
     type_implementation = {"rf": "scikit", "svm": "scikit", "knn": "scikit",
                            "easy_ensemble": "scikit", "self_trainer": "scikit",
                            "label_spreading": "scikit", "lstm": "keras",
@@ -434,19 +431,19 @@ def evaluate_all_models(data, file_scores=None, file_scores_lables=None, **param
                            "baseline": "baseline", "kmeans": "semi_manual",
                            "gmm": "semi_manual", "bmm": "semi_manual"}
 
-    supervised_models = ["baseline", "kmeans", "gmm", "bmm",
-                        "rf", "svm", "knn", "easy_ensemble",
-                        "self_trainer", "label_spreading",
-                        "lstm", "blstm", "enc_dec"]
-    supervised_names = ["Majority Vote", "K-means", "Gaussian Mixture Model", "Bayesian Gaussian Mixture Model",
-                        "Random Forest", "Support Vector Machine", "K-nearest Neighbors", "Easy Ensemble",
-                        "Self Trainer", "Label Spreading",
-                        "LSTM", "BLSTM", "Encoder Decoder"]
+    # supervised_models = ["baseline", "kmeans", "gmm", "bmm",
+    #                     "rf", "svm", "knn", "easy_ensemble",
+    #                     "self_trainer", "label_spreading",
+    #                     "lstm", "blstm", "enc_dec"]
+    # supervised_names = ["Majority Vote", "K-means", "Gaussian Mixture Model", "Bayesian Gaussian Mixture Model",
+    #                     "Random Forest", "Support Vector Machine", "K-nearest Neighbors", "Easy Ensemble",
+    #                     "Self Trainer", "Label Spreading",
+    #                     "LSTM", "BLSTM", "Encoder Decoder"]
     all_scores = []
     all_scores_per_label = []
 
-    # supervised_models = ["baseline"]
-    # supervised_names = ["Majority Vote"]
+    supervised_models = ["baseline", "rf", "gmm", "lstm", "label_spreading"]
+    supervised_names = ["Majority Vote", "Random Forest", "Gaussian Mixture", "LSTM", "Label Spreading"]
 
     for model_type, name in zip(supervised_models, supervised_names):
         print("Evaluating {} Model ...\n".format(name))
@@ -456,7 +453,7 @@ def evaluate_all_models(data, file_scores=None, file_scores_lables=None, **param
         if (model_type != "label_spreading") and (model_type != "self_trainer"):
             scores = testing(model, **data, name=name,
                              impl_type=type_implementation[model_type],
-                             save_folder=folders[model_type],
+                             save_dir=folders[model_type], printing=False,
                              **plotting, **BEST_PARAMS[model_type])
         # if the semi supervised sciktit models are used, x_train and y_train
         # must be x_train_all and y_train_all
@@ -465,8 +462,8 @@ def evaluate_all_models(data, file_scores=None, file_scores_lables=None, **param
                              data["x_test"], data["y_test"],
                              data["smp_idx_train"], data["smp_idx_test"],
                              name=name, impl_type=type_implementation[model_type],
-                             save_folder=folders[model_type], **plotting,
-                             **BEST_PARAMS[model_type])
+                             save_dir=folders[model_type], printing=False,
+                             **plotting, **BEST_PARAMS[model_type])
 
         all_scores.append(scores[0])
         all_scores_per_label.append(scores[1])
@@ -474,8 +471,39 @@ def evaluate_all_models(data, file_scores=None, file_scores_lables=None, **param
         if file_scores_lables is not None: save_results(file_scores_lables, all_scores_per_label)
         print("...finished {} Model.\n".format(name))
 
-        # TODO print all scores
-        # TODO save plots
+    # print all general scores and save them in evaluation
+    print(tabulate(pd.concat(all_scores, axis=0, ignore_index=True), headers="keys", tablefmt="psql"))
+    with open("plots/evaluation/all_scores_psql.txt", 'w') as f:
+        f.write(tabulate(pd.concat(all_scores, axis=0, ignore_index=True), headers="keys", tablefmt="psql"))
+    with open("plots/evaluation/all_scores_latex.txt", 'w') as f:
+        f.write(tabulate(pd.concat(all_scores, axis=0, ignore_index=True), headers="keys", tablefmt="latex_raw"))
+
+    # here, we can pick out the interesting stuff, like comparing the labels
+    # based on accuracy  and precision for all models
+    str_labels = [ANTI_LABELS[label] for label in [3, 4, 5, 6, 13, 16, 17]]
+    acc_per_label = pd.DataFrame(columns=str_labels)
+    prec_per_label = pd.DataFrame(columns=str_labels)
+    for i, model in enumerate(all_scores_per_label):
+        acc_per_label.loc[i] = model["eval_accuracy"]
+        prec_per_label.loc[i] = model["eval_precision"]
+    acc_per_label["model"] = [model_coll["model"] for model_coll in all_scores_per_label]
+    prec_per_label["model"] = [model_coll["model"] for model_coll in all_scores_per_label]
+
+    # save acc
+    print(tabulate(acc_per_label, headers="keys", tablefmt="psql"))
+    with open("plots/evaluation/acc_labels_psql.txt", 'w') as f:
+        f.write(tabulate(acc_per_label, headers="keys", tablefmt="psql"))
+    with open("plots/evaluation/acc_labels_latex.txt", 'w') as f:
+        f.write(tabulate(acc_per_label, headers="keys", tablefmt="latex_raw"))
+
+    # save prec
+    print(tabulate(prec_per_label, headers="keys", tablefmt="psql"))
+    with open("plots/evaluation/prec_labels_psql.txt", 'w') as f:
+        f.write(tabulate(prec_per_label, headers="keys", tablefmt="psql"))
+    with open("plots/evaluation/prec_labels_latex.txt", 'w') as f:
+        f.write(tabulate(prec_per_label, headers="keys", tablefmt="latex_raw"))
+
+
 
 
 # TODO make a validation_all_models and evaluate_all_models function
