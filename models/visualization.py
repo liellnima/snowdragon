@@ -14,6 +14,7 @@ import matplotlib.ticker as ticker
 # important setting to scale the pictures correctly
 plt.rcParams.update({"figure.dpi": 250})
 
+from tqdm import tqdm
 from scipy import stats
 from tabulate import tabulate
 from sklearn.manifold import TSNE
@@ -26,11 +27,14 @@ from sklearn.feature_selection import SelectKBest
 from sklearn.metrics import roc_curve, auc
 
 
-def smp_unlabelled(smp, smp_name):
+def smp_unlabelled(smp, smp_name, save_file=None):
     """ Plots a SMP profile without labels.
     Parameters:
         smp (df.DataFrame): SMP preprocessed data
-        smp_name (String or float/int): Name of the wished smp profile or alternatively its converted index number
+        smp_name (String or float/int): Name of the wished smp profile or
+            alternatively its converted index number
+        save_file (str): path where the plot should be saved. If None the plot is
+            shown and not stored.
     """
     if isinstance(smp_name, str):
         smp_wanted = idx_to_int(smp_name)
@@ -43,14 +47,23 @@ def smp_unlabelled(smp, smp_name):
     ax.set_ylabel("Mean Force [N]")
     ax.set_xlim(0, len(smp_profile)-1)
     ax.set_ylim(0)
-    plt.show()
+    if save_file is None:
+        plt.show()
+    else:
+        plt.savefig(save_file)
+        plt.close()
 
-def smp_labelled(smp, smp_name, title=None):
+
+def smp_labelled(smp, smp_name, title=None, save_file=None):
     """ Plots a SMP profile with labels.
     Parameters:
         smp (df.DataFrame): SMP preprocessed data
-        smp_name (String or float/int): Name of the wished smp profile or alternatively its converted index number
-        title (str): if None, a simple headline for the plot is used. Please specify with string.
+        smp_name (String or float/int): Name of the wished smp profile or
+            alternatively its converted index number
+        title (str): if None, a simple headline for the plot is used.
+            Please specify with string.
+        save_file (str): path where the plot should be saved. If None the plot is
+            shown and not stored.
     """
     # SHOW THE SAME PROFILE WITH LABELS
     if isinstance(smp_name, str):
@@ -79,24 +92,32 @@ def smp_labelled(smp, smp_name, title=None):
 
 
     anti_colors = {ANTI_LABELS[key] : value for key, value in COLORS.items() if key in smp_profile["label"].unique()}
-    markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='') for color in anti_colors.values()]
+    markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='', alpha=0.5) for color in anti_colors.values()]
     plt.legend(markers, anti_colors.keys(), numpoints=1, loc="lower right")
     ax.set_xlabel("Snow Depth [mm]")
     ax.set_ylabel("Mean Force [N]")
     ax.set_xlim(0, len(smp_profile)-1)
     ax.set_ylim(0)
     plt.tight_layout()
-    plt.show()
+    if save_file is None:
+        plt.show()
+    else:
+        plt.savefig(save_file)
+        plt.close()
 
-def smp_pair(smp_true, smp_pred, smp_name, title=None, grid=True):
+
+
+def smp_pair(smp_true, smp_pred, smp_name, title=None, grid=True, save_file=None):
     """ Visualizes the prediced and the observed smp profile in one plot.
-    The observation is a bar above/inside the predicted smp profile
+    The observation is a bar above/inside the predicted smp profile.
     Parameters:
         smp_true (pd.DataFrame): Only one SMP profile -the observed one-, which is already filtered out.
         smp_pred (pd.DataFrame): Only one SMP profile -the predicted one-, which is already filtered out.
         smp_name (num or str): Name of the SMP profile that is observed and predicted.
         title (str): Title of the plot.
         grid (bool): If a grid should be plotted over the plot.
+        save_file (str): path where the plot should be saved. If None the plot is
+            shown and not stored.
     """
     if isinstance(smp_name, str):
         smp_wanted = idx_to_int(smp_name)
@@ -118,6 +139,7 @@ def smp_pair(smp_true, smp_pred, smp_name, title=None, grid=True):
             axs[0].axvspan(last_distance, distance, color=COLORS[label_num], alpha=0.5)
     axs[0].set_xlim(0, len(smp_pred))
     axs[0].set_yticks([])
+    plt.text(0.01, 0.5, "Ground Truth", fontweight="bold", fontsize=8.5, transform=axs[0].transAxes)
 
     # plot the predicted smp profile - with line and background colors
     axs[1] = sns.lineplot(smp_pred["distance"], smp_pred["mean_force"], ax=axs[1])
@@ -132,11 +154,12 @@ def smp_pair(smp_true, smp_pred, smp_name, title=None, grid=True):
             axs[1].axvspan(last_distance, distance, color=COLORS[label_num], alpha=0.5)
     axs[1].set_xlim(0, len(smp_pred)-1)
     axs[1].set_ylim(0)
+    plt.text(0.01, 0.95, "Prediction", fontweight="bold", fontsize=8.5, transform=axs[1].transAxes)
 
     # set legend, and axis labels for prediction
     all_labels = list(set([*smp_true["label"].unique(), *smp_pred["label"].unique()]))
     anti_colors = {ANTI_LABELS[key] : value for key, value in COLORS.items() if key in all_labels}
-    markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='') for color in anti_colors.values()]
+    markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='', alpha=0.5) for color in anti_colors.values()]
     plt.legend(markers, anti_colors.keys(), numpoints=1, loc="lower right")
     axs[1].set_xlabel("Snow Depth [mm]")
     axs[1].set_ylabel("Mean Force [N]")
@@ -153,7 +176,7 @@ def smp_pair(smp_true, smp_pred, smp_name, title=None, grid=True):
 
     # add title
     if title is None:
-        plt.suptitle("Observed and Predicted SMP Profile {}\n".format(smp_name))
+        plt.suptitle("Observed and Predicted SMP Profile {}".format(smp_name))
     else:
         plt.suptitle(title)
 
@@ -161,16 +184,23 @@ def smp_pair(smp_true, smp_pred, smp_name, title=None, grid=True):
     plt.tight_layout()
     fig.subplots_adjust(hspace=0.002)
 
-    # show plot
-    plt.show()
+    # show or save plot
+    if save_file is None:
+        plt.show()
+    else:
+        plt.savefig(save_file)
+        plt.close()
 
-def smp_pair_both(smp_true, smp_pred, smp_name, title=None):
+
+def smp_pair_both(smp_true, smp_pred, smp_name, title=None, save_file=None):
     """ Visualizes the prediced and the observed smp profile both in one plot.
     Parameters:
         smp_true (pd.DataFrame): Only one SMP profile -the observed one-, which is already filtered out.
         smp_pred (pd.DataFrame): Only one SMP profile -the predicted one-, which is already filtered out.
         smp_name (num or str): Name of the SMP profile that is observed and predicted.
         title (str): Title of the plot.
+        save_file (str): path where the plot should be saved. If None the plot is
+            shown and not stored.
     """
     if isinstance(smp_name, str):
         smp_wanted = idx_to_int(smp_name)
@@ -199,18 +229,25 @@ def smp_pair_both(smp_true, smp_pred, smp_name, title=None):
         ax.set_ylim(0)
         ax.set(ylabel=None)
 
+    fig.text(0.01, 0.9, "Ground Truth", fontweight="bold", fontsize=8.5, transform=axs[0].transAxes)
+    fig.text(0.01, 0.9, "Prediction", fontweight="bold", fontsize=8.5, transform=axs[1].transAxes)
     all_labels = list(set([*smp_true["label"].unique(), *smp_pred["label"].unique()]))
     anti_colors = {ANTI_LABELS[key] : value for key, value in COLORS.items() if key in all_labels}
-    markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='') for color in anti_colors.values()]
-    fig.legend(markers, anti_colors.keys(), numpoints=1, loc="upper right")
+    markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='', alpha=0.5) for color in anti_colors.values()]
+    plt.legend(markers, anti_colors.keys(), numpoints=1, loc="lower right")
     if title is None:
-        plt.suptitle("Observed and Predicted SMP Profile {}\n".format(smp_name))
+        plt.suptitle("Observed and Predicted SMP Profile {}".format(smp_name))
     else:
         plt.suptitle(title)
     fig.text(0.015,0.5, "Mean Force [N]", ha="center", va="center", rotation=90)
     plt.xlabel("Snow Depth [mm]")
     plt.tight_layout()
-    plt.show()
+    if save_file is None:
+        plt.show()
+    else:
+        plt.savefig(save_file)
+        plt.close()
+
 
 def smp_features(smp, smp_name, features):
     """ Plots all wished features in the lineplot of a single SMP Profile.
@@ -450,7 +487,7 @@ def pca(smp, n=3, dim="both", biplot=True):
                 else:
                     plt.text(coeff[i,0]* 1.15, coeff[i,1] * 1.15, labels[i], color="black", ha='center', va='center')
 
-        markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='') for color in anti_colors.values()]
+        markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='', alpha=0.5) for color in anti_colors.values()]
         plt.legend(markers, anti_colors.keys(), numpoints=1, loc="center left", bbox_to_anchor=(1.04, 0.5))
         plt.show()
 
@@ -498,7 +535,7 @@ def tsne(smp, dim="both"):
         ax.set_xlabel("tsne-one")
         ax.set_ylabel("tsne-two")
         ax.set_zlabel("tsne-three")
-        markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='') for color in anti_colors.values()]
+        markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='', alpha=0.5) for color in anti_colors.values()]
         plt.legend(markers, anti_colors.keys(), numpoints=1, bbox_to_anchor=(1.04, 0.5), loc=2)
         plt.show()
 
@@ -607,7 +644,7 @@ def all_in_one_plot(smp, show_indices=False, sort=True, title=None, file_name="p
         title (str): Title of the plot
         file_name (str): where the resulting picture should be saved
     """
-    plt.rcParams.update({'font.size': 22})
+    #plt.rcParams.update({'font.size': 22})
     # be aware that predictions from other models must be consistent with the labels we know
     labelled_smp = smp[(smp["label"] != 0) & (smp["label"] != 2)]
     smp_indices = list(labelled_smp["smp_idx"].unique())
@@ -633,7 +670,7 @@ def all_in_one_plot(smp, show_indices=False, sort=True, title=None, file_name="p
 
     # iterate through each mm of all profiles
     # plot a 1mm bar and assign the label corresponding colors
-    for cur_mm in reversed(range(max_distance)):
+    for cur_mm in tqdm(reversed(range(max_distance)), total=len(range(max_distance))):
         label_colors = [COLORS[cur_label] if cur_label != 0 else "white" for cur_label in smp_idx_labels_filled[:, cur_mm]]
         plt.bar(x_ticks, np.repeat(1 + cur_mm, len(smp_indices)), width=bar_width, color=label_colors)
 
@@ -641,7 +678,7 @@ def all_in_one_plot(smp, show_indices=False, sort=True, title=None, file_name="p
     anti_colors = {ANTI_LABELS[key] : value for key, value in COLORS.items() if key in labelled_smp["label"].unique()}
     markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='') for color in anti_colors.values()]
     plt.yticks(range(0, max_distance, 100))
-    plt.legend(markers, anti_colors.keys(), numpoints=1, loc="upper left", markerscale=3)
+    plt.legend(markers, anti_colors.keys(), numpoints=1, loc="upper left")#, markerscale=3)
     plt.ylabel("Distance from Ground [mm]")
     if title is None: title = "SMP Profiles with Labels"
     plt.title(title)
@@ -656,18 +693,20 @@ def all_in_one_plot(smp, show_indices=False, sort=True, title=None, file_name="p
     plt.xlim(0.0, 1.0)
     plt.ylim(0, int(math.ceil(max_distance / 100.0)) * 100) # rounds up to next hundred
     figure = plt.gcf()  # get current figure
-    figure.set_size_inches(27.2, 15.2) # set size of figure
-    plt.savefig(file_name, bbox_inches="tight", dpi=300)
+    #figure.set_size_inches(27.2, 15.2) # set size of figure
+    #plt.savefig(file_name, bbox_inches="tight", dpi=300)
+    plt.savefig(file_name)
+    plt.close()
 
-
-def plot_confusion_matrix(confusion_matrix, labels, name=""):
+def plot_confusion_matrix(confusion_matrix, labels, name="", save_file=None):
     """ Plot confusion matrix with relative prediction frequencies per label as heatmap.
     Parameters:
         confusion_matrix (nested list): 2d nested list with frequencies
         labels (list): list of tags or labels that should be used for the plot.
             Must be in the same order like the label order of the confusion matrix.
         name (str): Name of the model for the plot
-
+        save_file (str): path where the plot should be saved. If None the plot is
+            shown and not stored.
     """
     # "accuracy per label" so to say (diagonal at least is acc)
     bal_accs = [[cell/sum(row) for cell in row] for row in confusion_matrix]
@@ -697,15 +736,22 @@ def plot_confusion_matrix(confusion_matrix, labels, name=""):
     plt.ylabel("True Label")
     plt.xlabel("Predicted Label" + stats_text)
     plt.title("Confusion Matrix of {} Model \n".format(name))
-    plt.show()
+    if save_file is None:
+        plt.show()
+    else:
+        plt.savefig(save_file)
+        plt.close()
 
-def plot_roc_curve(y_trues, y_prob_preds, labels, name=""):
+def plot_roc_curve(y_trues, y_prob_preds, labels, name="", save_file=None):
     """ Plotting ROC curves for all labels of a multiclass classification problem.
     Inspired from: https://scikit-learn.org/stable/auto_examples/model_selection/plot_roc.html
     Parameters:
         y_trues
         y_prob_preds
         labels
+        name
+        save_file (str): path where the plot should be saved. If None the plot is
+            shown and not stored.
     """
     n_classes = len(labels)
 
@@ -760,8 +806,11 @@ def plot_roc_curve(y_trues, y_prob_preds, labels, name=""):
     plt.ylabel("True Positive Rate")
     plt.title("Receiver Operating Characteristics for Model {}\n".format(name))
     plt.legend(loc="lower right", prop={'size': 7})
-    plt.show()
-
+    if save_file is None:
+        plt.show()
+    else:
+        plt.savefig(save_file)
+        plt.close()
 
 def visualize_normalized_data(smp):
     """ Visualization after normalization and summing up classes has been achieved.
