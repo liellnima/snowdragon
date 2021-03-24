@@ -472,8 +472,14 @@ def get_ann_model(x_train, y_train, smp_idx_train, ann_type="lstm", **params):
 def fit_ann_model(model, x_train, y_train, smp_idx_train, batch_size=32, epochs=50, plot_loss=False, file_name=None, **kwargs):
     """ Fitting a given ANN model to the training data.
     Parameters:
+        model (keras.model): keras model on which fit can be called
+        x_train (pd.DataFrame): the complete training data
+        y_train (pd.DataFrame): the complete target data
+        batch_size (int): batch size employed during ANN training
+        epochs (int): number of epochs run during ANN training
+        plot_loss (bool): Indicates if plot should be plotted or not
+        file_name (str): Name for the plot_loss plot ("_loss") will be added. Default = None means that the plot won't be saved.
     """
-    epochs=5
     # make the training data to tensor data and batch it
     max_smp_len_train = find_max_len(smp_idx=smp_idx_train, x_data=x_train)
     x_train, y_train, profile_len_train = prepare_data(x_train, y_train, smp_idx_train, max_smp_len=max_smp_len_train, labels=list(y_train.unique()))
