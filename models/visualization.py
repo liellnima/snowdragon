@@ -406,9 +406,10 @@ def plot_balancing(smp):
     # take only labelled data and exclude surface and ground
     labelled_smp = smp[(smp["label"] != 0) & (smp["label"] != 1) & (smp["label"] != 2)]
     # I can currently not find snow-ice because I am cutting of the last datapoints, if they are less than 1mm
-    print("Can I find the snow-ice label?", smp[smp["label"] == 12])
+    print("Can I find the snow-ice label?", smp[smp["label"] == 11])
 
-    ax = sns.countplot(x="label", data=labelled_smp, order=labelled_smp["label"].value_counts().index)
+    colors = [COLORS[label_number] for label_number in labelled_smp["label"].value_counts().index]
+    ax = sns.countplot(x="label", data=labelled_smp, order=labelled_smp["label"].value_counts().index, palette=colors)
     plt.title("Distribution of Labels in the Labelled SMP Dataset")
     plt.xlabel("Labels")
     ax2=ax.twinx()
@@ -418,9 +419,9 @@ def plot_balancing(smp):
         y=p.get_bbox().get_points()[1,1]
         ax.annotate("{:.1f}%".format(100.*y/len(labelled_smp)), (x.mean(), y), ha="center", va="bottom") # set the alignment of the text
     x_labels = [ANTI_LABELS[label_number] for label_number in labelled_smp["label"].value_counts().index]
-    ax.set_xticklabels(x_labels, rotation=90)
-    ax2.set_ylim(0,100)
-    ax.set_ylim(0,len(labelled_smp))
+    ax.set_xticklabels(x_labels, rotation=0)
+    ax2.set_ylim(0,50)
+    ax.set_ylim(0,len(labelled_smp)*0.5)
     plt.show()
 
 def bog_plot(smp):
@@ -821,7 +822,7 @@ def visualize_normalized_data(smp):
 
     #smp_profile_name = "S31H0368"
     # HOW BALANCED IS THE LABELLED DATASET?
-    #plot_balancing(smp)
+    plot_balancing(smp)
     # SHOW THE DATADISTRIBUTION OF ALL FEATURES
     #pairwise_features(smp, features=["label", "distance", "var_force", "mean_force", "delta_4", "lambda_4", "gradient"], samples=200)
     # SHOW HEATMAP OF ALL FEATURES (with what are the labels correlated the most?)
@@ -842,7 +843,7 @@ def visualize_normalized_data(smp):
     # bog_plot(smp)
     # bog_label_plot(smp) # does not work correctly
     # smp_labelled(smp, smp_name=2000367.0)
-    all_in_one_plot(smp, file_name="plots/bogplots/all_in_one_all_labels.png")
+    # all_in_one_plot(smp, file_name="plots/bogplots/all_in_one_all_labels.png")
 
     # PCA and TSNE
     #pca(smp)
@@ -859,7 +860,7 @@ def visualize_original_data(smp):
     """
     # smp_profile_name = "S31H0368" #"S31H0607"
     # # HOW BALANCED IS THE LABELLED DATASET?
-    # plot_balancing(smp)
+    plot_balancing(smp)
     # # SHOW THE DATADISTRIBUTION OF ALL FEATURES
     # pairwise_features(smp, features=["label", "distance", "var_force", "mean_force", "delta_4", "lambda_4", "gradient"], samples=2000)
     # # SHOW HEATMAP OF ALL FEATURES (with what are the labels correlated the most?)
@@ -879,7 +880,7 @@ def visualize_original_data(smp):
     #bog_plot(smp)
     #bog_label_plot(smp) # does not work correctly
     #smp_labelled(smp, smp_name=2000367.0)
-    all_in_one_plot(smp)
+    #all_in_one_plot(smp)
 
     # PCA and TSNE
     #pca(smp)
