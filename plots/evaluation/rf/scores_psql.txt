@@ -1,0 +1,11 @@
++----+------------------------+-----------+---------------+
+|    | Metrics                |    Values | Model         |
+|----+------------------------+-----------+---------------|
+|  0 | eval_balanced_accuracy |  0.565235 | Random Forest |
+|  1 | eval_recall            |  0.725033 | Random Forest |
+|  2 | eval_precision         |  0.72862  | Random Forest |
+|  3 | eval_fit_time          | 11.8029   | Random Forest |
+|  4 | eval_score_time        |  0.092237 | Random Forest |
+|  5 | eval_roc_auc           |  0.898734 | Random Forest |
+|  6 | eval_log_loss          |  1.51026  | Random Forest |
++----+------------------------+-----------+---------------+

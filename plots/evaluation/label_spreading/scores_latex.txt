@@ -1,0 +1,13 @@
+\begin{tabular}{rlrl}
+\hline
+    & Metrics                &   Values & Model           \\
+\hline
+  0 & eval_balanced_accuracy & 0.496394 & Label Spreading \\
+  1 & eval_recall            & 0.676775 & Label Spreading \\
+  2 & eval_precision         & 0.683186 & Label Spreading \\
+  3 & eval_fit_time          & 9.2875   & Label Spreading \\
+  4 & eval_score_time        & 3.05178  & Label Spreading \\
+  5 & eval_roc_auc           & 0.880778 & Label Spreading \\
+  6 & eval_log_loss          & 1.37047  & Label Spreading \\
+\hline
+\end{tabular}

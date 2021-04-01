@@ -1,0 +1,11 @@
+\begin{tabular}{rlrrrrrrr}
+\hline
+    & model            &   eval_balanced_accuracy &   eval_recall &   eval_precision &   eval_fit_time &   eval_score_time &   eval_roc_auc &   eval_log_loss \\
+\hline
+  0 & Majority Vote    &                 0.142857 &      0.502406 &         0.252411 &     0.000622749 &       3.79086e-05 &     nan        &      nan        \\
+  1 & Random Forest    &                 0.565235 &      0.725033 &         0.72862  &    11.8029      &       0.092237    &       0.898734 &        1.51026  \\
+  2 & Gaussian Mixture &                 0.192484 &      0.549643 &         0.382724 &     2.7348      &       0.0075798   &     nan        &      nan        \\
+  3 & LSTM             &                 0.376811 &      0.650095 &         0.666998 &    44.3853      &       2.28987     &       0.868317 &        0.999275 \\
+  4 & Label Spreading  &                 0.496394 &      0.676775 &         0.683186 &     9.2875      &       3.05178     &       0.880778 &        1.37047  \\
+\hline
+\end{tabular}

@@ -1,0 +1,11 @@
+\begin{tabular}{rrrrrrrrl}
+\hline
+    &       dh &     dhid &     mfdh &     rgwp &       mfcl &       pp &       rare & model            \\
+\hline
+  0 & 0        & 0        & 0        & 1        & 0          & 0        & 0          & Majority Vote    \\
+  1 & 0.693719 & 0.614692 & 0.525641 & 0.838944 & 0.232143   & 0.943662 & 0.107843   & Random Forest    \\
+  2 & 0        & 0.435897 & 0        & 0.911492 & 0          & 0        & 0          & Gaussian Mixture \\
+  3 & 0.765702 & 0.644491 & 0.538462 & 0.684562 & 0.00446429 & 0        & 0          & LSTM             \\
+  4 & 0.708539 & 0.589744 & 0.429487 & 0.758561 & 0.232143   & 0.746479 & 0.00980392 & Label Spreading  \\
+\hline
+\end{tabular}

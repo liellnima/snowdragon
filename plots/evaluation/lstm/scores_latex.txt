@@ -1,0 +1,13 @@
+\begin{tabular}{rlrl}
+\hline
+    & Metrics                &    Values & Model   \\
+\hline
+  0 & eval_balanced_accuracy &  0.376811 & LSTM    \\
+  1 & eval_recall            &  0.650095 & LSTM    \\
+  2 & eval_precision         &  0.666998 & LSTM    \\
+  3 & eval_fit_time          & 44.3853   & LSTM    \\
+  4 & eval_score_time        &  2.28987  & LSTM    \\
+  5 & eval_roc_auc           &  0.868317 & LSTM    \\
+  6 & eval_log_loss          &  0.999275 & LSTM    \\
+\hline
+\end{tabular}

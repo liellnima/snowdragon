@@ -1,0 +1,9 @@
+\begin{tabular}{lrrrrrrr}
+\hline
+                &   dh &     dhid &   mfdh &     rgwp &   dhwp &   pp &   rare \\
+\hline
+ eval_accuracy  &    0 & 0.435897 &      0 & 0.911492 &      0 &    0 &      0 \\
+ eval_recall    &    0 & 0.435897 &      0 & 0.911492 &      0 &    0 &      0 \\
+ eval_precision &    0 & 0.395597 &      0 & 0.596128 &      0 &    0 &      0 \\
+\hline
+\end{tabular}
