@@ -6,9 +6,10 @@ from models.cv_handler import cv_manual, mean_kfolds
 from models.supervised_models import svm, random_forest, ada_boost, knn
 from models.semisupervised_models import kmeans, gaussian_mix, bayesian_gaussian_mix, label_spreading, self_training
 from models.baseline import majority_class_baseline
-from models.helper_funcs import normalize, save_results, load_results
+from models.helper_funcs import normalize, save_results, load_results, reverse_normalize
 from models.anns import ann, get_ann_model
 from models.evaluation import testing
+from models.visualization import all_in_one_plot, smp_labelled
 from tuning.tuning_parameters import BEST_PARAMS
 
 import pickle
@@ -140,14 +141,18 @@ def normalize_mosaic(smp):
     smp = normalize(smp, "dist_ground", min=smp["dist_ground"].min(), max=smp["dist_ground"].max())
     return smp
 
-def preprocess_dataset(smp_file_name, output_file="preprocessed_data_dict.txt", visualize=False, sample_size_unlabelled=1000, tsne=None):
+def preprocess_dataset(smp_file_name, output_file=None, visualize=False, sample_size_unlabelled=1000, tsne=None):
     """ Preprocesses the complete smp data and returns what is needed for the models.
     Parameters:
         smp_file_name (str): where the complete smp data is saved
-        output_file (str): where the resulting dict should be saved
-        visualize (bool): if the data should be visualized before and after normalization
-        sample_size_unlabelled (int): how many unlabelled samples should be included in x_train_all and y_train_all
-        tsne (int): None means no dim reduction. int indicated that the data's dimensionality should be reduced with the help of tsne.
+        output_file (str): where the resulting dict should be saved. If None it
+            is not saved.
+        visualize (bool): if the data should be visualized before and after
+            normalization
+        sample_size_unlabelled (int): how many unlabelled samples should be
+            included in x_train_all and y_train_all
+        tsne (int): None means no dim reduction. int indicated that the data's
+            dimensionality should be reduced with the help of tsne.
             The number indicates how many dimensions should remain.
     Returns:
         (dict): "x_train", "y_train", " x_test" and "y_test" are the prepared and normalized training and test data.
@@ -163,6 +168,7 @@ def preprocess_dataset(smp_file_name, output_file="preprocessed_data_dict.txt", 
 
     # 2. Visualize before normalization
     if visualize: visualize_original_data(smp_org)
+    exit(0)
 
     # 3. Normalize
     smp = normalize_mosaic(smp_org)
@@ -173,7 +179,6 @@ def preprocess_dataset(smp_file_name, output_file="preprocessed_data_dict.txt", 
 
     # 5. Visualize the data after normalization
     if visualize: visualize_normalized_data(smp)
-    exit(0)
 
     # if wished, make dimension reduction here!
     if tsne is not None:
@@ -230,8 +235,9 @@ def preprocess_dataset(smp_file_name, output_file="preprocessed_data_dict.txt", 
                      "cv": cv_stratified, "cv_semisupervised": cv_semisupervised, "cv_timeseries": cv_timeseries,
                      "smp_idx_train": smp_idx_train, "smp_idx_test": smp_idx_test}
 
-    with open(output_file, "wb") as myFile:
-        pickle.dump(prepared_data, myFile)
+    if output_file is not None:
+        with open(output_file, "wb") as myFile:
+            pickle.dump(prepared_data, myFile)
 
     return prepared_data
 
@@ -408,7 +414,7 @@ def evaluate_all_models(data, file_scores=None, file_scores_lables=None, **param
     # bog plots are omitted for the moment (takes quite long)
     plotting = {"annot": "eval", "roc_curve": True, "confusion_matrix": True,
                 "one_plot": True, "pair_plots": True, "only_preds": True, "only_trues": False,
-                "plot_list": None, "bog_plot_preds": "plots/evaluation/"}
+                "plot_list": None, "bog_plot_preds": "plots/evaluation/", "bog_plot_trues": "plots/evaluation/"}
 
     folders = {"rf": "plots/evaluation/rf",
                "svm": "plots/evaluation/svm",
@@ -439,6 +445,43 @@ def evaluate_all_models(data, file_scores=None, file_scores_lables=None, **param
     #                     "Random Forest", "Support Vector Machine", "K-nearest Neighbors", "Easy Ensemble",
     #                     "Self Trainer", "Label Spreading",
     #                     "LSTM", "BLSTM", "Encoder Decoder"]
+
+    # save bogplot for true predictions and all true smps in the folder above
+    if (plotting["bog_plot_trues"] is not None) or (plotting["only_trues"]):
+        # get important vars
+        y_test = data["y_test"]
+        smp_idx_test = data["smp_idx_test"]
+        x_test = data["x_test"]
+        # collect the smp true data
+        smp_trues = []
+        smp_names = smp_idx_test.unique()
+        for smp_name in smp_names:
+            smp = pd.DataFrame({"mean_force": x_test["mean_force"], "distance": x_test["distance"], "label": y_test, "smp_idx": smp_idx_test})
+            smp = reverse_normalize(smp, "mean_force", min=0, max=45)
+            smp = reverse_normalize(smp, "distance", min=0, max=1187)
+            smp_wanted = smp[smp["smp_idx"] == smp_name]
+            smp_trues.append(smp_wanted)
+        all_smp_trues = pd.concat(smp_trues)
+
+        # create the only_trues
+        if plotting["only_trues"]:
+            for smp_name, smp_true in tqdm(zip(smp_names, smp_trues), total=len(smp_names)):
+                smp_name_str = str(int(smp_name))
+                save_file = "plots/evaluation/trues/smp_" + smp_name_str + ".png" if save_dir is not None else None
+                smp_labelled(smp_true, smp_name, title="{} SMP Profile Observed\n".format(smp_name_str), save_file=save_file)
+                # set the plotting value to False now
+                plotting["only_trues"] = False
+
+        # create the bogplot
+        if plotting["bog_plot_trues"] is not None:
+            save_file = plotting["bog_plot_trues"] + "/bogplot_trues.png"
+            all_in_one_plot(all_smp_trues, show_indices=False, sort=True,
+                            title="All Observed SMP Profiles of the Testing Data", file_name=save_file)
+            plotting["bog_plot_trues"] = None
+    exit(0)
+
+
+
     all_scores = []
     all_scores_per_label = []
 
@@ -656,6 +699,8 @@ def run_all_models(data, intermediate_file=None):
 # data_dict (str): npz file name with dictionary or None, if no preprocessing file exists yet.
 # TODO one parameter should be the table format of the output
 def main():
+    preprocess_dataset(smp_file_name="smp_all_03.npz", visualize=True)
+    exit(0)
     data_dict = "preprocessed_data_k5.txt"
     if data_dict is None:
         data = preprocess_dataset(smp_file_name="smp_all_03.npz", output_file="preprocessed_data_test.txt", visualize=True)
