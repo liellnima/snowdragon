@@ -89,13 +89,13 @@ done
 
 # encoder decoder
 for batch_size in 32 8; do
-  for regularizer in 0 1; do
+  for regularize in 0 1; do
     for learning_rate in 0.001 0.0001; do
       for dropout in 0 0.5; do
         for dense_units in 0 100; do
           for bidirectional in 0 1; do
             for attention in 0 1; do
-              python -m tuning.tuning $1 --model_type lstm --batch_size $batch_size --epochs 100 --rnn_size 150 --learning_rate $learning_rate --dropout $dropout --dense_units $dense_units
+              python -m tuning.tuning $1 --model_type enc_dec --regularize $regularize --bidirectional $bidirectional --attention $attention --batch_size $batch_size --epochs 100 --rnn_size 150 --learning_rate $learning_rate --dropout $dropout --dense_units $dense_units
             done
           done
         done
