@@ -42,7 +42,7 @@ def smp_unlabelled(smp, smp_name, save_file=None):
         smp_wanted = smp_name
     smp_profile = smp[smp["smp_idx"] == smp_wanted]
     ax = sns.lineplot(smp_profile["distance"], smp_profile["mean_force"])
-    plt.title("{} SMP Profile Distance (1mm layers) and Force".format(smp_name))
+    plt.title("Unlabelled SMP Profile {}".format(smp_name))
     ax.set_xlabel("Snow Depth [mm]")
     ax.set_ylabel("Mean Force [N]")
     ax.set_xlim(0, len(smp_profile)-1)
@@ -424,37 +424,52 @@ def plot_balancing(smp):
     ax.set_ylim(0,len(labelled_smp)*0.5)
     plt.show()
 
-def bog_plot(smp):
+def bog_plot(smp, sort=True, file_name=None):
     """ Creates a bog plot for the given smp profiles. Makes the mean force visible.
     Parameters:
         smp (pd.DataFrame): dataframe containing smp profiles
+        sort (bool): indicates if profiles should be sorted ascending
+        file_name (str): Default None - plot is shown. If str, the file is saved there.
     """
     labelled_smp = smp[(smp["label"] != 0) & (smp["label"] != 2)]
     distance_between_smp = 0.5
     day_id = 1
-    smp_indices = labelled_smp["smp_idx"].unique()
+    smp_indices_unsorted = labelled_smp["smp_idx"].unique()
+    # sort the smp indices according to length
+    if sort:
+        smp_lengths = np.array([labelled_smp[labelled_smp["smp_idx"] == smp_idx]["distance"].max() for smp_idx in smp_indices_unsorted])
+        smp_indices = [smp_indices_unsorted[ix] for ix in np.argsort(smp_lengths)]
+    else:
+        smp_indices = smp_indices_unsorted
+
     # apply logarithm to force
     #labelled_smp.loc[:, "mean_force"] = labelled_smp.loc[:, "mean_force"].apply(lambda x: np.log10(x))
     for i, curr_smp_idx in zip(range(len(smp_indices)), smp_indices):
         smp_profile = labelled_smp[labelled_smp["smp_idx"] == curr_smp_idx]
-        Y = smp_profile["mean_force"]
+        Y = smp_profile["mean_force"][::-1]
         z = smp_profile["distance"]
         #contour_levels = np.arange( 0, 3, 0.5)
         #contour_levels[-1] = 3
-        #contour_levels = np.arange( 0, 2, 0.025)
+        contour_levels = np.arange( 0, 34, 0.5)
         x1 = i * distance_between_smp
         x2 = (i+1) * distance_between_smp
-        plt.contourf([x1, x2], z, np.array([Y,Y]).transpose(), cmap='jet')
+        plt.contourf([x1, x2], z, np.array([Y,Y]).transpose(), levels=contour_levels, cmap="jet")# np.array([Y,Y]).transpose(), cmap="jet")
 
-    plt.xlabel('Snow Micro Pen Profiles')
-    plt.ylabel('Depth (mm)')
-    plt.gca().invert_yaxis()
-    plt.tight_layout()
+    plt.xlabel("SMP Profile Indices")
+    plt.ylabel("Distance from Ground [mm]")
+    plt.xticks([])
+    #plt.gca().invert_yaxis()
+    #plt.tight_layout()
     cbar = plt.colorbar()
-    cbar.set_label("Mean force (N)", rotation=90)
+    cbar.set_label("Mean force [N]", rotation=90)
+    cbar.set_ticks(np.arange(0, 34, 5))
     plt.title("All Labelled SMP Profiles with Mean Force Values")
-    plt.grid()
-    plt.show()
+    #plt.grid()
+    if file_name is None:
+        plt.show()
+    else:
+        plt.savefig(file_name)
+        plt.close()
 
 def pca(smp, n=3, dim="both", biplot=True):
     """ Visualizing 2d and 2d plot with the 2 or 3 principal components that explain the most variance.
@@ -645,7 +660,6 @@ def all_in_one_plot(smp, show_indices=False, sort=True, title=None, file_name="p
         title (str): Title of the plot
         file_name (str): where the resulting picture should be saved
     """
-    #plt.rcParams.update({'font.size': 22})
     # be aware that predictions from other models must be consistent with the labels we know
     labelled_smp = smp[(smp["label"] != 0) & (smp["label"] != 2)]
     smp_indices = list(labelled_smp["smp_idx"].unique())
@@ -858,9 +872,9 @@ def visualize_original_data(smp):
     Parameters:
         smp (df.DataFrame): SMP preprocessed data
     """
-    # smp_profile_name = "S31H0368" #"S31H0607"
+    smp_profile_name = "S31H0368" #"S31H0607"
     # # HOW BALANCED IS THE LABELLED DATASET?
-    plot_balancing(smp)
+    #plot_balancing(smp)
     # # SHOW THE DATADISTRIBUTION OF ALL FEATURES
     # pairwise_features(smp, features=["label", "distance", "var_force", "mean_force", "delta_4", "lambda_4", "gradient"], samples=2000)
     # # SHOW HEATMAP OF ALL FEATURES (with what are the labels correlated the most?)
@@ -870,17 +884,17 @@ def visualize_original_data(smp):
     # anova(smp, "plots/tables/ANOVA_results.txt", tablefmt="psql") # latex_raw also possible
     # # TODO: RANDOM FOREST FEATURE EXTRACTION
     # # SHOW ONE SMP PROFILE WITHOUT LABELS
-    # smp_unlabelled(smp, smp_name=smp_profile_name)
+    #smp_unlabelled(smp, smp_name=smp_profile_name)
     # # SHOW ONE SMP PROFILE WITH LABELS
     # smp_labelled(smp, smp_name=smp_profile_name)
     # # PLOT ALL FEATURES AS LINES IN ONE PROFILE
     # smp_features(smp, smp_name=smp_profile_name, features=["mean_force", "var_force", "delta_4", "delta_12", "gradient"])
 
     # PLOT BOGPLOT
-    #bog_plot(smp)
+    bog_plot(smp, file_name=None)
     #bog_label_plot(smp) # does not work correctly
     #smp_labelled(smp, smp_name=2000367.0)
-    #all_in_one_plot(smp)
+    all_in_one_plot(smp, file_name="plots/data_original/bogplot_labels_all.png")
 
     # PCA and TSNE
     #pca(smp)
