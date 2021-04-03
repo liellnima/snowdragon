@@ -47,7 +47,7 @@ def label_spreading(x_train_all, y_train_all, cv_semisupervised, kernel="knn", a
         dict: results from cross validation, inclusive probability based crossvalidation
     """
     # TODO cv: use the same cv split but randomly assign the other unlabelled data pieces to the other cv folds
-    ls_model = LabelSpreading(kernel="knn", alpha=0.2, n_jobs=-1, max_iter=100).fit(x_train_all, y_train_all)
+    ls_model = LabelSpreading(kernel=kernel, alpha=alpha, n_jobs=-1, max_iter=100).fit(x_train_all, y_train_all)
     #y_pred = ls_model.predict(x_train)
 
     if only_model:
