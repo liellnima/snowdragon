@@ -1,0 +1,291 @@
+Model Type dense_lstm, Batch size 64, Dropout 0, Learning Rate 0.001, RNN Size 25, Dense Units 25, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.2849556373116401
+Balanced Accuracy Validation Data: 0.3307883104020443
+Model Type dense_lstm, Batch size 64, Dropout 0, Learning Rate 0.001, RNN Size 25, Dense Units 50, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.302402161698787
+Balanced Accuracy Validation Data: 0.34779527865633014
+Model Type dense_lstm, Batch size 64, Dropout 0, Learning Rate 0.001, RNN Size 25, Dense Units 100, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.31921110017833154
+Balanced Accuracy Validation Data: 0.35122610659091347
+Model Type dense_relu_lstm, Batch size 64, Dropout 0, Learning Rate 0.001, RNN Size 25, Dense Units 25, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.2848038721859164
+Balanced Accuracy Validation Data: 0.3319061943659583
+Model Type dense_relu_lstm, Batch size 64, Dropout 0, Learning Rate 0.001, RNN Size 25, Dense Units 50, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.29342525329567426
+Balanced Accuracy Validation Data: 0.3487591703122819
+Model Type dense_relu_lstm, Batch size 64, Dropout 0, Learning Rate 0.001, RNN Size 25, Dense Units 100, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.31613089518120646
+Balanced Accuracy Validation Data: 0.3576109577316659
+Model Type lstm_lstm, Batch size 64, Dropout 0, Learning Rate 0.001, RNN Size 25, Dense Units 0, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.2835019240158462
+Balanced Accuracy Validation Data: 0.32668492640327407
+Model Type bidirectional, Batch size 64, Dropout 0, Learning Rate 0.001, RNN Size 25, Dense Units 0, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.2760086725706149
+Balanced Accuracy Validation Data: 0.33322070305707646
+Model Type lstm, Batch size 32, Dropout 0, Learning Rate 0.001, RNN Size 25, Dense Units 0, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.34051336488898126
+Balanced Accuracy Validation Data: 0.4146125936911449
+Model Type dense_lstm, Batch size 32, Dropout 0, Learning Rate 0.001, RNN Size 25, Dense Units 25, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.34900029692278556
+Balanced Accuracy Validation Data: 0.38373155010545984
+Model Type dense_lstm, Batch size 32, Dropout 0, Learning Rate 0.001, RNN Size 25, Dense Units 50, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.33583475036149096
+Balanced Accuracy Validation Data: 0.40535334931923955
+Model Type dense_lstm, Batch size 32, Dropout 0, Learning Rate 0.001, RNN Size 25, Dense Units 100, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.3593809296332656
+Balanced Accuracy Validation Data: 0.4021054398213301
+Model Type dense_relu_lstm, Batch size 32, Dropout 0, Learning Rate 0.001, RNN Size 25, Dense Units 25, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.32807696003931025
+Balanced Accuracy Validation Data: 0.39789975064661826
+Model Type dense_relu_lstm, Batch size 32, Dropout 0, Learning Rate 0.001, RNN Size 25, Dense Units 50, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.3189456488577519
+Balanced Accuracy Validation Data: 0.3433027026474174
+Model Type dense_relu_lstm, Batch size 32, Dropout 0, Learning Rate 0.001, RNN Size 25, Dense Units 100, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.3708684162325198
+Balanced Accuracy Validation Data: 0.4358499558035762
+Model Type lstm_lstm, Batch size 32, Dropout 0, Learning Rate 0.001, RNN Size 25, Dense Units 0, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.2812556427310586
+Balanced Accuracy Validation Data: 0.31462864845375577
+Model Type bidirectional, Batch size 32, Dropout 0, Learning Rate 0.001, RNN Size 25, Dense Units 0, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.30531358011660775
+Balanced Accuracy Validation Data: 0.3488833705437783
+Model Type lstm, Batch size 6, Dropout 0, Learning Rate 0.001, RNN Size 25, Dense Units 0, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.3731743206856204
+Balanced Accuracy Validation Data: 0.44284304115529016
+Model Type dense_lstm, Batch size 6, Dropout 0, Learning Rate 0.001, RNN Size 25, Dense Units 25, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.38844747548893344
+Balanced Accuracy Validation Data: 0.4498271005284192
+Model Type dense_lstm, Batch size 6, Dropout 0, Learning Rate 0.001, RNN Size 25, Dense Units 50, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.3930740564286625
+Balanced Accuracy Validation Data: 0.459786567350945
+Model Type dense_lstm, Batch size 6, Dropout 0, Learning Rate 0.001, RNN Size 25, Dense Units 100, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.4262654049793139
+Balanced Accuracy Validation Data: 0.4304824125449212
+Model Type dense_relu_lstm, Batch size 6, Dropout 0, Learning Rate 0.001, RNN Size 25, Dense Units 25, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.3853050685262612
+Balanced Accuracy Validation Data: 0.4293634554108907
+Model Type dense_relu_lstm, Batch size 6, Dropout 0, Learning Rate 0.001, RNN Size 25, Dense Units 50, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.38759522052945466
+Balanced Accuracy Validation Data: 0.46232250571470773
+Model Type dense_relu_lstm, Batch size 6, Dropout 0, Learning Rate 0.001, RNN Size 25, Dense Units 100, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.46665653185530787
+Balanced Accuracy Validation Data: 0.45449272121664136
+Model Type lstm_lstm, Batch size 6, Dropout 0, Learning Rate 0.001, RNN Size 25, Dense Units 0, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.4114891994487734
+Balanced Accuracy Validation Data: 0.423170405974902
+Model Type bidirectional, Batch size 6, Dropout 0, Learning Rate 0.001, RNN Size 25, Dense Units 0, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.35660409718848435
+Balanced Accuracy Validation Data: 0.4237107630564297
+Model Type lstm, Batch size 1, Dropout 0, Learning Rate 0.001, RNN Size 25, Dense Units 0, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.37903876791402746
+Balanced Accuracy Validation Data: 0.4418786325239668
+Model Type dense_lstm, Batch size 1, Dropout 0, Learning Rate 0.001, RNN Size 25, Dense Units 25, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.5593282578717852
+Balanced Accuracy Validation Data: 0.4923732092152417
+Model Type dense_lstm, Batch size 1, Dropout 0, Learning Rate 0.001, RNN Size 25, Dense Units 50, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.5362428405294626
+Balanced Accuracy Validation Data: 0.4711670785702957
+Model Type dense_lstm, Batch size 1, Dropout 0, Learning Rate 0.001, RNN Size 25, Dense Units 100, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.6116904135063171
+Balanced Accuracy Validation Data: 0.4774319841812573
+Model Type dense_relu_lstm, Batch size 1, Dropout 0, Learning Rate 0.001, RNN Size 25, Dense Units 25, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.5962345841153894
+Balanced Accuracy Validation Data: 0.48978792047375047
+Model Type dense_relu_lstm, Batch size 1, Dropout 0, Learning Rate 0.001, RNN Size 25, Dense Units 50, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.5569210211578771
+Balanced Accuracy Validation Data: 0.4370444589752702
+Model Type dense_relu_lstm, Batch size 1, Dropout 0, Learning Rate 0.001, RNN Size 25, Dense Units 100, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.6381335723183453
+Balanced Accuracy Validation Data: 0.4688546973175937
+Model Type lstm_lstm, Batch size 1, Dropout 0, Learning Rate 0.001, RNN Size 25, Dense Units 0, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.4440382433149224
+Balanced Accuracy Validation Data: 0.43620999893497475
+Model Type bidirectional, Batch size 1, Dropout 0, Learning Rate 0.001, RNN Size 25, Dense Units 0, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.47356136123742576
+Balanced Accuracy Validation Data: 0.4365841655229721
+Model Type lstm, Batch size 64, Dropout 0, Learning Rate 0.01, RNN Size 25, Dense Units 0, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.3627580567459168
+Balanced Accuracy Validation Data: 0.38408227895585995
+Model Type dense_lstm, Batch size 64, Dropout 0, Learning Rate 0.01, RNN Size 25, Dense Units 25, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.4078062809249909
+Balanced Accuracy Validation Data: 0.4749376197138553
+Model Type dense_lstm, Batch size 64, Dropout 0, Learning Rate 0.01, RNN Size 25, Dense Units 50, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.4617457164736764
+Balanced Accuracy Validation Data: 0.5172346253506263
+Model Type dense_lstm, Batch size 64, Dropout 0, Learning Rate 0.01, RNN Size 25, Dense Units 100, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.5131204575731002
+Balanced Accuracy Validation Data: 0.4796018075342802
+Model Type dense_relu_lstm, Batch size 64, Dropout 0, Learning Rate 0.01, RNN Size 25, Dense Units 25, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.4163714907357629
+Balanced Accuracy Validation Data: 0.4766683033439402
+Model Type dense_relu_lstm, Batch size 64, Dropout 0, Learning Rate 0.01, RNN Size 25, Dense Units 50, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.34249163085971684
+Balanced Accuracy Validation Data: 0.36506654698758045
+Model Type dense_relu_lstm, Batch size 64, Dropout 0, Learning Rate 0.01, RNN Size 25, Dense Units 100, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.5138164108102491
+Balanced Accuracy Validation Data: 0.45424851150376383
+Model Type lstm_lstm, Batch size 64, Dropout 0, Learning Rate 0.01, RNN Size 25, Dense Units 0, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.36739300211319953
+Balanced Accuracy Validation Data: 0.3823433048304985
+Model Type bidirectional, Batch size 64, Dropout 0, Learning Rate 0.01, RNN Size 25, Dense Units 0, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.35877567788012216
+Balanced Accuracy Validation Data: 0.4298445432150264
+Model Type lstm, Batch size 32, Dropout 0, Learning Rate 0.01, RNN Size 25, Dense Units 0, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.4278203246998187
+Balanced Accuracy Validation Data: 0.46968627889600817
+Model Type dense_lstm, Batch size 32, Dropout 0, Learning Rate 0.01, RNN Size 25, Dense Units 25, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.5621899797880877
+Balanced Accuracy Validation Data: 0.47863207191156976
+Model Type dense_lstm, Batch size 32, Dropout 0, Learning Rate 0.01, RNN Size 25, Dense Units 50, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.6712663070575532
+Balanced Accuracy Validation Data: 0.528742618222405
+Model Type dense_lstm, Batch size 32, Dropout 0, Learning Rate 0.01, RNN Size 25, Dense Units 100, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.4172907668499578
+Balanced Accuracy Validation Data: 0.4758236903283542
+Model Type dense_relu_lstm, Batch size 32, Dropout 0, Learning Rate 0.01, RNN Size 25, Dense Units 25, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.36578777392997913
+Balanced Accuracy Validation Data: 0.43446906155982196
+Model Type dense_relu_lstm, Batch size 32, Dropout 0, Learning Rate 0.01, RNN Size 25, Dense Units 50, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.5791839441253926
+Balanced Accuracy Validation Data: 0.45563220505029656
+Model Type dense_relu_lstm, Batch size 32, Dropout 0, Learning Rate 0.01, RNN Size 25, Dense Units 100, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.611762453679324
+Balanced Accuracy Validation Data: 0.5003154733951755
+Model Type lstm_lstm, Batch size 32, Dropout 0, Learning Rate 0.01, RNN Size 25, Dense Units 0, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.41730712292425765
+Balanced Accuracy Validation Data: 0.4692132445100395
+Model Type bidirectional, Batch size 32, Dropout 0, Learning Rate 0.01, RNN Size 25, Dense Units 0, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.36867414209264177
+Balanced Accuracy Validation Data: 0.42089590187246984
+Model Type lstm, Batch size 6, Dropout 0, Learning Rate 0.01, RNN Size 25, Dense Units 0, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.6209831035857333
+Balanced Accuracy Validation Data: 0.44280280648046816
+Model Type dense_lstm, Batch size 6, Dropout 0, Learning Rate 0.01, RNN Size 25, Dense Units 25, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.5550907123124058
+Balanced Accuracy Validation Data: 0.5173751857435923
+Model Type dense_lstm, Batch size 6, Dropout 0, Learning Rate 0.01, RNN Size 25, Dense Units 50, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.6678841827776404
+Balanced Accuracy Validation Data: 0.5325206067647746
+Model Type dense_lstm, Batch size 6, Dropout 0, Learning Rate 0.01, RNN Size 25, Dense Units 100, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.7088435686365245
+Balanced Accuracy Validation Data: 0.5508079420451356
+Model Type dense_relu_lstm, Batch size 6, Dropout 0, Learning Rate 0.01, RNN Size 25, Dense Units 25, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.6764178948806724
+Balanced Accuracy Validation Data: 0.5146789991015901
+Model Type dense_relu_lstm, Batch size 6, Dropout 0, Learning Rate 0.01, RNN Size 25, Dense Units 50, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.6790065180019571
+Balanced Accuracy Validation Data: 0.5049144534447559
+Model Type dense_relu_lstm, Batch size 6, Dropout 0, Learning Rate 0.01, RNN Size 25, Dense Units 100, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.6302599221104134
+Balanced Accuracy Validation Data: 0.4942197286250139
+Model Type lstm_lstm, Batch size 6, Dropout 0, Learning Rate 0.01, RNN Size 25, Dense Units 0, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.4819821514714516
+Balanced Accuracy Validation Data: 0.4786869500998845
+Model Type bidirectional, Batch size 6, Dropout 0, Learning Rate 0.01, RNN Size 25, Dense Units 0, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.4339248337286126
+Balanced Accuracy Validation Data: 0.47289936171049457
+Model Type lstm, Batch size 1, Dropout 0, Learning Rate 0.01, RNN Size 25, Dense Units 0, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.6085738058687856
+Balanced Accuracy Validation Data: 0.48070996817514017
+Model Type dense_lstm, Batch size 1, Dropout 0, Learning Rate 0.01, RNN Size 25, Dense Units 25, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.6155167522555299
+Balanced Accuracy Validation Data: 0.5192116106869759
+Model Type dense_lstm, Batch size 1, Dropout 0, Learning Rate 0.01, RNN Size 25, Dense Units 50, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.6996455946155553
+Balanced Accuracy Validation Data: 0.5354814566231222
+Model Type dense_lstm, Batch size 1, Dropout 0, Learning Rate 0.01, RNN Size 25, Dense Units 100, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.643348229725757
+Balanced Accuracy Validation Data: 0.4916234643819269
+Model Type dense_relu_lstm, Batch size 1, Dropout 0, Learning Rate 0.01, RNN Size 25, Dense Units 25, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.6883222468087331
+Balanced Accuracy Validation Data: 0.5240619455389115
+Model Type dense_relu_lstm, Batch size 1, Dropout 0, Learning Rate 0.01, RNN Size 25, Dense Units 50, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.49925755763050417
+Balanced Accuracy Validation Data: 0.47532939488000575
+Model Type dense_relu_lstm, Batch size 1, Dropout 0, Learning Rate 0.01, RNN Size 25, Dense Units 100, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.694009039725889
+Balanced Accuracy Validation Data: 0.5842564096276196
+Model Type lstm_lstm, Batch size 1, Dropout 0, Learning Rate 0.01, RNN Size 25, Dense Units 0, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.6881271142233326
+Balanced Accuracy Validation Data: 0.5460410467300351
+Model Type bidirectional, Batch size 1, Dropout 0, Learning Rate 0.01, RNN Size 25, Dense Units 0, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.6869926082090354
+Balanced Accuracy Validation Data: 0.46864221615774815
+Model Type lstm, Batch size 64, Dropout 0, Learning Rate 0.1, RNN Size 25, Dense Units 0, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.4691755510069719
+Balanced Accuracy Validation Data: 0.5053376302824679
+Model Type dense_lstm, Batch size 64, Dropout 0, Learning Rate 0.1, RNN Size 25, Dense Units 25, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.46017800623269245
+Balanced Accuracy Validation Data: 0.45735903813831963
+Model Type dense_lstm, Batch size 64, Dropout 0, Learning Rate 0.1, RNN Size 25, Dense Units 50, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.32980660447520416
+Balanced Accuracy Validation Data: 0.356336190831899
+Model Type dense_lstm, Batch size 64, Dropout 0, Learning Rate 0.1, RNN Size 25, Dense Units 100, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.14285714285714285
+Balanced Accuracy Validation Data: 0.16666666666666666
+Model Type dense_relu_lstm, Batch size 64, Dropout 0, Learning Rate 0.1, RNN Size 25, Dense Units 25, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.48461050597958494
+Balanced Accuracy Validation Data: 0.4152376405270805
+Model Type dense_relu_lstm, Batch size 64, Dropout 0, Learning Rate 0.1, RNN Size 25, Dense Units 50, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.41594159471898645
+Balanced Accuracy Validation Data: 0.4684753743424828
+Model Type dense_relu_lstm, Batch size 64, Dropout 0, Learning Rate 0.1, RNN Size 25, Dense Units 100, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.42601193170902013
+Balanced Accuracy Validation Data: 0.47518511889163806
+Model Type lstm_lstm, Batch size 64, Dropout 0, Learning Rate 0.1, RNN Size 25, Dense Units 0, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.40254762097312763
+Balanced Accuracy Validation Data: 0.4761541388008057
+Model Type bidirectional, Batch size 64, Dropout 0, Learning Rate 0.1, RNN Size 25, Dense Units 0, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.5268161921078438
+Balanced Accuracy Validation Data: 0.4655054712921077
+Model Type lstm, Batch size 32, Dropout 0, Learning Rate 0.1, RNN Size 25, Dense Units 0, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.6580461201909319
+Balanced Accuracy Validation Data: 0.4721364855106462
+Model Type dense_lstm, Batch size 32, Dropout 0, Learning Rate 0.1, RNN Size 25, Dense Units 25, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.5910419997859349
+Balanced Accuracy Validation Data: 0.44872983130762095
+Model Type dense_lstm, Batch size 32, Dropout 0, Learning Rate 0.1, RNN Size 25, Dense Units 50, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.4796310458170091
+Balanced Accuracy Validation Data: 0.35677729940739594
+Model Type dense_lstm, Batch size 32, Dropout 0, Learning Rate 0.1, RNN Size 25, Dense Units 100, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.2997844652165559
+Balanced Accuracy Validation Data: 0.3179228725097824
+Model Type dense_relu_lstm, Batch size 32, Dropout 0, Learning Rate 0.1, RNN Size 25, Dense Units 25, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.43532750366962386
+Balanced Accuracy Validation Data: 0.4629991550408534
+Model Type dense_relu_lstm, Batch size 32, Dropout 0, Learning Rate 0.1, RNN Size 25, Dense Units 50, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.5694840588480796
+Balanced Accuracy Validation Data: 0.5004951893299013
+Model Type dense_relu_lstm, Batch size 32, Dropout 0, Learning Rate 0.1, RNN Size 25, Dense Units 100, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.48278975656779044
+Balanced Accuracy Validation Data: 0.46876690435028384
+Model Type lstm_lstm, Batch size 32, Dropout 0, Learning Rate 0.1, RNN Size 25, Dense Units 0, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.409882607451272
+Balanced Accuracy Validation Data: 0.4785687559152099
+Model Type bidirectional, Batch size 32, Dropout 0, Learning Rate 0.1, RNN Size 25, Dense Units 0, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.4102034596904502
+Balanced Accuracy Validation Data: 0.43514083363674083
+Model Type lstm, Batch size 6, Dropout 0, Learning Rate 0.1, RNN Size 25, Dense Units 0, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.6056546102293988
+Balanced Accuracy Validation Data: 0.5039413254262953
+Model Type dense_lstm, Batch size 6, Dropout 0, Learning Rate 0.1, RNN Size 25, Dense Units 25, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.30977532146216913
+Balanced Accuracy Validation Data: 0.3123465957425185
+Model Type dense_lstm, Batch size 6, Dropout 0, Learning Rate 0.1, RNN Size 25, Dense Units 50, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.3100999523378264
+Balanced Accuracy Validation Data: 0.35733174044601085
+Model Type dense_lstm, Batch size 6, Dropout 0, Learning Rate 0.1, RNN Size 25, Dense Units 100, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.36891602564016823
+Balanced Accuracy Validation Data: 0.4035795740830872
+Model Type dense_relu_lstm, Batch size 6, Dropout 0, Learning Rate 0.1, RNN Size 25, Dense Units 25, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.47273919594012
+Balanced Accuracy Validation Data: 0.4414981256840595
+Model Type dense_relu_lstm, Batch size 6, Dropout 0, Learning Rate 0.1, RNN Size 25, Dense Units 50, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.4609339366939871
+Balanced Accuracy Validation Data: 0.37041000422840553
+Model Type dense_relu_lstm, Batch size 6, Dropout 0, Learning Rate 0.1, RNN Size 25, Dense Units 100, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.14285714285714285
+Balanced Accuracy Validation Data: 0.16666666666666666
+Model Type lstm, Batch size 64, Dropout 0, Learning Rate 0.001, RNN Size 25, Dense Units 100, Loss Plot 5: 
+Balanced Accuracy Training Data: 0.28828546121119775
+Balanced Accuracy Validation Data: 0.36290069263513464
