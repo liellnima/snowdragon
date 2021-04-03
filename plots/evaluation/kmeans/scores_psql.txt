@@ -1,0 +1,9 @@
++------------------------+-------------+---------+
+| Metrics                |      Values | Model   |
+|------------------------+-------------+---------|
+| eval_balanced_accuracy |   0.347608  | K-means |
+| eval_recall            |   0.63916   | K-means |
+| eval_precision         |   0.618081  | K-means |
+| eval_fit_time          | 257.641     | K-means |
+| eval_score_time        |   0.0172701 | K-means |
++------------------------+-------------+---------+

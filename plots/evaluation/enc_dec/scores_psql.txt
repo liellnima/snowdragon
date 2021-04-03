@@ -1,0 +1,11 @@
++------------------------+-------------+-----------------+
+| Metrics                |      Values | Model           |
+|------------------------+-------------+-----------------|
+| eval_balanced_accuracy |    0.365682 | Encoder Decoder |
+| eval_recall            |    0.703601 | Encoder Decoder |
+| eval_precision         |    0.684656 | Encoder Decoder |
+| eval_fit_time          | 2538.23     | Encoder Decoder |
+| eval_score_time        |    5.22994  | Encoder Decoder |
+| eval_roc_auc           |    0.910261 | Encoder Decoder |
+| eval_log_loss          |    0.794276 | Encoder Decoder |
++------------------------+-------------+-----------------+

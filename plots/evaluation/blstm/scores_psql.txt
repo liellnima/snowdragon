@@ -1,0 +1,11 @@
++------------------------+------------+---------+
+| Metrics                |     Values | Model   |
+|------------------------+------------+---------|
+| eval_balanced_accuracy |   0.401865 | BLSTM   |
+| eval_recall            |   0.681586 | BLSTM   |
+| eval_precision         |   0.660802 | BLSTM   |
+| eval_fit_time          | 433.338    | BLSTM   |
+| eval_score_time        |   2.90001  | BLSTM   |
+| eval_roc_auc           |   0.889481 | BLSTM   |
+| eval_log_loss          |   0.904001 | BLSTM   |
++------------------------+------------+---------+
