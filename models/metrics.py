@@ -1,5 +1,5 @@
 # here all the different metrics are saved as scoreres
-from sklearn.metrics import make_scorer, balanced_accuracy_score, recall_score
+from sklearn.metrics import make_scorer, balanced_accuracy_score, recall_score, accuracy_score
 from sklearn.metrics import precision_score, roc_auc_score, log_loss, confusion_matrix
 import numpy as np
 
@@ -8,6 +8,10 @@ import numpy as np
 # (not avilable for multiclass case in roc auc or log_loss)
 def balanced_accuracy(y_true, y_pred):
     return balanced_accuracy_score(y_true, y_pred)
+
+# overall accuracy is exactly the same like weighted recall in our case
+def overall_accuracy(y_true, y_pred):
+    return accuracy_score(y_true, y_pred)
 
 def recall(y_true, y_pred, average="weighted", labels=None):
     return recall_score(y_true, y_pred, average=average, labels=labels, zero_division=0)
@@ -93,9 +97,11 @@ def calculate_metrics_per_label(y_trues, y_preds, name=None, annot="train", labe
     # add accuracy per label (diagonal of matrix)
     cm = scores[annot + "confusion_matrix"]
     # normalize confusion matrix and take the diagonal -> acc per label
-    accuracies = (cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]).diagonal()
-    scores[annot + "accuracy"] = accuracies
-    scores[annot + "recall"] = recall(y_trues, y_preds, average=None, labels=labels_order)
+    #accuracies = (cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]).diagonal()
+    #scores[annot + "accuracy"] = accuracies
+
+    # this used to be "recall" - however recall is in this case the same like accuracy
+    scores[annot + "accuracy"] = recall(y_trues, y_preds, average=None, labels=labels_order)
     scores[annot + "precision"] = precision(y_trues, y_preds, average=None, labels=labels_order)
 
     return scores
