@@ -1,10 +1,10 @@
-\begin{tabular}{rrlrrrrrrr}
+\begin{tabular}{rlrrrrrrr}
 \hline
-    &   num_clusters & find_num_clusters   &   fit_time &   score_time &   test_roc_auc &   test_log_loss &   test_prec &   test_recall &   test_bal_acc \\
+   num_clusters & find_num_clusters   &   fit_time &   score_time &   test_roc_auc &   test_log_loss &   test_prec &   test_recall &   test_bal_acc \\
 \hline
-  3 &             30 & acc                 &  322.184   &   0.00344725 &            nan &             nan &    0.556367 &      0.588883 &       0.316992 \\
-  2 &             15 & sil                 &    1.64299 &   0.00344143 &            nan &             nan &    0.334183 &      0.511704 &       0.225448 \\
-  4 &             30 & sil                 &    1.65254 &   0.00335312 &            nan &             nan &    0.334183 &      0.511704 &       0.225448 \\
-  1 &             15 & acc                 &   25.2861  &   0.00328627 &            nan &             nan &    0.438931 &      0.494796 &       0.220841 \\
+             30 & acc                 &  322.184   &   0.00344725 &            nan &             nan &    0.556367 &      0.588883 &       0.316992 \\
+             15 & sil                 &    1.64299 &   0.00344143 &            nan &             nan &    0.334183 &      0.511704 &       0.225448 \\
+             30 & sil                 &    1.65254 &   0.00335312 &            nan &             nan &    0.334183 &      0.511704 &       0.225448 \\
+             15 & acc                 &   25.2861  &   0.00328627 &            nan &             nan &    0.438931 &      0.494796 &       0.220841 \\
 \hline
 \end{tabular}
