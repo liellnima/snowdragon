@@ -2,6 +2,35 @@ import pickle
 import pandas as pd
 import numpy as np
 
+
+# longterm TODO: move idx_to_int from data_preprocessing here!
+
+def int_to_idx(int_idx):
+    """ Converts an int that indexes the smp profile to a string.
+    Paramters:
+        int_idx (String): the index that is converted
+    Returns:
+        str: the index as string
+        For smp profiles starting with 200, 300 or 400, the last four digits are caught
+            and added either to       S31H, S43M, S49M.
+        For smp profiles starting with 1 throw an error, since no SMP profile should have a 1.
+            PS122 is only used to describe event ids.
+        Profiles with 0 throw an error.
+        All other profiles get their int index returned as string (unchanged).
+    """
+    int_idx = str(int_idx)
+    smp_device = int(int_idx[0])
+    if (smp_device == 1) or (smp_device == 0):
+        raise ValueError("SMP indices with 0 or 1 cannot be converted. Indices with 1 are reserved for event IDs. 0 means that no suitable match was found during index convertion.")
+    elif smp_device == 2:
+        return "S31H" + int_idx[3:7]
+    elif smp_device == 3:
+        return "S43M" + int_idx[3:7]
+    elif smp_device == 4:
+        return "S49M" + int_idx[3:7]
+    else:
+        return str(int_idx)
+
 def normalize(data, features, min, max):
     """ Normalizes the given features of a dataframe.
     Parameters:
