@@ -28,7 +28,8 @@ for num_components in 15 30; do
 done
 
 # random forest
-for n_estimators in 25, 100, 500, 1000; do
+# resample with 0 and 1 was done for subset -> 1 is clerly better
+for n_estimators in 25 100 500 1000 10000; do
   for criterion in "entropy" "gini"; do
     for max_features in "sqrt" "log2"; do
       for max_samples in 0.4 0.6 0.8; do
@@ -50,7 +51,7 @@ for decision_function_shape in "ovr" "ovo"; do
 done
 
 # k nearest neighbors
-for n_neighbors in 10 20 50 100 1000; do
+for n_neighbors in 1 2 3 4 5 6 7 8 9 10 20 50 100 1000; do
   python -m tuning.tuning $1 --model_type knn --n_neighbors $n_neighbors
 done
 
@@ -105,8 +106,8 @@ for batch_size in 32 8; do
 done
 
 # label spreading
-for kernel in "knn" "rbf"; do
-  for alpha in 0 0.2 0.4; do
+for kernel in "knn"; do
+  for alpha in 0.01 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 0.99; do
     python -m tuning.tuning $1 --model_type label_spreading --kernel $kernel --alpha $alpha
   done
 done
