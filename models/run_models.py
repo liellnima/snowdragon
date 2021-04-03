@@ -6,7 +6,7 @@ from models.cv_handler import cv_manual, mean_kfolds
 from models.supervised_models import svm, random_forest, ada_boost, knn
 from models.semisupervised_models import kmeans, gaussian_mix, bayesian_gaussian_mix, label_spreading, self_training
 from models.baseline import majority_class_baseline
-from models.helper_funcs import normalize, save_results, load_results, reverse_normalize
+from models.helper_funcs import normalize, save_results, load_results, reverse_normalize, int_to_idx
 from models.anns import ann, get_ann_model
 from models.evaluation import testing
 from models.visualization import all_in_one_plot, smp_labelled
@@ -17,12 +17,16 @@ import random
 import numpy as np
 import pandas as pd
 
+from tqdm import tqdm
+from pathlib import Path
 from tabulate import tabulate
 from sklearn.manifold import TSNE
 # Other metrics: https://stats.stackexchange.com/questions/390725/suitable-performance-metric-for-an-unbalanced-multi-class-classification-problem
 from sklearn.model_selection import train_test_split, StratifiedKFold #, cross_validate, cross_val_score, cross_val_predict
-# TODO remove all the following imports!!!
 from sklearn.neighbors import KNeighborsClassifier
+from imblearn.ensemble import BalancedRandomForestClassifier
+
+# TODO remove all the following imports!!!
 from models.metrics import balanced_accuracy
 from models.cv_handler import calculate_metrics_cv
 from data_handling.data_preprocessing import remove_negatives
@@ -271,10 +275,19 @@ def get_single_model(model_type, data, **params):
 
     elif model_type == "self_trainer":
         if params["base_model"] is None:
-            params["base_model"] = KNeighborsClassifier(n_neighbors = 20, weights = "distance")
+            params["base_model"] = KNeighborsClassifier(n_neighbors = 10, weights = "distance")
+        elif params["base_model"] == "best":
+            params["base_model"] = BalancedRandomForestClassifier(
+                                        n_estimators = 500,
+                                        criterion = "entropy",
+                                        bootstrap = True,
+                                        max_samples = 0.6, # 60 % of the training data (None: all)
+                                        max_features = "sqrt", # uses sqrt(num_features) features
+                                        class_weight = "balanced", # balanced_subsample computes weights based on bootstrap sample
+                                        random_state = 42) #random state might not work
         model = self_training(**data, **params, only_model=True)
 
-    elif model_type == "rf":
+    elif (model_type == "rf") or (model_type == "rf_bal"):
         model = random_forest(**data, **params, only_model=True)
 
     elif model_type == "svm":
@@ -341,12 +354,21 @@ def run_single_model(model_type, data, name=None, **params):
 
     elif model_type == "self_trainer":
         if params["base_model"] is None:
-            params["base_model"] = KNeighborsClassifier(n_neighbors = 20, weights = "distance")
+            params["base_model"] = KNeighborsClassifier(n_neighbors = 10, weights = "distance")
+        elif params["base_model"] == "best":
+            params["base_model"] = BalancedRandomForestClassifier(
+                                        n_estimators = 500,
+                                        criterion = "entropy",
+                                        bootstrap = True,
+                                        max_samples = 0.6, # 60 % of the training data (None: all)
+                                        max_features = "sqrt", # uses sqrt(num_features) features
+                                        class_weight = "balanced", # balanced_subsample computes weights based on bootstrap sample
+                                        random_state = 42) #random state might not work
         # params: criterion (threshold or k best -> set k or threshold), base_estimator (best model, but should be fast)
         # fixed: max_iter (None means until all unlabelled samples are labelled)
         scores = self_training(**data, **params, name=name)
 
-    elif model_type == "rf":
+    elif (model_type == "rf") or (model_type == "rf_bal"):
         # params: n_estimators, criterion (entropy, gini), max_features (sqrt, log2),
         #          max_samples (float, 0.6), resample (bool for balanced RF)
         # fixed: bootstrap=True, class_weight=balanced
@@ -411,12 +433,13 @@ def evaluate_all_models(data, file_scores=None, file_scores_lables=None, **param
     """
     # set plotting variables:
     # no special labels order (default ascending) and name must be set individually
-    # bog plots are omitted for the moment (takes quite long)
+    save_overall_metrics = False
     plotting = {"annot": "eval", "roc_curve": True, "confusion_matrix": True,
                 "one_plot": True, "pair_plots": True, "only_preds": True, "only_trues": False,
-                "plot_list": None, "bog_plot_preds": "plots/evaluation/", "bog_plot_trues": "plots/evaluation/"}
+                "plot_list": None, "bog_plot_preds": "plots/evaluation/", "bog_plot_trues": None} #"plots/evaluation/"
 
     folders = {"rf": "plots/evaluation/rf",
+               "rf_bal": "plots/evaluation/rf_bal",
                "svm": "plots/evaluation/svm",
                "knn": "plots/evaluation/knn",
                "easy_ensemble": "plots/evaluation/easy_ensemble",
@@ -427,24 +450,28 @@ def evaluate_all_models(data, file_scores=None, file_scores_lables=None, **param
                "enc_dec": "plots/evaluation/enc_dec",
                "baseline": "plots/evaluation/baseline",
                "kmeans": "plots/evaluation/kmeans",
-               "gmm": "plots/evaluation/gmm", "bmm": "plots/evaluation/bmm"}
+               "gmm": "plots/evaluation/gmm",
+               "bmm": "plots/evaluation/bmm"}
 
-    # TODO find fast params for BMM
-    type_implementation = {"rf": "scikit", "svm": "scikit", "knn": "scikit",
+    type_implementation = {"rf": "scikit", "rf_bal": "scikit", "svm": "scikit", "knn": "scikit",
                            "easy_ensemble": "scikit", "self_trainer": "scikit",
                            "label_spreading": "scikit", "lstm": "keras",
                            "blstm": "keras", "enc_dec": "keras",
                            "baseline": "baseline", "kmeans": "semi_manual",
                            "gmm": "semi_manual", "bmm": "semi_manual"}
 
-    # supervised_models = ["baseline", "kmeans", "gmm", "bmm",
-    #                     "rf", "svm", "knn", "easy_ensemble",
-    #                     "self_trainer", "label_spreading",
-    #                     "lstm", "blstm", "enc_dec"]
-    # supervised_names = ["Majority Vote", "K-means", "Gaussian Mixture Model", "Bayesian Gaussian Mixture Model",
-    #                     "Random Forest", "Support Vector Machine", "K-nearest Neighbors", "Easy Ensemble",
-    #                     "Self Trainer", "Label Spreading",
-    #                     "LSTM", "BLSTM", "Encoder Decoder"]
+    # TODO change to all models
+    # all_models = ["baseline", "kmeans", "gmm", "bmm",
+    #               "rf", "rf_bal", "svm", "knn", "easy_ensemble",
+    #               "self_trainer", "label_spreading",
+    #               "lstm", "blstm", "enc_dec"]
+    # all_names = ["Majority Vote", "K-means", "Gaussian Mixture Model", "Bayesian Gaussian Mixture Model",
+    #              "Random Forest", "Balanced Random Forest", "Support Vector Machine", "K-nearest Neighbors", "Easy Ensemble",
+    #              "Self Trainer", "Label Spreading",
+    #              "LSTM", "BLSTM", "Encoder Decoder"]
+
+    all_models =["baseline", "rf_bal", "rf"]
+    all_names = ["Majority Vote", "Balanced Random Forest", "Random Forest"]
 
     # save bogplot for true predictions and all true smps in the folder above
     if (plotting["bog_plot_trues"] is not None) or (plotting["only_trues"]):
@@ -465,30 +492,30 @@ def evaluate_all_models(data, file_scores=None, file_scores_lables=None, **param
 
         # create the only_trues
         if plotting["only_trues"]:
+            print("Plotting the observed SMP Profiles:")
+            # create trues folder if it doesnt exist yet
+            path_to_truth = Path.cwd() / "plots/evaluation/trues"
+            if not path_to_truth.is_dir():
+                path_to_truth.mkdir(parents=True, exist_ok=True)
             for smp_name, smp_true in tqdm(zip(smp_names, smp_trues), total=len(smp_names)):
-                smp_name_str = str(int(smp_name))
-                save_file = "plots/evaluation/trues/smp_" + smp_name_str + ".png" if save_dir is not None else None
+                smp_name_str = int_to_idx(smp_name)
+                save_file = "plots/evaluation/trues/smp_" + smp_name_str + ".png"
                 smp_labelled(smp_true, smp_name, title="{} SMP Profile Observed\n".format(smp_name_str), save_file=save_file)
                 # set the plotting value to False now
                 plotting["only_trues"] = False
 
         # create the bogplot
         if plotting["bog_plot_trues"] is not None:
+            print("Plotting the Bogplot of all observed SMP Profiles:")
             save_file = plotting["bog_plot_trues"] + "/bogplot_trues.png"
             all_in_one_plot(all_smp_trues, show_indices=False, sort=True,
                             title="All Observed SMP Profiles of the Testing Data", file_name=save_file)
             plotting["bog_plot_trues"] = None
-    exit(0)
-
-
 
     all_scores = []
     all_scores_per_label = []
 
-    supervised_models = ["baseline", "rf", "gmm", "lstm", "label_spreading"]
-    supervised_names = ["Majority Vote", "Random Forest", "Gaussian Mixture", "LSTM", "Label Spreading"]
-
-    for model_type, name in zip(supervised_models, supervised_names):
+    for model_type, name in zip(all_models, all_names):
         print("Evaluating {} Model ...\n".format(name))
         model = get_single_model(model_type=model_type, data=data,
                                  **BEST_PARAMS[model_type])
@@ -496,7 +523,7 @@ def evaluate_all_models(data, file_scores=None, file_scores_lables=None, **param
         if (model_type != "label_spreading") and (model_type != "self_trainer"):
             scores = testing(model, **data, name=name,
                              impl_type=type_implementation[model_type],
-                             save_dir=folders[model_type], printing=False,
+                             save_dir=folders[model_type], printing=True,
                              **plotting, **BEST_PARAMS[model_type])
         # if the semi supervised sciktit models are used, x_train and y_train
         # must be x_train_all and y_train_all
@@ -505,7 +532,7 @@ def evaluate_all_models(data, file_scores=None, file_scores_lables=None, **param
                              data["x_test"], data["y_test"],
                              data["smp_idx_train"], data["smp_idx_test"],
                              name=name, impl_type=type_implementation[model_type],
-                             save_dir=folders[model_type], printing=False,
+                             save_dir=folders[model_type], printing=True,
                              **plotting, **BEST_PARAMS[model_type])
 
         all_scores.append(scores[0])
@@ -516,10 +543,11 @@ def evaluate_all_models(data, file_scores=None, file_scores_lables=None, **param
 
     # print all general scores and save them in evaluation
     print(tabulate(pd.concat(all_scores, axis=0, ignore_index=True), headers="keys", tablefmt="psql"))
-    with open("plots/evaluation/all_scores_psql.txt", 'w') as f:
-        f.write(tabulate(pd.concat(all_scores, axis=0, ignore_index=True), headers="keys", tablefmt="psql"))
-    with open("plots/evaluation/all_scores_latex.txt", 'w') as f:
-        f.write(tabulate(pd.concat(all_scores, axis=0, ignore_index=True), headers="keys", tablefmt="latex_raw"))
+    if save_overall_metrics:
+        with open("plots/evaluation/all_scores_psql.txt", 'w') as f:
+            f.write(tabulate(pd.concat(all_scores, axis=0, ignore_index=True), headers="keys", tablefmt="psql"))
+        with open("plots/evaluation/all_scores_latex.txt", 'w') as f:
+            f.write(tabulate(pd.concat(all_scores, axis=0, ignore_index=True), headers="keys", tablefmt="latex_raw"))
 
     # here, we can pick out the interesting stuff, like comparing the labels
     # based on accuracy  and precision for all models
@@ -533,18 +561,20 @@ def evaluate_all_models(data, file_scores=None, file_scores_lables=None, **param
     prec_per_label["model"] = [model_coll["model"] for model_coll in all_scores_per_label]
 
     # save acc
-    print(tabulate(acc_per_label, headers="keys", tablefmt="psql"))
-    with open("plots/evaluation/acc_labels_psql.txt", 'w') as f:
-        f.write(tabulate(acc_per_label, headers="keys", tablefmt="psql"))
-    with open("plots/evaluation/acc_labels_latex.txt", 'w') as f:
-        f.write(tabulate(acc_per_label, headers="keys", tablefmt="latex_raw"))
+    print(tabulate(acc_per_label, headers="keys", showindex=False, tablefmt="psql"))
+    if save_overall_metrics:
+        with open("plots/evaluation/acc_labels_psql.txt", 'w') as f:
+            f.write(tabulate(acc_per_label, headers="keys", showindex=False, tablefmt="psql"))
+        with open("plots/evaluation/acc_labels_latex.txt", 'w') as f:
+            f.write(tabulate(acc_per_label, headers="keys", showindex=False, tablefmt="latex_raw"))
 
     # save prec
-    print(tabulate(prec_per_label, headers="keys", tablefmt="psql"))
-    with open("plots/evaluation/prec_labels_psql.txt", 'w') as f:
-        f.write(tabulate(prec_per_label, headers="keys", tablefmt="psql"))
-    with open("plots/evaluation/prec_labels_latex.txt", 'w') as f:
-        f.write(tabulate(prec_per_label, headers="keys", tablefmt="latex_raw"))
+    print(tabulate(prec_per_label, headers="keys", showindex=False, tablefmt="psql"))
+    if save_overall_metrics:
+        with open("plots/evaluation/prec_labels_psql.txt", 'w') as f:
+            f.write(tabulate(prec_per_label, headers="keys", showindex=False, tablefmt="psql"))
+        with open("plots/evaluation/prec_labels_latex.txt", 'w') as f:
+            f.write(tabulate(prec_per_label, headers="keys", showindex=False, tablefmt="latex_raw"))
 
 
 
@@ -699,8 +729,8 @@ def run_all_models(data, intermediate_file=None):
 # data_dict (str): npz file name with dictionary or None, if no preprocessing file exists yet.
 # TODO one parameter should be the table format of the output
 def main():
-    preprocess_dataset(smp_file_name="smp_all_03.npz", visualize=True)
-    exit(0)
+    #preprocess_dataset(smp_file_name="smp_all_03.npz", visualize=True)
+    #exit(0)
     data_dict = "preprocessed_data_k5.txt"
     if data_dict is None:
         data = preprocess_dataset(smp_file_name="smp_all_03.npz", output_file="preprocessed_data_test.txt", visualize=True)
