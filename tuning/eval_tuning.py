@@ -5,23 +5,25 @@ import pandas as pd
 from tabulate import tabulate
 
 # longterm TODO add parser, such that the results of a given csv is evaluated
-
-# TODO: add all csv table results together!
-# TODO: rerun self trainer
-# TODO: produce plot results for all!
-# TODO: add accuracy in evaluation!
+# longterm TODO try random forest with 100 or even 15 -> random forest has been overfitting already
 
 def read_tuning_results():
     """ Reads in a csv and finds the best hyperparameters in terms of balanced
     accuracy. Saves the results in pretty print tables. The tables contain only
     relevant hyperparameters.
     """
-    results_csv = "tuning/tuning_results/tuning_run02.csv"
+    results01 = pd.read_csv("tuning/tuning_results/tuning_run10.csv")
+    results02 = pd.read_csv("tuning/tuning_results/tuning_run09.csv")
+    results01 = results01[results01["model"] != "rf"]
+    results02 = results02[results02["model"] != "baseline"]
+    # divide between rf_bal and rf pure
+    results02.loc[results02["resample"] == 1, "model"] = "rf_bal"
+    all_results = pd.concat([results01, results02])
+    all_results = all_results.reset_index(drop=True)
+    all_results.to_csv("tuning/tuning_results/tuning_run01_all.csv", index=False)
 
+    results_csv = "tuning/tuning_results/tuning_run01_all.csv"
     results = pd.read_csv(results_csv)
-
-    # remove blstm scores, since they are incomplete here
-    results = results[results["model"] != "blstm"]
 
     # produce group results: fit_time, score_time, acc, prec, recall, roc_auc, log loss
     # important in case there is no hyperparmeter tuning!
@@ -38,6 +40,7 @@ def read_tuning_results():
     max_accs = results.groupby("model")["test_balanced_accuracy"].max()
     all_best_metrics = []
     all_best_params = []
+
     # read out max results and respective metrics for each type of model
     for model in results["model"].unique():
         # get only first best model
@@ -56,7 +59,6 @@ def read_tuning_results():
     with open("tuning/tuning_results/tables/models_max_metrics.txt", 'w') as f:
         f.write(tabulate(max_results, headers="keys", showindex=False, tablefmt="latex_raw"))
 
-
     # what we want: a table with all models of one type, but only with the relevant parameters
     for model in results["model"].unique():
         model_results = results[results["model"] == model]
@@ -67,9 +69,9 @@ def read_tuning_results():
         # rename column test_balanced_accuracy
         model_results = model_results.rename(columns={"test_balanced_accuracy": "test_bal_acc", "test_precision": "test_prec"})
         print("\nComplete Results for Model {}".format(model))
-        print(tabulate(model_results, headers="keys", tablefmt="psql"))
+        print(tabulate(model_results, headers="keys", showindex=False, tablefmt="psql"))
         with open("tuning/tuning_results/tables/results_{}.txt".format(model), 'w') as f:
-            f.write(tabulate(model_results, headers="keys", tablefmt="latex_raw"))
+            f.write(tabulate(model_results, headers="keys", showindex=False, tablefmt="latex_raw"))
 
 if __name__ == "__main__":
     read_tuning_results()
