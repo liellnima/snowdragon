@@ -1,5 +1,5 @@
 from models.metrics import METRICS, METRICS_PROB
-from models.helper_funcs import reverse_normalize
+from models.helper_funcs import reverse_normalize, int_to_idx
 from data_handling.data_parameters import ANTI_LABELS
 from models.semisupervised_models import assign_clusters
 from models.anns import fit_ann_model, predict_ann_model
@@ -15,6 +15,7 @@ import pandas as pd
 from tqdm import tqdm
 from pathlib import Path
 from tabulate import tabulate
+from sklearn.svm import SVC
 
 # Longterm TODO: make more of the parameters optional!
 
@@ -56,6 +57,11 @@ def predicting(model, x_train, y_train, x_test, y_test, smp_idx_train, smp_idx_t
         start_time = time.time()
         y_pred = model.predict(x_test)
         score_time = time.time() - start_time
+        # predict proba - special case SVM: change model, fit newly and predict
+        if isinstance(model, SVC):
+            # change model
+            model.probability = True
+            model.fit(x_train, y_train)
         # predicting probability
         if hasattr(model, "predict_proba"): y_pred_prob = model.predict_proba(x_test)
 
@@ -156,9 +162,9 @@ def metrics_testing(y_test, y_pred, y_pred_prob, fit_time, score_time, labels_or
         scores= pd.DataFrame({"Metrics": scores.keys(), "Values": scores.values(), "Model": [name] * len(scores.keys())})
         # save scores
         with open(save_dir + "/scores_psql.txt", 'w') as f:
-            f.write(tabulate(scores, headers="keys", tablefmt="psql"))
+            f.write(tabulate(scores, headers="keys", showindex=False, tablefmt="psql"))
         with open(save_dir + "/scores_latex.txt", 'w') as f:
-            f.write(tabulate(scores, headers="keys", tablefmt="latex_raw"))
+            f.write(tabulate(scores, headers="keys", showindex=False, tablefmt="latex_raw"))
         # save scores per label
         with open(save_dir + "/scores_per_label_psql.txt", 'w') as f:
             f.write(tabulate(scores_per_label, headers="keys", tablefmt="psql"))
@@ -201,6 +207,7 @@ def plot_testing(y_pred, y_pred_prob, metrics_per_label, x_test, y_test,
         plot_list (list): Default None. If not None, this is a list of smp names.
             All wished plots are only produced for the named smp profiles.
             (No strings! Must be floats or numeric inside the list!)
+            If None, all SMP profiles are plotted.
         save_dir (str): Default None means that the plots are not saved.
             If this is a string, the plots will be saved in this folder.
     """
@@ -243,7 +250,7 @@ def plot_testing(y_pred, y_pred_prob, metrics_per_label, x_test, y_test,
     if only_trues:
         print("\tPlotting all true smp profiles:")
         for smp_name, smp_true in tqdm(zip(smp_names, smp_trues), total=len(smp_names)):
-            smp_name_str = str(int(smp_name))
+            smp_name_str = int_to_idx(smp_name)
             save_file = save_dir + "/trues/smp_" + smp_name_str + ".png" if save_dir is not None else None
             smp_labelled(smp_true, smp_name, title="{} SMP Profile Observed\n".format(smp_name_str), save_file=save_file)
 
@@ -251,25 +258,25 @@ def plot_testing(y_pred, y_pred_prob, metrics_per_label, x_test, y_test,
     if only_preds:
         print("\tPlotting all predicted smp profiles:")
         for smp_name, smp_pred in tqdm(zip(smp_names, smp_preds), total=len(smp_names)):
-            smp_name_str = str(int(smp_name))
+            smp_name_str = int_to_idx(smp_name)
             save_file = save_dir + "/preds/smp_" + smp_name_str + ".png" if save_dir is not None else None
-            smp_labelled(smp_pred, smp_name, title="{} SMP Profile Predicted with {}\n".format(smp_name_str, name), save_file=save_file)
+            smp_labelled(smp_pred, smp_name, title="SMP Profile {}\nPredicted with {}".format(smp_name_str, name), save_file=save_file)
 
     # plot all pairs of true and observed profiles
     if pair_plots:
         print("\tPlotting all pair plots:")
         for smp_name, smp_true, smp_pred in tqdm(zip(smp_names, smp_trues, smp_preds), total=len(smp_names)):
-            smp_name_str = str(int(smp_name))
+            smp_name_str = int_to_idx(smp_name)
             save_file = save_dir + "/pairs/smp_" + smp_name_str + ".png" if save_dir is not None else None
-            smp_pair_both(smp_true, smp_pred, smp_name, title="Observed and with {} Predicted SMP Profile {}\n".format(name, smp_name_str), save_file=save_file)
+            smp_pair_both(smp_true, smp_pred, smp_name, title="Observed and with {} Predicted\nSMP Profile {}".format(name, smp_name_str), save_file=save_file)
 
     # one plot: observation as bar above everything
     if one_plot:
         print("\tPlotting all onesies:")
         for smp_name, smp_true, smp_pred in tqdm(zip(smp_names, smp_trues, smp_preds), total=len(smp_names)):
-            smp_name_str = str(int(smp_name))
+            smp_name_str = int_to_idx(smp_name)
             save_file = save_dir + "/onesies/smp_" + smp_name_str + ".png" if save_dir is not None else None
-            smp_pair(smp_true, smp_pred, smp_name, title="Observed and with {} Predicted SMP Profile {}\n".format(name, smp_name_str), save_file=save_file)
+            smp_pair(smp_true, smp_pred, smp_name, title="Observed and with {} Predicted\nSMP Profile {}".format(name, smp_name_str), save_file=save_file)
 
     # put all smps together in one plot
     if bog_plot_trues is not None:
@@ -284,7 +291,7 @@ def plot_testing(y_pred, y_pred_prob, metrics_per_label, x_test, y_test,
         all_smp_preds = pd.concat(smp_preds)
         save_file = save_dir + "/bogplot_preds.png" if save_dir is not None else None
         all_in_one_plot(all_smp_preds, show_indices=False, sort=True,
-                        title="All SMP Profiles Predicted with {}.".format(name), file_name=save_file)
+                        title="All SMP Profiles Predicted with {}".format(name), file_name=save_file)
 
 # TODO save or print loss for ANNs?
 # TODO make saving of plots possible
