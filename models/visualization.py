@@ -744,7 +744,7 @@ def plot_confusion_matrix(confusion_matrix, labels, name="", save_file=None):
     g = sns.heatmap(bal_accs, annot=box_annots, fmt="", cmap="Blues", cbar=True,
                     xticklabels=labels, yticklabels=labels, vmin=0, vmax=1,
                     cbar_kws={"label": "\nPrediction Frequency per Label"},
-                    annot_kws={"fontsize":7})
+                    annot_kws={"fontsize":6})
     # change font size of cbar axis
     #g.figure.axes[-1].yaxis.label.set_size(14)
 
