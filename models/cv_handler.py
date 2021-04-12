@@ -251,43 +251,5 @@ def cv_manual(data, target, k, random_state=42):
         valid_indices = data[mask].index.values
         train_indices = data[~mask].index.values
 
-        # TODO: delete this
-        # NOTE: this part of the code is currently not necessary since I fixed the problem elsewhere (anns -> prepare data)
-        # HOWEVER: I might come back to this and rewrite this completely
-        # # filtering out the cases where labels are missing in the validation dataset
-        # train_labels = set(target.iloc[train_indices].unique())
-        # valid_labels = set(target.iloc[valid_indices].unique())
-        #
-        # if len(train_labels) != len(valid_labels):
-        #     missing_labels = list(train_labels - valid_labels) if len(train_labels) > len(valid_labels) else list(valid_labels - train_labels)
-        #     print("""Warning: In fold {} of the manual crossvalidation the following labels are missing in the training or validation dataset: {}.
-        #           The profiles containing the labels are switched with other ones.""".format(k, missing_labels))
-        #     for missing_label in missing_labels:
-        #         smp_idx_missing_label = data.loc[target==missing_label, "smp_idx"].unique()
-        #         # pick a random idx from above
-        #         smp_chosen = smp_idx_missing_label[np.random.randint(len(smp_idx_missing_label))]
-        #         if len(train_labels) > len(valid_labels):
-        #             # replace one of the validation smp indices with the chosen smp
-        #             smp_switcher = data.loc[valid_indices, "smp_idx"].unique()[np.random.randint(len(valid_labels))]
-        #             # get indices of both
-        #             smp_switcher_idxs = data.loc[data["smp_idx"] == smp_switcher].index.values
-        #             smp_chosen_idxs = data.loc[data["smp_idx"] == smp_chosen].index.values
-        #             # add smp_chosen_idxs to validation and remove it from training
-        #             valid_indices = valid_indices[valid_indices != smp_switcher_idxs][0]
-        #             train_indices = train_indices[train_indices != smp_chosen_idxs][0]
-        #             valid_indices = np.concatenate([valid_indices, smp_chosen_idxs])
-        #             train_indices = np.concatenate([train_indices, smp_switcher_idxs])
-        #         else:
-        #             # replace one of the training smp indices with the chosen smp
-        #             smp_switcher = data.loc[train_indices, "smp_idx"].unique()[np.random.randint(len(train_labels))]
-        #             # get indices of both
-        #             smp_switcher_idxs = data.loc[data["smp_idx"] == smp_switcher].index.values
-        #             smp_chosen_idxs = data.loc[data["smp_idx"] == smp_chosen].index.values
-        #             # add smp_chosen_idxs to validation and remove it from training
-        #             train_indices = train_indices[train_indices != smp_switcher_idxs]
-        #             valid_indices = valid_indices[valid_indices != smp_chosen_idxs]
-        #             train_indices = np.concatenate([train_indices, smp_chosen_idxs])
-        #             valid_indices = np.concatenate([valid_indices, smp_switcher_idxs])
-
         cv.append((train_indices, valid_indices))
     return cv

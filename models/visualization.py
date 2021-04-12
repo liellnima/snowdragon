@@ -258,8 +258,9 @@ def smp_features(smp, smp_name, features):
     """
     smp_profile = smp[smp["smp_idx"] == idx_to_int(smp_name)]
     smp_melted = smp_profile.melt(id_vars=["distance"], value_vars=features, var_name="Feature", value_name="Value")
-    ax = sns.relplot(data=smp_melted, x="distance", y="Value", hue="Feature", kind="line")
-    plt.title("{} SMP Profile Distance (1mm layers) and Different Features".format(smp_name))
+    g = sns.relplot(data=smp_melted, x="distance", y="Value", hue="Feature", kind="line", height=3, aspect=2/1)
+    g.fig.suptitle("{} SMP Profile Normalized Distance and Different Features\n".format(smp_name))
+    plt.xlabel("Distance")
     plt.show()
 
 # Longterm TODO: more beautiful heatmaps: https://towardsdatascience.com/better-heatmaps-and-correlation-matrix-plots-in-python-41445d0f2bec
@@ -276,7 +277,20 @@ def corr_heatmap(smp, labels=None):
         mask = np.triu(np.ones_like(smp_corr, dtype=np.bool))
         mask = mask[1:, :-1]
         corr = smp_corr.iloc[1:, :-1].copy()
-        sns.heatmap(corr, mask=mask, annot=True, fmt=".2f")
+        sns.heatmap(corr, mask=mask, annot=False, fmt=".2f", vmin=-1, vmax=1, center=0, annot_kws={"fontsize": 5})
+        plt.xticks(range(0, 24),
+                   ["dist", "mean", "var", "min", "max", "mean_4", "var_4",
+                    "min_4", "max_4", "med_4", "lambda_4", "delta_4", "L_4",
+                    "mean_12", "var_12", "min_12", "max_12", "med_12",
+                    "lambda_12", "delta_12", "L_12", "gradient", "smp_idx", "pos_rel"],
+                    fontsize=7, rotation=45)
+        plt.yticks(range(0, 24),
+                   ["mean", "var", "min", "max", "mean_4", "var_4",
+                    "min_4", "max_4", "med_4", "lambda_4", "delta_4", "L_4",
+                    "mean_12", "var_12", "min_12", "max_12", "med_12",
+                    "lambda_12", "delta_12", "L_12", "gradient", "smp_idx", "pos_rel", "dist_gro"],
+                    fontsize=7)
+        plt.tight_layout(rect=[-0.02, 0, 1.07, 0.95])
         plt.title("Correlation Heatmap of SMP Features")
         plt.show()
     else:
@@ -299,8 +313,15 @@ def corr_heatmap(smp, labels=None):
         corr = smp_corr.iloc[-len(labels):, :].copy()
         corr = corr.drop(col_names, axis=1)
         # plot the resulting heatmap
-        sns.heatmap(corr, annot=True, fmt=".2f", vmin=-1, vmax=1, center=0)
-        plt.xticks(rotation=45)
+        sns.heatmap(corr, annot=True, fmt=".2f", vmin=-1, vmax=1, center=0, annot_kws={"fontsize":6})
+        plt.tight_layout(rect=[0, -0.05, 1.07, 0.95])
+        plt.xticks(range(0, 24),
+                   ["dist", "mean", "var", "min", "max", "mean_4", "var_4",
+                    "min_4", "max_4", "med_4", "lambda_4", "delta_4", "L_4",
+                    "mean_12", "var_12", "min_12", "max_12", "med_12",
+                    "lambda_12", "delta_12", "L_12", "gradient", "pos_rel", "dist_gro"],
+                   rotation=90, fontsize=8)
+        plt.yticks(fontsize=8)
         plt.xlabel("Features of SMP Data")
         plt.ylabel("Snow Grain Types")
         plt.title("Correlation Heat Map of SMP Features with Different Labels")
@@ -350,11 +371,11 @@ def forest_extractor(smp, file_name=None, tablefmt="psql", plot=False):
     forest.fit(x, y)
     importances = forest.feature_importances_
 
-    if plot:
-        # Plot feature importances as pixels
-        plt.matshow(importances, cmap=plt.cm.hot)
-        plt.title("Feature importances with forests of trees")
-        plt.show()
+    # if plot:
+    #     # Plot feature importances as pixels
+    #     plt.matshow(importances, cmap=plt.cm.hot)
+    #     plt.title("Feature importances with forests of trees")
+    #     plt.show()
 
     std = np.std([tree.feature_importances_ for tree in forest.estimators_], axis=0)
     indices = np.argsort(importances)[::-1]
@@ -366,7 +387,7 @@ def forest_extractor(smp, file_name=None, tablefmt="psql", plot=False):
 
     if file_name is not None:
         with open(file_name, "w") as f:
-            f.write(tabulate(results, headers='keys', tablefmt=tablefmt))
+            f.write(tabulate(results, headers="keys", tablefmt=tablefmt))
 
     print("Decision Tree Feature Ranking:")
     print(tabulate(results, headers='keys', tablefmt=tablefmt))
@@ -376,9 +397,15 @@ def forest_extractor(smp, file_name=None, tablefmt="psql", plot=False):
         plt.figure()
         plt.title("Feature importances")
         plt.bar(range(x.shape[1]), importances[indices],
-                color="lightgreen", yerr=std[indices], align="center")
-        plt.xticks(range(x.shape[1]), indices_names, rotation=55)
+                color="tab:green", yerr=std[indices], align="center")
+        indices_names = ["dist_gro", "pos_rel", "dist", "L_4", "var_12",
+                         "min_4", "min_12", "L_12", "var_4", "med_12",
+                         "min", "med_4", "var", "max_12", "max_4", "mean_12",
+                         "mean_4", "mean", "max", "delta_12", "gradient",
+                         "delta_4", "lambda_12", "lambda_4"]
+        plt.xticks(range(x.shape[1]), indices_names, rotation=90, fontsize=8)
         plt.xlim([-1, x.shape[1]])
+        plt.tight_layout()
         plt.show()
 
 def pairwise_features(smp, features, samples=None, kde=False):
@@ -450,20 +477,21 @@ def bog_plot(smp, sort=True, file_name=None):
         z = smp_profile["distance"]
         #contour_levels = np.arange( 0, 3, 0.5)
         #contour_levels[-1] = 3
-        contour_levels = np.arange( 0, 34, 0.5)
+        #contour_levels = np.arange( 0, 34, 0.5)
+        contour_levels = np.arange( 0, 1, 0.05)
         x1 = i * distance_between_smp
         x2 = (i+1) * distance_between_smp
         plt.contourf([x1, x2], z, np.array([Y,Y]).transpose(), levels=contour_levels, cmap="jet")# np.array([Y,Y]).transpose(), cmap="jet")
 
     plt.xlabel("SMP Profile Indices")
-    plt.ylabel("Distance from Ground [mm]")
+    plt.ylabel("Distance from Ground")
     plt.xticks([])
     #plt.gca().invert_yaxis()
     #plt.tight_layout()
     cbar = plt.colorbar()
-    cbar.set_label("Mean force [N]", rotation=90)
-    cbar.set_ticks(np.arange(0, 34, 5))
-    plt.title("All Labelled SMP Profiles with Mean Force Values")
+    cbar.set_label("Mean force", rotation=90)
+    #cbar.set_ticks(np.arange(0, 1.5, 0.5))
+    plt.title("All Labelled SMP Profiles with Normalized Force Values")
     #plt.grid()
     if file_name is None:
         plt.show()
@@ -479,6 +507,7 @@ def pca(smp, n=3, dim="both", biplot=True):
         dim (str): 2d, 3d or both - for visualization
         biplot (bool): indicating if the features most used for the principal components should be plotted as biplot
     """
+    plt.rcParams.update({"figure.dpi": 120})
     smp_labelled = smp[(smp["label"] != 0) & (smp["label"] != 2)]
     x = smp_labelled.drop(["label", "smp_idx"], axis=1)
     y = smp_labelled["label"]
@@ -489,6 +518,16 @@ def pca(smp, n=3, dim="both", biplot=True):
     smp_with_pca = pd.DataFrame({"pca-one": pca_result[:,0], "pca-two": pca_result[:,1], "pca-three": pca_result[:,2], "label": y})
     print("Explained variance per principal component: {}.".format(pca.explained_variance_ratio_))
     print("Cumulative explained variance: {}".format(sum(pca.explained_variance_ratio_)))
+    # print explained variance plot
+    cum_vars = [sum(pca.explained_variance_ratio_[:(i+1)])*100 for i in range(len(pca.explained_variance_ratio_))]
+    plt.ylabel("Explained Variance [%]")
+    plt.xlabel("Number of Features")
+    plt.title("Cumulatative Explained Variance of PCA Analysis")
+    plt.ylim(30,100.5)
+    plt.xlim(1, len(pca.explained_variance_ratio_))
+    plt.grid()
+    plt.plot(range(1, len(pca.explained_variance_ratio_)+1), cum_vars)
+    plt.show()
     # 2d plot
     if dim == "2d" or dim == "both":
         g = sns.scatterplot(x="pca-one", y="pca-two", hue="label", palette=COLORS, data=smp_with_pca, alpha=0.3)
@@ -504,7 +543,8 @@ def pca(smp, n=3, dim="both", biplot=True):
                     plt.text(coeff[i,0]* 1.15, coeff[i,1] * 1.15, labels[i], color="black", ha='center', va='center')
 
         markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='', alpha=0.5) for color in anti_colors.values()]
-        plt.legend(markers, anti_colors.keys(), numpoints=1, loc="center left", bbox_to_anchor=(1.04, 0.5))
+        plt.legend(markers, anti_colors.keys(), numpoints=1, loc="upper right")#loc="center left", bbox_to_anchor=(1.04, 0.5))
+        plt.title("PCA on all Labelled SMP Profiles (2-dim)")
         plt.show()
 
     # 3d plot
@@ -517,6 +557,7 @@ def pca(smp, n=3, dim="both", biplot=True):
         ax.set_zlabel("pca-three")
         markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='') for color in anti_colors.values()]
         plt.legend(markers, anti_colors.keys(), numpoints=1, bbox_to_anchor=(1.04, 0.5), loc=2)
+        plt.title("PCA on all Labelled SMP Profiles (3-dim)")
         plt.show()
 
 def tsne(smp, dim="both"):
@@ -525,6 +566,7 @@ def tsne(smp, dim="both"):
         smp (df.DataFrame): SMP preprocessed data
         dim (str): 2d, 3d or both - for visualization
     """
+    plt.rcParams.update({"figure.dpi": 120})
     smp_labelled = smp[(smp["label"] != 0) & (smp["label"] != 2)]
     x = smp_labelled.drop(["label", "smp_idx"], axis=1)
     y = smp_labelled["label"]
@@ -537,7 +579,8 @@ def tsne(smp, dim="both"):
 
         sns.scatterplot(x="tsne-one", y="tsne-two", hue="label", palette=COLORS, data=smp_with_tsne, alpha=0.3)
         markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='') for color in anti_colors.values()]
-        plt.legend(markers, anti_colors.keys(), numpoints=1, loc="center left", bbox_to_anchor=(1.04, 0.5))
+        plt.legend(markers, anti_colors.keys(), numpoints=1, loc="upper right")#, bbox_to_anchor=(1.04, 0.5))
+        plt.title("t-SNE on all Labelled SMP Profiles (2-dim)")
         plt.show()
 
     if dim == "3d" or dim == "both":
@@ -553,6 +596,7 @@ def tsne(smp, dim="both"):
         ax.set_zlabel("tsne-three")
         markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='', alpha=0.5) for color in anti_colors.values()]
         plt.legend(markers, anti_colors.keys(), numpoints=1, bbox_to_anchor=(1.04, 0.5), loc=2)
+        plt.title("t-SNE on all Labelled SMP Profiles (3-dim)")
         plt.show()
 
 
@@ -694,7 +738,7 @@ def all_in_one_plot(smp, show_indices=False, sort=True, title=None, file_name="p
     markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='') for color in anti_colors.values()]
     plt.yticks(range(0, max_distance, 100))
     plt.legend(markers, anti_colors.keys(), numpoints=1, loc="upper left")#, markerscale=3)
-    plt.ylabel("Distance from Ground [mm]")
+    plt.ylabel("Distance from Ground")
     if title is None: title = "SMP Profiles with Labels"
     plt.title(title)
 
@@ -834,38 +878,37 @@ def visualize_normalized_data(smp):
     """
     # ATTENTION: don't print bogplots or single profiles! The results are just wrong after normalization!!!
 
-    #smp_profile_name = "S31H0368"
+    smp_profile_name = "S31H0368"
     # HOW BALANCED IS THE LABELLED DATASET?
     plot_balancing(smp)
     # SHOW THE DATADISTRIBUTION OF ALL FEATURES
     #pairwise_features(smp, features=["label", "distance", "var_force", "mean_force", "delta_4", "lambda_4", "gradient"], samples=200)
     # SHOW HEATMAP OF ALL FEATURES (with what are the labels correlated the most?)
-    #corr_heatmap(smp, labels=[3, 4, 5, 6, 12, 17])
+    corr_heatmap(smp, labels=[3, 4, 5, 6, 12, 16, 17])
+    # SHOW HEATMAP BETWEEN FEATURES
+    corr_heatmap(smp, labels=None)
     # Correlation does not help for categorical + continuous data - use ANOVA instead
     # FEATURE "EXTRACTION"
-    #anova(smp, "plots/tables/ANOVA_results.txt", tablefmt="psql") # latex_raw also possible
+    anova(smp, "plots/data_preprocessed/anova.txt", tablefmt="latex_raw") # latex_raw also possible
     # RANDOM FOREST FEATURE EXTRACTION
-    #forest_extractor(smp)
+    forest_extractor(smp, file_name="plots/data_preprocessed/forest_features.txt", plot=True, tablefmt="latex_raw")
     # SHOW ONE SMP PROFILE WITHOUT LABELS
     #smp_unlabelled(smp, smp_name=smp_profile_name)
     # SHOW ONE SMP PROFILE WITH LABELS
     #smp_labelled(smp, smp_name=smp_profile_name)
     # PLOT ALL FEATURES AS LINES IN ONE PROFILE
-    #smp_features(smp, smp_name=smp_profile_name, features=["mean_force", "var_force", "delta_4", "delta_12", "gradient"])
+    smp_features(smp, smp_name=smp_profile_name, features=["mean_force", "var_force", "min_force_4", "max_force_4", "L_12", "gradient"])
 
     # PLOT BOGPLOT
-    # bog_plot(smp)
-    # bog_label_plot(smp) # does not work correctly
+    bog_plot(smp)
     # smp_labelled(smp, smp_name=2000367.0)
-    # all_in_one_plot(smp, file_name="plots/bogplots/all_in_one_all_labels.png")
+    all_in_one_plot(smp, title="Summarized Labels of all SMP Profiles", file_name="plots/data_preprocessed/bogplot_labels_normalized.png")
 
     # PCA and TSNE
-    #pca(smp)
-    # tsne(smp)
+    pca(smp, n=24, biplot=False)
+    tsne(smp)
+
     #tsne_pca(smp, n=5)
-
-
-
 
 def visualize_original_data(smp):
     """ Visualizing some things of the original data
@@ -873,37 +916,32 @@ def visualize_original_data(smp):
         smp (df.DataFrame): SMP preprocessed data
     """
     smp_profile_name = "S31H0368" #"S31H0607"
-    # # HOW BALANCED IS THE LABELLED DATASET?
-    #plot_balancing(smp)
-    # # SHOW THE DATADISTRIBUTION OF ALL FEATURES
-    # pairwise_features(smp, features=["label", "distance", "var_force", "mean_force", "delta_4", "lambda_4", "gradient"], samples=2000)
-    # # SHOW HEATMAP OF ALL FEATURES (with what are the labels correlated the most?)
-    # corr_heatmap(smp, labels=[3, 4, 5, 6, 7, 8, 9, 10])
-    # # Correlation does not help for categorical + continuous data - use ANOVA instead
-    # # FEATURE "EXTRACTION"
-    # anova(smp, "plots/tables/ANOVA_results.txt", tablefmt="psql") # latex_raw also possible
-    # # TODO: RANDOM FOREST FEATURE EXTRACTION
-    # # SHOW ONE SMP PROFILE WITHOUT LABELS
-    #smp_unlabelled(smp, smp_name=smp_profile_name)
-    # # SHOW ONE SMP PROFILE WITH LABELS
-    # smp_labelled(smp, smp_name=smp_profile_name)
-    # # PLOT ALL FEATURES AS LINES IN ONE PROFILE
-    # smp_features(smp, smp_name=smp_profile_name, features=["mean_force", "var_force", "delta_4", "delta_12", "gradient"])
+    # HOW BALANCED IS THE LABELLED DATASET?
+    plot_balancing(smp)
+    # SHOW THE DATADISTRIBUTION OF ALL FEATURES
+    #pairwise_features(smp, features=["label", "distance", "var_force", "mean_force", "delta_4", "lambda_4", "gradient"], samples=2000)
+    # SHOW HEATMAP OF ALL FEATURES (with what are the labels correlated the most?)
+    corr_heatmap(smp, labels=[3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17])
+    # Correlation does not help for categorical + continuous data - use ANOVA instead
+    # FEATURE "EXTRACTION"
+    #anova(smp, "plots/tables/ANOVA_results.txt", tablefmt="psql") # latex_raw also possible
+    # TODO: RANDOM FOREST FEATURE EXTRACTION
+    # SHOW ONE SMP PROFILE WITHOUT LABELS
+    smp_unlabelled(smp, smp_name=smp_profile_name)
+    # SHOW ONE SMP PROFILE WITH LABELS
+    smp_labelled(smp, smp_name=smp_profile_name)
+    # PLOT ALL FEATURES AS LINES IN ONE PROFILE
+    smp_features(smp, smp_name=smp_profile_name, features=["mean_force", "var_force", "delta_4", "delta_12", "gradient"])
 
     # PLOT BOGPLOT
     bog_plot(smp, file_name=None)
-    #bog_label_plot(smp) # does not work correctly
-    #smp_labelled(smp, smp_name=2000367.0)
-    all_in_one_plot(smp, file_name="plots/data_original/bogplot_labels_all.png")
+    smp_labelled(smp, smp_name=2000367.0)
+    all_in_one_plot(smp, file_name="plots/data_original/bogplot_labels_original.png")
 
-    # PCA and TSNE
-    #pca(smp)
-    #tsne(smp)
-    #tsne_pca(smp, n=5)
 
 def main():
     # load dataframe with smp data
-    smp = load_data("smp_lambda_delta_gradient.npz")
+    smp = load_data("data/all_smp_profiles.npz")
 
     # visualize the original data
     visualize_original_data(smp)

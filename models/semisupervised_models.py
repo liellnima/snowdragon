@@ -10,7 +10,6 @@ from sklearn.semi_supervised import SelfTrainingClassifier, LabelSpreading
 
 # TODO make return_train_score a parameter (not for self-training and label-spreading, but for the rest)
 
-# TODO add parameters for base estimator etc.
 def self_training(x_train_all, y_train_all, cv_semisupervised, base_model, name="SelfTrainingClassifier", k_best=100, max_iter=None, only_model=False, **kwargs):
     """ Self training - a semisupervised model.
     Parameters:
@@ -222,36 +221,3 @@ def bayesian_gaussian_mix(unlabelled_data, x_train, y_train, cv, cov_type="tied"
         return bgm
 
     return semisupervised_cv(bgm, unlabelled_data, x_train, y_train, num_components, cv, name=(name+"_"+cov_type))
-
-
-# TODO Delete after using the visualization
-def kmeans_old():
-
-    # k-means clustering for one sample
-    km = KMeans(n_clusters=5, init="random", n_init=10, random_state=42)
-
-    clusters = km.fit_predict(sample[["mean_force", "var_force"]])
-    print(clusters)
-
-    sns.scatterplot(sample["var_force"], sample["mean_force"], hue=sample["label"], style=clusters).set_title("Clustering of S31H0369")
-    plt.show()
-
-    # we have in total 10 labels
-    km_more = KMeans(n_clusters=10, init="random", n_init=100, random_state=42)
-
-    clusters = km_more.fit_predict(smp_more[["mean_force", "var_force"]])
-    print(clusters)
-
-    sns.scatterplot(smp_more["var_force"], smp_more["mean_force"], hue=clusters).set_title("Variance and Mean force of 1000 samples")
-    plt.show()
-
-    # k-means clustering for all which are labelled
-
-    # we have in total 10 labels
-    km_lab = KMeans(n_clusters=10, init="random", n_init=100, random_state=42)
-
-    clusters = km_lab.fit_predict(smp_labelled[["mean_force", "var_force"]])
-    print(clusters)
-
-    sns.scatterplot(smp_labelled["var_force"], smp_labelled["mean_force"], hue=smp_labelled["label"], style=clusters).set_title("Clustering for labelled data")
-    plt.show()
