@@ -5,6 +5,9 @@ import numpy as np
 import argparse
 import time
 
+# Example of how to use the parser to export everything
+# python -m data_handling.data_loader data/all_smp_profiles.npz --smp_src /home/julia/Documents/University/BA/Data/Arctic/ --exp_loc data/smp_profiles
+
 parser = argparse.ArgumentParser(description="Exporting SMP Profiles. Unifying SMP pnt files into one npz file. Loading united npz file. All arguments have default parameters from the data_parameters.py file.")
 
 # Mandatory argument
@@ -21,7 +24,7 @@ parser.add_argument("--exp_loc", default=EXP_LOC, type=str, help="The directory 
 
 # Parameter arguments for data processing
 parser.add_argument("--sum_mm", default=PARAMS["sum_mm"], type=float, help="How many mm of the smp data should be summed up together? (e.g. 1 -> resolution of 1mm snow layers)")
-parser.add_argument("--gradient", default= PARAMS["gradient"], type=bool, help="Should the gradient be included in the formed dataset?")
+parser.add_argument("--gradient", default=int(PARAMS["gradient"]), type=int, help="Should the gradient be excluded from the formed dataset? Use 0 for False and 1 for True.")
 parser.add_argument("--window_size", default=PARAMS["window_size"], type=list, help="List of window sizes that should be applied for rolling window. e.g. [4]")
 parser.add_argument("--window_type", default=PARAMS["window_type"], type=str, help="Window type of the rolling window")
 parser.add_argument("--window_type_std", default=PARAMS["window_type_std"], type=int, help="std used for window type")
@@ -44,7 +47,7 @@ def print_test_df(smp):
     print("Was S31H0117 found in the dataframe? ", any(smp.smp_idx == idx_to_int("S31H0117")))
     print("Only S31H0117 data: \n", smp[smp["smp_idx"] == idx_to_int("S31H0117")].head())
 
-def preprocess_data(data_dir, export_dir, npz_name="smp_all.npz", overwrite=False,**PARAMS):
+def preprocess_data(data_dir, export_dir, npz_name="smp_all.npz", overwrite=False,**params):
     """ Preprocesses the pnt data in the data_dir according the given parameters.
     Data is intermittently exported as single npz files. The single npz_files are combined to one pandas frame and exported as one united npz file.
     Parameters:
@@ -67,7 +70,7 @@ def preprocess_data(data_dir, export_dir, npz_name="smp_all.npz", overwrite=Fals
     # export, unite and label smp data
     start = time.time()
     # export data from pnt to csv or npz
-    export_pnt(pnt_dir=data_dir, target_dir=export_dir, export_as="npz", overwrite=overwrite, **PARAMS)
+    export_pnt(pnt_dir=data_dir, target_dir=export_dir, export_as="npz", overwrite=overwrite, **params)
     # load pd.DataFrame from all npz files and save this pd as united DataFrame in npz
     smp_first = npz_to_pd(export_dir, is_dir=True)
     dict = smp_first.to_dict(orient="list")
@@ -103,6 +106,7 @@ def main():
     if not params["load_only"]:
         preprocess_data(data_dir=data_dir, export_dir=exp_loc, **params)
     smp = load_data(**params)
+    if params["load_only"]: smp.info()
 
 
 if __name__ == "__main__":

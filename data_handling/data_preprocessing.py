@@ -21,7 +21,7 @@ T_LOC = Path(T_LOC)
 
 
 # exports pnt files (our smp profiles!) to csv files in a target directory
-def export_pnt (pnt_dir, target_dir, export_as="npz", overwrite=False, **kwargs):
+def export_pnt (pnt_dir, target_dir, export_as="npz", overwrite=False, **params):
     """ Exports all pnt files from a dir and its subdirs as csv files into a new dir.
     Preproceses the profiles, according to kwargs arguments.
     Parameters:
@@ -48,7 +48,7 @@ def export_pnt (pnt_dir, target_dir, export_as="npz", overwrite=False, **kwargs)
             if overwrite or not file_name.is_file():
                 smp_profile = Profile.load(file)
                 # indexes, labels, summarizes and applies a rolling window to the data
-                preprocess_profile(smp_profile, target_dir, export_as=export_as, **kwargs)
+                preprocess_profile(smp_profile, target_dir, export_as=export_as, **params)
             pbar.update(1)
 
     print("Finished exporting all pnt file as {} files in {}.".format(export_as, target_dir))
@@ -323,7 +323,7 @@ def remove_negatives(df, col="force", threshold=-1):
     return df_removed
 
 
-def preprocess_profile(profile, target_dir, export_as="csv", sum_mm=1, gradient=False, **kwargs):
+def preprocess_profile(profile, target_dir, export_as="csv", sum_mm=1, gradient=False, **params):
     """ Preprocesses a smp profile. Jobs done:
     Indexing, labelling, select data between surface and ground (and relativizes this data).
     Summarizing data in a certain mm window (reduces precision/num of rows).
@@ -336,7 +336,7 @@ def preprocess_profile(profile, target_dir, export_as="csv", sum_mm=1, gradient=
         export_as (String): how the data should be exported. Either as "csv" possible or "npz"
         sum_mm (num): arg for summarize_rows function - indicates how many mm should be packed together
         gradient (Boolean): arg to decide whether gradient of each datapoint should be calculated
-        **kwargs:
+        **params:
             window_size (list): arg for rolling_window function - List of window sizes that should be applied. e.g. [4]
             rolling_cols (list): arg for rolling_window function - List of columns over which should be rolled
             window_type (String): arg for rolling_window function - E.g. Gaussian (default). None is a normal window.
@@ -383,7 +383,7 @@ def preprocess_profile(profile, target_dir, export_as="csv", sum_mm=1, gradient=
     df_mm = summarize_rows(df, mm_window=sum_mm)
 
     # 6. rolling window in order to know distribution of next and past values (+ poisson shot model)
-    final_df = rolling_window(df_mm, **kwargs)
+    final_df = rolling_window(df_mm, **params)
 
     # 7.include gradient if wished
     if gradient:
@@ -450,46 +450,43 @@ def npz_to_pd(npz_file, is_dir):
         return pd.DataFrame.from_dict(final_dict)
 
 def main():
+    """ This main exists only for testing purposes. The files specified in EXP_LOC
+    in the data_parameters.py file are preprocessed and exported to an npz file.
+    The data is than read in as pandas frame again and info of the data is printed.
+    The smp files can be also exported as csv files. Only a subset of the SMP profiles
+    can be exported by naming a sub directory in EXP_LOC.
+    """
 
     print("Starting to export and/or convert data")
 
     # get temp data
     # tmp = get_temperature(temp=T_LOC)
-    # print(tmp.head())
 
     # export, unite and label smp data
     start = time.time()
     # export data from pnt to csv or npz
     # pnt_dir can be also a small sub directory if you want to update only a few files
-    #export_pnt(pnt_dir=SMP_LOC, target_dir=EXP_LOC, export_as="npz", overwrite=True, **PARAMS)
+    export_pnt(pnt_dir=SMP_LOC, target_dir=EXP_LOC, export_as="npz", overwrite=True, **PARAMS)
 
     # OTHER OPTIONS
     # unite csv data in one csv file, index it, convert it to pandas (and save it as npz)
     #smp = get_smp_data(csv_dir=EXP_LOC, csv_filename="test04.csv", npz_filename="smp_test04.npz", skip_unify=False, skip_npz=False)
 
-    # TESTING MODULES
-    # import sys
-    #
-    # modulename = 'signal'
-    # if modulename not in sys.modules:
-    #     print('You have not imported the {} module'.format(modulename))
-    # print(idx_to_int("S31H0369"))
-
     # FIRST time to use npz_to_pd:
     smp_first = npz_to_pd(EXP_LOC, is_dir=True)
     # than: export smp as united npz
     dict = smp_first.to_dict(orient="list")
-    np.savez_compressed("smp_all_test.npz", **dict)
+    np.savez_compressed("data/all_smp_profiles.npz", **dict)
 
     # AFTER FIRST time and during first time:
     # load pd directly from this npz
-    #smp = npz_to_pd("smp_lambda_delta_gradient.npz", is_dir=False)
+    smp = npz_to_pd("data/all_smp_profiles.npz", is_dir=False)
 
     end = time.time()
     print("Elapsed time for export and dataframe creation: ", end-start)
 
-    #print(smp.head())
-    #smp.info()
+    print(smp.head())
+    smp.info()
 
     print("Number of files in export folder: ", len(os.listdir(EXP_LOC)))
     #print("All pnt files from source dir were also found in the given dataframe: ", check_export(SMP_LOC, smp))
