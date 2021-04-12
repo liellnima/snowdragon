@@ -6,7 +6,7 @@ KMEANS_PARAMS={"num_clusters": 30 , "find_num_clusters": "acc"}
 
 # num_components = [15, 30], cov_type = ["tied, "diag"], find_num_clusters = ["acc", "bic"], with and without tsne
 # not important: find_num_clusters
-GMM_PARAMS={"num_components": 30, "find_num_clusters": "bic",
+GMM_PARAMS={"num_components": 30, "find_num_clusters": "acc",
             "cov_type": "diag"}
 
 # num_components = [15, 30], cov_type = ["tied, "diag"], with and without tsne

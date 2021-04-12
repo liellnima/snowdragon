@@ -12,16 +12,6 @@ def read_tuning_results():
     accuracy. Saves the results in pretty print tables. The tables contain only
     relevant hyperparameters.
     """
-    results01 = pd.read_csv("tuning/tuning_results/tuning_run10.csv")
-    results02 = pd.read_csv("tuning/tuning_results/tuning_run09.csv")
-    results01 = results01[results01["model"] != "rf"]
-    results02 = results02[results02["model"] != "baseline"]
-    # divide between rf_bal and rf pure
-    results02.loc[results02["resample"] == 1, "model"] = "rf_bal"
-    all_results = pd.concat([results01, results02])
-    all_results = all_results.reset_index(drop=True)
-    all_results.to_csv("tuning/tuning_results/tuning_run01_all.csv", index=False)
-
     results_csv = "tuning/tuning_results/tuning_run01_all.csv"
     results = pd.read_csv(results_csv)
 

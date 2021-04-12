@@ -29,7 +29,7 @@ done
 
 # random forest
 # resample with 0 and 1 was done for subset -> 1 is clerly better
-for n_estimators in 25 100 500 1000 10000; do
+for n_estimators in 25 100 500 1000; do
   for criterion in "entropy" "gini"; do
     for max_features in "sqrt" "log2"; do
       for max_samples in 0.4 0.6 0.8; do
