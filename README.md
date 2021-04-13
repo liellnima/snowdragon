@@ -2,10 +2,11 @@
 
 This repository can be used to run and compare different models for the classification and segmentation of Snow Micro Pen (SMP) profiles.  
 
-The SMP is a fast, high-resolution, portable snow hardness measurement device. The automatic classification and segmentation models can be used for the fast analysis of vast numbers of SMP profiles. For more information about the background of snow layer segmentation and grain type classification please refer to the related thesis. The plots and results of the different models can be reproduced with this repository.
+The SMP is a fast, high-resolution, portable snow hardness measurement device. The automatic classification and segmentation models can be used for the fast analysis of vast numbers of SMP profiles. For more information about the background of snow layer segmentation and grain type classification please refer to the related thesis. In the thesis the SMP dataset collected during the MOSAiC expedition was used. The plots and results of the different models can be reproduced with this repository.
 
 * Related thesis: "Automatic Snow Classification − A Comparison of Machine Learning Algorithms for the Segmentation and Classification of Snow Micro Penetrometer Profiles" by Julia Kaltenborn
 * About the SMP: [SLF Website](https://www.slf.ch/en/ueber-das-slf/versuchsanlagen-und-labors/kaeltelabor/snowmicropenr.html) 
+* About MOSAiC: [MOSAiC Website](https://mosaic-expedition.org/)
 * Contact: [jkaltenborn@uos.de](mailto:jkaltenborn@uos.de)
 
 
@@ -86,9 +87,9 @@ To run prepocessing and evaluation, run:
 ```
 python -m models.run_models
 ```
-If ``visualize`` is set to ``True`` the original and preprocessed data will be visualized. The plots are not saved, but all plots were already run and can be found in the plots folder.
+If ``visualize`` is set to ``True`` the original and preprocessed data will be visualized. The plots are not saved, but all plots were already stored and can be found in the plots folder.
 
-After preprocessing all models are evaluated. All results are stored in the folder ``plots/evaluation``.
+After preprocessing all models are evaluated. All results are stored for each model in the folder ``plots/evaluation``.
 
 ## Structure
 
