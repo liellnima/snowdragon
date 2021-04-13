@@ -711,10 +711,12 @@ def validate_all_models(data, intermediate_file=None):
 # data_dict (str): npz file name with dictionary or None, if no preprocessing file exists yet.
 # TODO one parameter should be the table format of the output
 def main():
-    preprocess_dataset(smp_file_name="data/all_smp_profiles.npz", visualize=True)
+    smp_file_name = "data/all_smp_profiles.npz"
+    output_file = "data/preprocessed_data_k5.txt"
     data_dict = "data/preprocessed_data_k5.txt"
+
     if data_dict is None:
-        data = preprocess_dataset(smp_file_name="data/all_smp_profiles.npz", output_file="data/preprocessed_data_test.txt", visualize=True)
+        data = preprocess_dataset(smp_file_name=smp_file_name, output_file=output_file, visualize=True)
     else:
         with open(data_dict, "rb") as myFile:
             data = pickle.load(myFile)
