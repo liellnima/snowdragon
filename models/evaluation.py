@@ -165,11 +165,13 @@ def metrics_testing(y_test, y_pred, y_pred_prob, fit_time, score_time, labels_or
             f.write(tabulate(scores, headers="keys", showindex=False, tablefmt="psql"))
         with open(save_dir + "/scores_latex.txt", 'w') as f:
             f.write(tabulate(scores, headers="keys", showindex=False, tablefmt="latex_raw"))
+        scores.to_csv(save_dir + "/scores.csv")
         # save scores per label
         with open(save_dir + "/scores_per_label_psql.txt", 'w') as f:
             f.write(tabulate(scores_per_label, headers="keys", tablefmt="psql"))
         with open(save_dir + "/scores_per_label_latex.txt", 'w') as f:
             f.write(tabulate(scores_per_label, headers="keys", tablefmt="latex_raw"))
+        scores_per_label.to_csv(save_dir + "/scores_per_label.csv")
 
     return scores_output, metrics_per_label
 

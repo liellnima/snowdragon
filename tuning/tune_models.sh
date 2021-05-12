@@ -62,52 +62,52 @@ for n_estimators in 10 100 500 1000; do
   done
 done
 
-# lstm
-for batch_size in 32 8; do
-  for rnn_size in 50 100 150; do
-    for learning_rate in 0.01 0.001; do
-      for dropout in 0 0.2 0.5; do
-        for dense_units in 0 100; do
-          python -m tuning.tuning $1 --model_type lstm --batch_size $batch_size --epochs 100 --rnn_size $rnn_size --learning_rate $learning_rate --dropout $dropout --dense_units $dense_units
-        done
-      done
-    done
-  done
-done
-
-# blstm
-for batch_size in 32 8; do
-  for rnn_size in 50 100 150; do
-    for learning_rate in 0.01 0.001; do
-      for dropout in 0 0.2 0.5; do
-        for dense_units in 0 100; do
-          python -m tuning.tuning $1 --model_type blstm --batch_size $batch_size --epochs 100 --rnn_size $rnn_size --learning_rate $learning_rate --dropout $dropout --dense_units $dense_units
-        done
-      done
-    done
-  done
-done
-
-# encoder decoder
-for batch_size in 32 8; do
-  for regularize in 0 1; do
-    for learning_rate in 0.001 0.0001; do
-      for dropout in 0 0.5; do
-        for dense_units in 0 100; do
-          for bidirectional in 0 1; do
-            for attention in 0 1; do
-              python -m tuning.tuning $1 --model_type enc_dec --regularize $regularize --bidirectional $bidirectional --attention $attention --batch_size $batch_size --epochs 100 --rnn_size 150 --learning_rate $learning_rate --dropout $dropout --dense_units $dense_units
-            done
-          done
-        done
-      done
-    done
-  done
-done
-
 # label spreading
 for kernel in "knn"; do
   for alpha in 0.01 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 0.99; do
     python -m tuning.tuning $1 --model_type label_spreading --kernel $kernel --alpha $alpha
   done
 done
+
+# # lstm
+# for batch_size in 32 8; do
+#   for rnn_size in 50 100 150; do
+#     for learning_rate in 0.01 0.001; do
+#       for dropout in 0 0.2 0.5; do
+#         for dense_units in 0 100; do
+#           python -m tuning.tuning $1 --model_type lstm --batch_size $batch_size --epochs 100 --rnn_size $rnn_size --learning_rate $learning_rate --dropout $dropout --dense_units $dense_units
+#         done
+#       done
+#     done
+#   done
+# done
+#
+# # blstm
+# for batch_size in 32 8; do
+#   for rnn_size in 50 100 150; do
+#     for learning_rate in 0.01 0.001; do
+#       for dropout in 0 0.2 0.5; do
+#         for dense_units in 0 100; do
+#           python -m tuning.tuning $1 --model_type blstm --batch_size $batch_size --epochs 100 --rnn_size $rnn_size --learning_rate $learning_rate --dropout $dropout --dense_units $dense_units
+#         done
+#       done
+#     done
+#   done
+# done
+#
+# # encoder decoder
+# for batch_size in 32 8; do
+#   for regularize in 0 1; do
+#     for learning_rate in 0.001 0.0001; do
+#       for dropout in 0 0.5; do
+#         for dense_units in 0 100; do
+#           for bidirectional in 0 1; do
+#             for attention in 0 1; do
+#               python -m tuning.tuning $1 --model_type enc_dec --regularize $regularize --bidirectional $bidirectional --attention $attention --batch_size $batch_size --epochs 100 --rnn_size 150 --learning_rate $learning_rate --dropout $dropout --dense_units $dense_units
+#             done
+#           done
+#         done
+#       done
+#     done
+#   done
+# done

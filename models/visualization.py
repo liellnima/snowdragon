@@ -2,6 +2,7 @@
 from data_handling.data_loader import load_data
 from data_handling.data_preprocessing import idx_to_int
 from data_handling.data_parameters import LABELS, ANTI_LABELS, COLORS
+from models.helper_funcs import int_to_idx
 
 import os
 import math
@@ -704,6 +705,7 @@ def all_in_one_plot(smp, show_indices=False, sort=True, title=None, file_name="p
         title (str): Title of the plot
         file_name (str): where the resulting picture should be saved
     """
+    plt.rcParams.update({"figure.dpi": 400})
     # be aware that predictions from other models must be consistent with the labels we know
     labelled_smp = smp[(smp["label"] != 0) & (smp["label"] != 2)]
     smp_indices = list(labelled_smp["smp_idx"].unique())
@@ -743,8 +745,9 @@ def all_in_one_plot(smp, show_indices=False, sort=True, title=None, file_name="p
     plt.title(title)
 
     if show_indices:
-        labels = [str(int(smp_index)) for smp_index in smp_indices]
-        plt.xticks(labels=labels, ticks=x_ticks, rotation=90, fontsize=8)
+        #labels = [str(int(smp_index)) for smp_index in smp_indices]
+        labels = [int_to_idx(smp_index) for smp_index in smp_indices]
+        plt.xticks(labels=labels, ticks=x_ticks, rotation=90, fontsize=7)
     else:
         plt.xticks([])
 
@@ -752,9 +755,10 @@ def all_in_one_plot(smp, show_indices=False, sort=True, title=None, file_name="p
     plt.xlim(0.0, 1.0)
     plt.ylim(0, int(math.ceil(max_distance / 100.0)) * 100) # rounds up to next hundred
     figure = plt.gcf()  # get current figure
-    #figure.set_size_inches(27.2, 15.2) # set size of figure
+    figure.set_size_inches(28.2, 15.2) # set size of figure
     #plt.savefig(file_name, bbox_inches="tight", dpi=300)
-    plt.savefig(file_name)
+    #ax.set_aspect(aspect=0.5)
+    plt.savefig(file_name, bbox_inches="tight")
     plt.close()
 
 def plot_confusion_matrix(confusion_matrix, labels, name="", save_file=None):
@@ -877,7 +881,7 @@ def visualize_normalized_data(smp):
         smp (df.DataFrame): SMP preprocessed data
     """
     # ATTENTION: don't print bogplots or single profiles! The results are just wrong after normalization!!!
-
+    plt.rcParams.update({"figure.dpi": 180})
     smp_profile_name = "S31H0368"
     # HOW BALANCED IS THE LABELLED DATASET?
     plot_balancing(smp)
@@ -898,7 +902,7 @@ def visualize_normalized_data(smp):
     #smp_labelled(smp, smp_name=smp_profile_name)
     # PLOT ALL FEATURES AS LINES IN ONE PROFILE
     smp_features(smp, smp_name=smp_profile_name, features=["mean_force", "var_force", "min_force_4", "max_force_4", "L_12", "gradient"])
-
+    plt.rcParams.update({"figure.dpi": 250})
     # PLOT BOGPLOT
     bog_plot(smp)
     # smp_labelled(smp, smp_name=2000367.0)
@@ -917,27 +921,28 @@ def visualize_original_data(smp):
     """
     smp_profile_name = "S31H0368" #"S31H0607"
     # HOW BALANCED IS THE LABELLED DATASET?
-    plot_balancing(smp)
+    #plot_balancing(smp)
     # SHOW THE DATADISTRIBUTION OF ALL FEATURES
     #pairwise_features(smp, features=["label", "distance", "var_force", "mean_force", "delta_4", "lambda_4", "gradient"], samples=2000)
     # SHOW HEATMAP OF ALL FEATURES (with what are the labels correlated the most?)
-    corr_heatmap(smp, labels=[3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17])
+    #corr_heatmap(smp, labels=[3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17])
     # Correlation does not help for categorical + continuous data - use ANOVA instead
     # FEATURE "EXTRACTION"
     #anova(smp, "plots/tables/ANOVA_results.txt", tablefmt="psql") # latex_raw also possible
     # TODO: RANDOM FOREST FEATURE EXTRACTION
     # SHOW ONE SMP PROFILE WITHOUT LABELS
-    smp_unlabelled(smp, smp_name=smp_profile_name)
+    #smp_unlabelled(smp, smp_name=smp_profile_name)
     # SHOW ONE SMP PROFILE WITH LABELS
-    smp_labelled(smp, smp_name=smp_profile_name)
+    #smp_labelled(smp, smp_name=smp_profile_name)
     # PLOT ALL FEATURES AS LINES IN ONE PROFILE
-    smp_features(smp, smp_name=smp_profile_name, features=["mean_force", "var_force", "delta_4", "delta_12", "gradient"])
+    #smp_features(smp, smp_name=smp_profile_name, features=["mean_force", "var_force", "delta_4", "delta_12", "gradient"])
 
     # PLOT BOGPLOT
-    bog_plot(smp, file_name=None)
-    smp_labelled(smp, smp_name=2000367.0)
-    all_in_one_plot(smp, file_name="plots/data_original/bogplot_labels_original.png")
+    #bog_plot(smp, file_name=None)
+    #smp_labelled(smp, smp_name=2000367.0)
+    #all_in_one_plot(smp, file_name="plots/data_original/bogplot_labels_original.png")
 
+    all_in_one_plot(smp, file_name="plots/data_original/bogplot_with_indices.png", show_indices=True)
 
 def main():
     # load dataframe with smp data

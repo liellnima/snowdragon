@@ -1,7 +1,7 @@
 # Here are all the important parameters for the data preprocssing
 
 # Set folder location of smp data (pnt format)
-SMP_LOC = "/home/julia/Documents/University/BA/Data/Arctic/"
+SMP_LOC = "/home/julia/Documents/University/BA/Data/Arctic_updated/"
 # Set file location of temperature data
 T_LOC = "/home/julia/Documents/University/BA/Data/Arctic/MOSAiC_ICE_Temperature.csv"
 # Set folder name were export files get saved
