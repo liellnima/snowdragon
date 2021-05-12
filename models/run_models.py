@@ -434,7 +434,7 @@ def evaluate_all_models(data, file_scores=None, file_scores_lables=None, **param
     """
     # set plotting variables:
     # no special labels order (default ascending) and name must be set individually
-    save_overall_metrics = False
+    save_overall_metrics = True
     plotting = {"annot": "eval", "roc_curve": True, "confusion_matrix": True,
                 "one_plot": True, "pair_plots": True, "only_preds": True, "only_trues": False,
                 "plot_list": None, "bog_plot_preds": "plots/evaluation/", "bog_plot_trues": "plots/evaluation/"}
@@ -546,10 +546,11 @@ def evaluate_all_models(data, file_scores=None, file_scores_lables=None, **param
             f.write(tabulate(pd.concat(all_scores, axis=0, ignore_index=True), headers="keys", tablefmt="psql"))
         with open("plots/evaluation/all_scores_latex.txt", 'w') as f:
             f.write(tabulate(pd.concat(all_scores, axis=0, ignore_index=True), headers="keys", tablefmt="latex_raw"))
+        all_scores.to_csv("plots/evaluation/all_scores.csv")
 
     # here, we can pick out the interesting stuff, like comparing the labels
     # based on accuracy  and precision for all models
-    str_labels = [ANTI_LABELS[label] for label in [3, 4, 5, 6, 13, 16, 17]]
+    str_labels = [ANTI_LABELS[label] for label in [3, 4, 5, 6, 12, 16, 17]]
     acc_per_label = pd.DataFrame(columns=str_labels)
     prec_per_label = pd.DataFrame(columns=str_labels)
     for i, model in enumerate(all_scores_per_label):
@@ -565,6 +566,7 @@ def evaluate_all_models(data, file_scores=None, file_scores_lables=None, **param
             f.write(tabulate(acc_per_label, headers="keys", showindex=False, tablefmt="psql"))
         with open("plots/evaluation/acc_labels_latex.txt", 'w') as f:
             f.write(tabulate(acc_per_label, headers="keys", showindex=False, tablefmt="latex_raw"))
+        acc_per_label.to_csv("plots/evaluation/all_scores.csv")
 
     # save prec
     print(tabulate(prec_per_label, headers="keys", showindex=False, tablefmt="psql"))
@@ -573,6 +575,7 @@ def evaluate_all_models(data, file_scores=None, file_scores_lables=None, **param
             f.write(tabulate(prec_per_label, headers="keys", showindex=False, tablefmt="psql"))
         with open("plots/evaluation/prec_labels_latex.txt", 'w') as f:
             f.write(tabulate(prec_per_label, headers="keys", showindex=False, tablefmt="latex_raw"))
+        prec_per_label.to_csv("plots/evaluation/all_scores.csv")
 
 
 
@@ -715,7 +718,7 @@ def validate_all_models(data, intermediate_file=None):
 def main():
     smp_file_name = "data/all_smp_profiles_updated.npz"
     output_file = "data/preprocessed_data_k5_updated.txt"
-    data_dict = None
+    data_dict = "data/preprocessed_data_k5_updated.txt"#None
 
     if data_dict is None:
         data = preprocess_dataset(smp_file_name=smp_file_name, output_file=output_file, visualize=True)

@@ -30,9 +30,10 @@ def lstm_architecture(input_shape, output_shape, rnn_size=100, dropout=0, dense_
     Return:
         model: a compiled model ready for fitting
     """
+
     # architecture
     model = Sequential()
-    model.add(Masking(mask_value=0.0, input_shape=input_shape))
+    model.add(Masking(mask_value=0.0, input_shape=(None, input_shape[1])))
     if dense_units > 0:
         model.add(Dense(units=dense_units, activation="relu"))
         model.add(Dropout(dropout))
@@ -43,7 +44,6 @@ def lstm_architecture(input_shape, output_shape, rnn_size=100, dropout=0, dense_
 
     optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
     model.compile(optimizer=optimizer, loss="categorical_crossentropy", metrics=["acc"])
-
     return model
 
 
@@ -62,7 +62,7 @@ def blstm_architecture(input_shape, output_shape, rnn_size=100, dropout=0, dense
     # architecture
     # change this: https://stackoverflow.com/questions/62991082/bidirectional-lstm-merge-mode-explanation
     model = Sequential()
-    model.add(Masking(mask_value=0.0, input_shape=input_shape))
+    model.add(Masking(mask_value=0.0, input_shape=(None, input_shape[1])))
     if dense_units > 0:
         model.add(Dense(units=dense_units, activation="relu"))
         model.add(Dropout(dropout))
@@ -99,7 +99,7 @@ def enc_dec_architecture(input_shape, output_shape, rnn_size=100, dropout=0.2, d
     enc_return_seq = True if attention else False
 
     model = Sequential()
-    model.add(Masking(mask_value=0.0, input_shape=input_shape))
+    model.add(Masking(mask_value=0.0, input_shape=(None, input_shape[1])))
     # TODO a boolean to decide if there should be stacked (B)LSTMs instead of a dense layer
     # first dense layer
     if dense_units > 0:
