@@ -3,9 +3,9 @@
  Metrics                &      Values & Model         \\
 \hline
  eval_balanced_accuracy & 0.142857    & Majority Vote \\
- eval_recall            & 0.502406    & Majority Vote \\
- eval_precision         & 0.252411    & Majority Vote \\
- eval_fit_time          & 0.000743389 & Majority Vote \\
- eval_score_time        & 4.12464e-05 & Majority Vote \\
+ eval_recall            & 0.279494    & Majority Vote \\
+ eval_precision         & 0.0781167   & Majority Vote \\
+ eval_fit_time          & 0.00133419  & Majority Vote \\
+ eval_score_time        & 7.20024e-05 & Majority Vote \\
 \hline
 \end{tabular}

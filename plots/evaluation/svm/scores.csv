@@ -1,0 +1,8 @@
+,Metrics,Values,Model
+0,eval_balanced_accuracy,0.5925431665085753,Support Vector Machine
+1,eval_recall,0.6207594936708861,Support Vector Machine
+2,eval_precision,0.700161739124261,Support Vector Machine
+3,eval_fit_time,20.8891761302948,Support Vector Machine
+4,eval_score_time,6.243462800979614,Support Vector Machine
+5,eval_roc_auc,0.9084007869543741,Support Vector Machine
+6,eval_log_loss,0.7856483857669507,Support Vector Machine

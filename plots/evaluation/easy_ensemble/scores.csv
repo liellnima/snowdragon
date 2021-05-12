@@ -1,0 +1,8 @@
+,Metrics,Values,Model
+0,eval_balanced_accuracy,0.4526508865826272,Easy Ensemble
+1,eval_recall,0.47341772151898737,Easy Ensemble
+2,eval_precision,0.6255914341392591,Easy Ensemble
+3,eval_fit_time,173.07838678359985,Easy Ensemble
+4,eval_score_time,73.80119490623474,Easy Ensemble
+5,eval_roc_auc,0.8170066233614393,Easy Ensemble
+6,eval_log_loss,1.7368326271141366,Easy Ensemble

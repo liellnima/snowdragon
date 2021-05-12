@@ -1,11 +1,11 @@
 +------------------------+-----------+---------------+
 | Metrics                |    Values | Model         |
 |------------------------+-----------+---------------|
-| eval_balanced_accuracy |  0.564604 | Random Forest |
-| eval_recall            |  0.720076 | Random Forest |
-| eval_precision         |  0.724912 | Random Forest |
-| eval_fit_time          | 81.4889   | Random Forest |
-| eval_score_time        |  0.506863 | Random Forest |
-| eval_roc_auc           |  0.900262 | Random Forest |
-| eval_log_loss          |  1.14105  | Random Forest |
+| eval_balanced_accuracy |  0.600864 | Random Forest |
+| eval_recall            |  0.713755 | Random Forest |
+| eval_precision         |  0.734348 | Random Forest |
+| eval_fit_time          | 79.5898   | Random Forest |
+| eval_score_time        |  0.436118 | Random Forest |
+| eval_roc_auc           |  0.921941 | Random Forest |
+| eval_log_loss          |  0.783405 | Random Forest |
 +------------------------+-----------+---------------+

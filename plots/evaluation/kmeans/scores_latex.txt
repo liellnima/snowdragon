@@ -2,10 +2,10 @@
 \hline
  Metrics                &      Values & Model   \\
 \hline
- eval_balanced_accuracy &   0.347608  & K-means \\
- eval_recall            &   0.63916   & K-means \\
- eval_precision         &   0.618081  & K-means \\
- eval_fit_time          & 257.641     & K-means \\
- eval_score_time        &   0.0172701 & K-means \\
+ eval_balanced_accuracy &  0.360467   & K-means \\
+ eval_recall            &  0.545654   & K-means \\
+ eval_precision         &  0.547932   & K-means \\
+ eval_fit_time          & 97.854      & K-means \\
+ eval_score_time        &  0.00761271 & K-means \\
 \hline
 \end{tabular}

@@ -2,12 +2,12 @@
 \hline
  Metrics                &   Values & Model                  \\
 \hline
- eval_balanced_accuracy & 0.670381 & Balanced Random Forest \\
- eval_recall            & 0.675317 & Balanced Random Forest \\
- eval_precision         & 0.734123 & Balanced Random Forest \\
- eval_fit_time          & 7.66325  & Balanced Random Forest \\
- eval_score_time        & 0.386095 & Balanced Random Forest \\
- eval_roc_auc           & 0.898458 & Balanced Random Forest \\
- eval_log_loss          & 0.886807 & Balanced Random Forest \\
+ eval_balanced_accuracy & 0.607335 & Balanced Random Forest \\
+ eval_recall            & 0.638987 & Balanced Random Forest \\
+ eval_precision         & 0.739527 & Balanced Random Forest \\
+ eval_fit_time          & 5.89691  & Balanced Random Forest \\
+ eval_score_time        & 0.319046 & Balanced Random Forest \\
+ eval_roc_auc           & 0.907157 & Balanced Random Forest \\
+ eval_log_loss          & 0.961941 & Balanced Random Forest \\
 \hline
 \end{tabular}

@@ -1,13 +1,13 @@
 \begin{tabular}{lrl}
 \hline
- Metrics                &   Values & Model           \\
+ Metrics                &    Values & Model           \\
 \hline
- eval_balanced_accuracy & 0.495844 & Label Spreading \\
- eval_recall            & 0.675463 & Label Spreading \\
- eval_precision         & 0.682377 & Label Spreading \\
- eval_fit_time          & 8.60943  & Label Spreading \\
- eval_score_time        & 2.89001  & Label Spreading \\
- eval_roc_auc           & 0.880149 & Label Spreading \\
- eval_log_loss          & 1.5559   & Label Spreading \\
+ eval_balanced_accuracy &  0.552366 & Label Spreading \\
+ eval_recall            &  0.679831 & Label Spreading \\
+ eval_precision         &  0.696882 & Label Spreading \\
+ eval_fit_time          & 12.5524   & Label Spreading \\
+ eval_score_time        &  2.90719  & Label Spreading \\
+ eval_roc_auc           &  0.897855 & Label Spreading \\
+ eval_log_loss          &  1.16636  & Label Spreading \\
 \hline
 \end{tabular}

@@ -1,9 +1,9 @@
-+------------------------+--------------+---------------------------------+
-| Metrics                |       Values | Model                           |
-|------------------------+--------------+---------------------------------|
-| eval_balanced_accuracy |   0.302615   | Bayesian Gaussian Mixture Model |
-| eval_recall            |   0.664383   | Bayesian Gaussian Mixture Model |
-| eval_precision         |   0.616719   | Bayesian Gaussian Mixture Model |
-| eval_fit_time          | 232.683      | Bayesian Gaussian Mixture Model |
-| eval_score_time        |   0.00933576 | Bayesian Gaussian Mixture Model |
-+------------------------+--------------+---------------------------------+
++------------------------+-------------+---------------------------------+
+| Metrics                |      Values | Model                           |
+|------------------------+-------------+---------------------------------|
+| eval_balanced_accuracy |   0.373527  | Bayesian Gaussian Mixture Model |
+| eval_recall            |   0.581941  | Bayesian Gaussian Mixture Model |
+| eval_precision         |   0.575636  | Bayesian Gaussian Mixture Model |
+| eval_fit_time          | 268.586     | Bayesian Gaussian Mixture Model |
+| eval_score_time        |   0.0101252 | Bayesian Gaussian Mixture Model |
++------------------------+-------------+---------------------------------+

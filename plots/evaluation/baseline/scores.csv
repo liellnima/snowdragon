@@ -1,0 +1,6 @@
+,Metrics,Values,Model
+0,eval_balanced_accuracy,0.14285714285714285,Majority Vote
+1,eval_recall,0.27949367088607596,Majority Vote
+2,eval_precision,0.07811671206537414,Majority Vote
+3,eval_fit_time,0.0013341903686523438,Majority Vote
+4,eval_score_time,7.200241088867188e-05,Majority Vote

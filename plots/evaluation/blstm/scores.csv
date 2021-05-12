@@ -1,0 +1,8 @@
+,Metrics,Values,Model
+0,eval_balanced_accuracy,0.5112390379857638,BLSTM
+1,eval_recall,0.7081856540084388,BLSTM
+2,eval_precision,0.7179346192396135,BLSTM
+3,eval_fit_time,547.541773557663,BLSTM
+4,eval_score_time,3.4971108436584473,BLSTM
+5,eval_roc_auc,0.9132068328448103,BLSTM
+6,eval_log_loss,0.7785217080305562,BLSTM

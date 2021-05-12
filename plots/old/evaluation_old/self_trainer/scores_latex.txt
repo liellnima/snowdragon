@@ -1,0 +1,13 @@
+\begin{tabular}{lrl}
+\hline
+ Metrics                &    Values & Model        \\
+\hline
+ eval_balanced_accuracy &  0.671492 & Self Trainer \\
+ eval_recall            &  0.676629 & Self Trainer \\
+ eval_precision         &  0.734384 & Self Trainer \\
+ eval_fit_time          & 85.379    & Self Trainer \\
+ eval_score_time        &  0.323341 & Self Trainer \\
+ eval_roc_auc           &  0.899305 & Self Trainer \\
+ eval_log_loss          &  0.884257 & Self Trainer \\
+\hline
+\end{tabular}

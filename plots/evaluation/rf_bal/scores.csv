@@ -1,0 +1,8 @@
+,Metrics,Values,Model
+0,eval_balanced_accuracy,0.6073351853913127,Balanced Random Forest
+1,eval_recall,0.6389873417721519,Balanced Random Forest
+2,eval_precision,0.739527042261763,Balanced Random Forest
+3,eval_fit_time,5.896908521652222,Balanced Random Forest
+4,eval_score_time,0.3190460205078125,Balanced Random Forest
+5,eval_roc_auc,0.9071566987568932,Balanced Random Forest
+6,eval_log_loss,0.961940595182932,Balanced Random Forest

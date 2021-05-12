@@ -2,29 +2,29 @@
 \hline
     & Feature         &   Tree-Importance \\
 \hline
-  0 & dist_ground     &       0.109028    \\
-  1 & pos_rel         &       0.094873    \\
-  2 & distance        &       0.0700177   \\
-  3 & L_4             &       0.0571275   \\
-  4 & var_force_12    &       0.0542368   \\
-  5 & min_force_4     &       0.0527384   \\
-  6 & min_force_12    &       0.0517169   \\
-  7 & L_12            &       0.050821    \\
-  8 & var_force_4     &       0.0495951   \\
-  9 & median_force_12 &       0.0470317   \\
- 10 & min_force       &       0.043129    \\
- 11 & median_force_4  &       0.0363525   \\
- 12 & var_force       &       0.0356849   \\
- 13 & max_force_12    &       0.0351189   \\
- 14 & max_force_4     &       0.0344852   \\
- 15 & mean_force_12   &       0.030987    \\
- 16 & mean_force_4    &       0.030356    \\
- 17 & mean_force      &       0.0281388   \\
- 18 & max_force       &       0.0275961   \\
- 19 & delta_12        &       0.0232456   \\
- 20 & gradient        &       0.0222096   \\
- 21 & delta_4         &       0.0155052   \\
- 22 & lambda_12       &       5.33148e-06 \\
+  0 & dist_ground     &       0.108334    \\
+  1 & pos_rel         &       0.071621    \\
+  2 & var_force_12    &       0.0669029   \\
+  3 & var_force_4     &       0.058417    \\
+  4 & distance        &       0.0582122   \\
+  5 & L_4             &       0.0543392   \\
+  6 & min_force_12    &       0.0538435   \\
+  7 & min_force_4     &       0.0534623   \\
+  8 & L_12            &       0.0488875   \\
+  9 & median_force_12 &       0.0461839   \\
+ 10 & min_force       &       0.0445578   \\
+ 11 & var_force       &       0.0430347   \\
+ 12 & median_force_4  &       0.0407625   \\
+ 13 & max_force_12    &       0.0358734   \\
+ 14 & max_force_4     &       0.0351876   \\
+ 15 & mean_force_4    &       0.0343708   \\
+ 16 & mean_force_12   &       0.0309304   \\
+ 17 & mean_force      &       0.030287    \\
+ 18 & max_force       &       0.0277934   \\
+ 19 & delta_12        &       0.0214722   \\
+ 20 & gradient        &       0.0210562   \\
+ 21 & delta_4         &       0.0144701   \\
+ 22 & lambda_12       &       1.91629e-07 \\
  23 & lambda_4        &       0           \\
 \hline
 \end{tabular}

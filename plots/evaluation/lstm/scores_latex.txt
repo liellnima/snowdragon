@@ -2,12 +2,12 @@
 \hline
  Metrics                &     Values & Model   \\
 \hline
- eval_balanced_accuracy &   0.546644 & LSTM    \\
- eval_recall            &   0.747339 & LSTM    \\
- eval_precision         &   0.750921 & LSTM    \\
- eval_fit_time          & 424.401    & LSTM    \\
- eval_score_time        &   2.28358  & LSTM    \\
- eval_roc_auc           &   0.921255 & LSTM    \\
- eval_log_loss          &   0.780666 & LSTM    \\
+ eval_balanced_accuracy &   0.605081 & LSTM    \\
+ eval_recall            &   0.701266 & LSTM    \\
+ eval_precision         &   0.711555 & LSTM    \\
+ eval_fit_time          & 487.538    & LSTM    \\
+ eval_score_time        &   2.06351  & LSTM    \\
+ eval_roc_auc           &   0.895538 & LSTM    \\
+ eval_log_loss          &   1.05531  & LSTM    \\
 \hline
 \end{tabular}

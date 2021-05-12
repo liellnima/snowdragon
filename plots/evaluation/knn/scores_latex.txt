@@ -2,12 +2,12 @@
 \hline
  Metrics                &     Values & Model               \\
 \hline
- eval_balanced_accuracy & 0.501866   & K-nearest Neighbors \\
- eval_recall            & 0.656218   & K-nearest Neighbors \\
- eval_precision         & 0.670795   & K-nearest Neighbors \\
- eval_fit_time          & 0.00632381 & K-nearest Neighbors \\
- eval_score_time        & 2.19237    & K-nearest Neighbors \\
- eval_roc_auc           & 0.830223   & K-nearest Neighbors \\
- eval_log_loss          & 6.26417    & K-nearest Neighbors \\
+ eval_balanced_accuracy & 0.547906   & K-nearest Neighbors \\
+ eval_recall            & 0.663291   & K-nearest Neighbors \\
+ eval_precision         & 0.682045   & K-nearest Neighbors \\
+ eval_fit_time          & 0.00617743 & K-nearest Neighbors \\
+ eval_score_time        & 2.19487    & K-nearest Neighbors \\
+ eval_roc_auc           & 0.851302   & K-nearest Neighbors \\
+ eval_log_loss          & 5.52364    & K-nearest Neighbors \\
 \hline
 \end{tabular}

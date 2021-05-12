@@ -2,12 +2,12 @@
 \hline
  Metrics                &    Values & Model                  \\
 \hline
- eval_balanced_accuracy &  0.648383 & Support Vector Machine \\
- eval_recall            &  0.638285 & Support Vector Machine \\
- eval_precision         &  0.704466 & Support Vector Machine \\
- eval_fit_time          & 19.2416   & Support Vector Machine \\
- eval_score_time        &  7.11643  & Support Vector Machine \\
- eval_roc_auc           &  0.888599 & Support Vector Machine \\
- eval_log_loss          &  0.814205 & Support Vector Machine \\
+ eval_balanced_accuracy &  0.592543 & Support Vector Machine \\
+ eval_recall            &  0.620759 & Support Vector Machine \\
+ eval_precision         &  0.700162 & Support Vector Machine \\
+ eval_fit_time          & 20.8892   & Support Vector Machine \\
+ eval_score_time        &  6.24346  & Support Vector Machine \\
+ eval_roc_auc           &  0.908401 & Support Vector Machine \\
+ eval_log_loss          &  0.785648 & Support Vector Machine \\
 \hline
 \end{tabular}

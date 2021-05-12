@@ -1,0 +1,11 @@
++------------------------+----------+-----------------+
+| Metrics                |   Values | Model           |
+|------------------------+----------+-----------------|
+| eval_balanced_accuracy | 0.495844 | Label Spreading |
+| eval_recall            | 0.675463 | Label Spreading |
+| eval_precision         | 0.682377 | Label Spreading |
+| eval_fit_time          | 8.60943  | Label Spreading |
+| eval_score_time        | 2.89001  | Label Spreading |
+| eval_roc_auc           | 0.880149 | Label Spreading |
+| eval_log_loss          | 1.5559   | Label Spreading |
++------------------------+----------+-----------------+
