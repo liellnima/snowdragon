@@ -468,7 +468,7 @@ def evaluate_all_models(data, file_scores=None, file_scores_lables=None, **param
                   "lstm", "blstm", "enc_dec"]
     all_names = ["Majority Vote", "K-means", "Gaussian Mixture Model", "Bayesian Gaussian Mixture Model",
                  "Random Forest", "Balanced Random Forest", "Support Vector Machine", "K-nearest Neighbors", "Easy Ensemble",
-                 "Self Trainer", "Label Spreading",
+                 "Self Trainer", "Label Propagation",
                  "LSTM", "BLSTM", "Encoder Decoder"]
 
     # save bogplot for true predictions and all true smps in the folder above
