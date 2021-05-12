@@ -178,6 +178,8 @@ def preprocess_dataset(smp_file_name, output_file=None, visualize=False, sample_
 
     # 4. Sum up certain classes if necessary (alternative: do something to balance the dataset)
     # (keep: 6, 3, 4, 12, 5, 16: rgwp, dh, dhid, dhwp, mfdh, pp)
+    # rename all df profiles to pp
+    smp.loc[smp["label"] == LABELS["df"], "label"] = LABELS["pp"]
     smp = sum_up_labels(smp, ["df", "ifwp", "if", "sh", "snow-ice", "mfcl", "mfsl", "mfcr"], name="rare", label_idx=17)
 
     # 5. Visualize the data after normalization
@@ -218,7 +220,7 @@ def preprocess_dataset(smp_file_name, output_file=None, visualize=False, sample_
     y_train_all = pd.concat([y_train, unlabelled_y])
 
     # 8. Make crossvalidation split
-    k = 10
+    k = 5
     # Note: if we want to use StratifiedKFold, we can just hand over an integer to the functions
     cv_stratified = StratifiedKFold(n_splits=k, shuffle=True, random_state=42).split(x_train, y_train)
     cv_stratified = list(cv_stratified)
@@ -435,7 +437,7 @@ def evaluate_all_models(data, file_scores=None, file_scores_lables=None, **param
     save_overall_metrics = False
     plotting = {"annot": "eval", "roc_curve": True, "confusion_matrix": True,
                 "one_plot": True, "pair_plots": True, "only_preds": True, "only_trues": False,
-                "plot_list": None, "bog_plot_preds": "plots/evaluation/", "bog_plot_trues": None} #"plots/evaluation/"
+                "plot_list": None, "bog_plot_preds": "plots/evaluation/", "bog_plot_trues": "plots/evaluation/"}
 
     folders = {"rf": "plots/evaluation/rf",
                "rf_bal": "plots/evaluation/rf_bal",
@@ -711,9 +713,9 @@ def validate_all_models(data, intermediate_file=None):
 # data_dict (str): npz file name with dictionary or None, if no preprocessing file exists yet.
 # TODO one parameter should be the table format of the output
 def main():
-    smp_file_name = "data/all_smp_profiles.npz"
-    output_file = "data/preprocessed_data_k5.txt"
-    data_dict = "data/preprocessed_data_k5.txt"
+    smp_file_name = "data/all_smp_profiles_updated.npz"
+    output_file = "data/preprocessed_data_k5_updated.txt"
+    data_dict = None
 
     if data_dict is None:
         data = preprocess_dataset(smp_file_name=smp_file_name, output_file=output_file, visualize=True)
