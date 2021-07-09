@@ -20,7 +20,7 @@ The SMP is a fast, high-resolution, portable snow hardness measurement device. T
 
 ## Setup
 
-This repository runs on Python 3.6. The required packages can be installed with ``pip install -r requirements.txt``. If wished, create an environment beforehand.  
+This repository runs on Python 3.6. For a quick setup run ``pip install -e .`` The required packages can also be installed with ``pip install -r requirements.txt``. If wished, create an environment beforehand (eg: ``conda create --name=snowdragon python=3.6``).  
 
 The repository does not contain the MOSAiC data used in the related thesis. The data is currently not publicly available, but will become available on 1st January 2023 on the open MCS or [PANGAEA](https://www.pangaea.de/) archives. However, any other SMP dataset can be used as well with this repository.
 
