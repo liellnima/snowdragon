@@ -16,6 +16,8 @@ import pickle
 import random
 import numpy as np
 import pandas as pd
+# surpress pandas warning SettingWithCopyWarning
+pd.options.mode.chained_assignment = None
 
 from tqdm import tqdm
 from pathlib import Path
@@ -176,11 +178,22 @@ def preprocess_dataset(smp_file_name, output_file=None, visualize=False, sample_
     # 3. Normalize
     smp = normalize_mosaic(smp_org)
 
+    # CHANGE HERE - YOUR FAVORITE LABELS IN THE DATA!
+
     # 4. Sum up certain classes if necessary (alternative: do something to balance the dataset)
-    # (keep: 6, 3, 4, 12, 5, 16: rgwp, dh, dhid, dhwp, mfdh, pp)
-    # rename all df profiles to pp
+    # check: which profiles (and how many) have melted datapoints?
+    #print("Profiles in which melted forms occur:")
+    meltform_profiles = smp.loc[(smp["label"] == LABELS["mfcl"]) | (smp["label"] == LABELS["mfcr"]), "smp_idx"].unique()
+    print(smp.loc[(smp["label"] == LABELS["sh"]), "smp_idx"].unique())
+    #meltform_profiles_str = [int_to_idx(profile) for profile in meltform_profiles]
+    # exclude these profiles!
+    smp = smp[~smp["smp_idx"].isin(meltform_profiles)]
+    # rename all df points to pp
     smp.loc[smp["label"] == LABELS["df"], "label"] = LABELS["pp"]
-    smp = sum_up_labels(smp, ["df", "ifwp", "if", "sh", "snow-ice", "mfcl", "mfsl", "mfcr"], name="rare", label_idx=17)
+    # keep: 6, 3, 4, 12, 5, 16, 8, 10: rgwp, dh, dhid, dhwp, mfdh, pp(, if, sh)
+    smp = sum_up_labels(smp, ["if", "sh"], name="rare", label_idx=17)
+
+    print(smp["label"].value_counts())
 
     # 5. Visualize the data after normalization
     if visualize: visualize_normalized_data(smp)
@@ -435,24 +448,29 @@ def evaluate_all_models(data, file_scores=None, file_scores_lables=None, **param
     # set plotting variables:
     # no special labels order (default ascending) and name must be set individually
     save_overall_metrics = True
-    plotting = {"annot": "eval", "roc_curve": True, "confusion_matrix": True,
+    smoothing = 9 # window for smoothing
+    # plotting = {"annot": "eval", "roc_curve": True, "confusion_matrix": True,
+    #             "one_plot": True, "pair_plots": True, "only_preds": True, "only_trues": False,
+    #             "plot_list": None, "bog_plot_preds": "plots/evaluation/", "bog_plot_trues": "plots/evaluation/"}
+    plotting = {"annot": "eval", "roc_curve": False, "confusion_matrix": False,
                 "one_plot": True, "pair_plots": True, "only_preds": True, "only_trues": False,
-                "plot_list": None, "bog_plot_preds": "plots/evaluation/", "bog_plot_trues": "plots/evaluation/"}
+                "plot_list": None, "bog_plot_preds": None, "bog_plot_trues": None}
 
-    folders = {"rf": "plots/evaluation/rf",
-               "rf_bal": "plots/evaluation/rf_bal",
-               "svm": "plots/evaluation/svm",
-               "knn": "plots/evaluation/knn",
-               "easy_ensemble": "plots/evaluation/easy_ensemble",
-               "self_trainer": "plots/evaluation/self_trainer",
-               "label_spreading": "plots/evaluation/label_spreading",
-               "lstm": "plots/evaluation/lstm",
-               "blstm": "plots/evaluation/blstm",
-               "enc_dec": "plots/evaluation/enc_dec",
-               "baseline": "plots/evaluation/baseline",
-               "kmeans": "plots/evaluation/kmeans",
-               "gmm": "plots/evaluation/gmm",
-               "bmm": "plots/evaluation/bmm"}
+    # folders = {"rf": "plots/evaluation/rf",
+    #            "rf_bal": "plots/evaluation/rf_bal",
+    #            "svm": "plots/evaluation/svm",
+    #            "knn": "plots/evaluation/knn",
+    #            "easy_ensemble": "plots/evaluation/easy_ensemble",
+    #            "self_trainer": "plots/evaluation/self_trainer",
+    #            "label_spreading": "plots/evaluation/label_spreading",
+    #            "lstm": "plots/evaluation/lstm",
+    #            "blstm": "plots/evaluation/blstm",
+    #            "enc_dec": "plots/evaluation/enc_dec",
+    #            "baseline": "plots/evaluation/baseline",
+    #            "kmeans": "plots/evaluation/kmeans",
+    #            "gmm": "plots/evaluation/gmm",
+    #            "bmm": "plots/evaluation/bmm"}
+    folders = {"knn": "plots/evaluation/knnSmoothingTest"}
 
     type_implementation = {"rf": "scikit", "rf_bal": "scikit", "svm": "scikit", "knn": "scikit",
                            "easy_ensemble": "scikit", "self_trainer": "scikit",
@@ -462,15 +480,16 @@ def evaluate_all_models(data, file_scores=None, file_scores_lables=None, **param
                            "gmm": "semi_manual", "bmm": "semi_manual"}
 
 
-    all_models = ["baseline", "kmeans", "gmm", "bmm",
-                  "rf", "rf_bal", "svm", "knn", "easy_ensemble",
-                  "self_trainer", "label_spreading",
-                  "lstm", "blstm", "enc_dec"]
-    all_names = ["Majority Vote", "K-means", "Gaussian Mixture Model", "Bayesian Gaussian Mixture Model",
-                 "Random Forest", "Balanced Random Forest", "Support Vector Machine", "K-nearest Neighbors", "Easy Ensemble",
-                 "Self Trainer", "Label Propagation",
-                 "LSTM", "BLSTM", "Encoder Decoder"]
-
+    # all_models = ["baseline", "kmeans", "gmm", "bmm",
+    #               "rf", "rf_bal", "svm", "knn", "easy_ensemble",
+    #               "self_trainer", "label_spreading",
+    #               "lstm", "blstm", "enc_dec"]
+    # all_names = ["Majority Vote", "K-means", "Gaussian Mixture Model", "Bayesian Gaussian Mixture Model",
+    #              "Random Forest", "Balanced Random Forest", "Support Vector Machine", "K-nearest Neighbors", "Easy Ensemble",
+    #              "Self Trainer", "Label Propagation",
+    #              "LSTM", "BLSTM", "Encoder Decoder"]
+    all_models = ["knn"]
+    all_names = ["K-nearest Neighbors"]
     # save bogplot for true predictions and all true smps in the folder above
     if (plotting["bog_plot_trues"] is not None) or (plotting["only_trues"]):
         # get important vars
@@ -521,7 +540,7 @@ def evaluate_all_models(data, file_scores=None, file_scores_lables=None, **param
         if (model_type != "label_spreading") and (model_type != "self_trainer"):
             scores = testing(model, **data, name=name,
                              impl_type=type_implementation[model_type],
-                             save_dir=folders[model_type], printing=True,
+                             save_dir=folders[model_type], smoothing=smoothing, printing=True,
                              **plotting, **BEST_PARAMS[model_type])
         # if the semi supervised sciktit models are used, x_train and y_train
         # must be x_train_all and y_train_all
@@ -530,7 +549,7 @@ def evaluate_all_models(data, file_scores=None, file_scores_lables=None, **param
                              data["x_test"], data["y_test"],
                              data["smp_idx_train"], data["smp_idx_test"],
                              name=name, impl_type=type_implementation[model_type],
-                             save_dir=folders[model_type], printing=True,
+                             save_dir=folders[model_type], smoothing=smoothing, printing=True,
                              **plotting, **BEST_PARAMS[model_type])
 
         all_scores.append(scores[0])
@@ -546,7 +565,7 @@ def evaluate_all_models(data, file_scores=None, file_scores_lables=None, **param
             f.write(tabulate(pd.concat(all_scores, axis=0, ignore_index=True), headers="keys", tablefmt="psql"))
         with open("plots/evaluation/all_scores_latex.txt", 'w') as f:
             f.write(tabulate(pd.concat(all_scores, axis=0, ignore_index=True), headers="keys", tablefmt="latex_raw"))
-        all_scores.to_csv("plots/evaluation/all_scores.csv")
+        pd.concat(all_scores, axis=0, ignore_index=True).to_csv("plots/evaluation/all_scores.csv")
 
     # here, we can pick out the interesting stuff, like comparing the labels
     # based on accuracy  and precision for all models
@@ -717,8 +736,8 @@ def validate_all_models(data, intermediate_file=None):
 # TODO one parameter should be the table format of the output
 def main():
     smp_file_name = "data/all_smp_profiles_updated.npz"
-    output_file = "data/preprocessed_data_k5_updated.txt"
-    data_dict = "data/preprocessed_data_k5_updated.txt"#None
+    output_file = "data/preprocessed_data_k5_updated02.txt"
+    data_dict = "data/preprocessed_data_k5_updated02.txt"#None
 
     if data_dict is None:
         data = preprocess_dataset(smp_file_name=smp_file_name, output_file=output_file, visualize=True)
