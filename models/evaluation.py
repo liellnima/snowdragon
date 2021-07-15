@@ -295,10 +295,9 @@ def plot_testing(y_pred, y_pred_prob, metrics_per_label, x_test, y_test,
         all_in_one_plot(all_smp_preds, show_indices=False, sort=True,
                         title="All SMP Profiles Predicted with {}".format(name), file_name=save_file)
 
-# TODO save or print loss for ANNs?
-# TODO make saving of plots possible
+# TODO include smoothing part here
 def testing(model, x_train, y_train, x_test, y_test, smp_idx_train, smp_idx_test,
-            unlabelled_data=None, annot="test", name="Model", labels_order=None,
+            unlabelled_data=None, smoothing=0, annot="test", name="Model", labels_order=None,
             impl_type="scikit", save_dir=None, printing=False, **plot_and_fit_params):
     """ Performs testing on a model. Model is fit on training data and evaluated on testing data. Prediction inclusive.
     Parameters:
@@ -311,6 +310,9 @@ def testing(model, x_train, y_train, x_test, y_test, smp_idx_train, smp_idx_test
         smp_idx_test (pd.Series): SMP indices for the testing data.
         unlabelled_data (pd.DataFrame): Unlabelled Data used for semi-supervised
             learning.
+        smoothing (int): Use this parameter when the predicted results should be
+            smoothed. Default 0 means no smoothing (1 is also no smoothing).
+            The value represents the size of the smoothing window.
         annot (str): How the metrics results should be annotated.
         name (str): Name of the Model.
         labels_order (list): list where a wished labels order is given. If None
@@ -343,6 +345,16 @@ def testing(model, x_train, y_train, x_test, y_test, smp_idx_train, smp_idx_test
                 y_train, x_test, y_test, smp_idx_train, smp_idx_test,
                 unlabelled_data, impl_type, **plot_and_fit_params)
     print("\t...done.\n")
+
+    ############## SMOOTHING ###################################################
+    # use a majority vote inside the window
+    if smoothing > 1:
+        center_pos = int(smoothing / 2 - 0.5 if smoothing % 2 else smoothing / 2)
+        y_pred_old = y_pred # save to replace resulting nans
+        y_pred_new = np.array(pd.Series(y_pred).rolling(smoothing, center=True).apply(lambda x: np.array(x)[center_pos] if len(x.mode()) > 1 else x.mode()[0]))
+        # replace nans
+        y_pred = np.array([old_val if np.isnan(new_val) else new_val for new_val, old_val in zip(y_pred_new, y_pred_old)])
+    ############################################################################
 
     # create dirs for metrics and plots
     if save_dir is not None:
