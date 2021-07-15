@@ -12,14 +12,14 @@ def read_tuning_results():
     accuracy. Saves the results in pretty print tables. The tables contain only
     relevant hyperparameters.
     """
-    results_csv = "tuning/tuning_results/tuning_run01_all.csv"
+    results_csv = "tuning/tuning_results/tuning_run01_server.csv"
     results = pd.read_csv(results_csv)
 
     # produce group results: fit_time, score_time, acc, prec, recall, roc_auc, log loss
     # important in case there is no hyperparmeter tuning!
     print("Mean Crossvalidation scores of each model type:\n")
     mean_results = results.groupby(["model"]).mean()[["fit_time", "score_time", "test_roc_auc", "test_log_loss", "test_precision", "test_recall", "test_balanced_accuracy"]]
-    mean_results_sorted = mean_results.sort_values(["test_balanced_accuracy"], ascending=False)
+    mean_results_sorted = mean_results.sort_values(["test_recall"], ascending=False)
     print(tabulate(mean_results_sorted, headers="keys", tablefmt="psql"))
     # save as latex table!
     with open("tuning/tuning_results/tables/models_mean_metrics.txt", 'w') as f:
@@ -27,14 +27,15 @@ def read_tuning_results():
 
     # get the relevant params for each model
     params = {model: list(params_dict.keys()) for model, params_dict in BEST_PARAMS.items()}
-    max_accs = results.groupby("model")["test_balanced_accuracy"].max()
+    print(params)
+    max_accs = results.groupby("model")["test_recall"].max()
     all_best_metrics = []
     all_best_params = []
 
     # read out max results and respective metrics for each type of model
     for model in results["model"].unique():
         # get only first best model
-        best_model = results[(results["model"] == model) & (results["test_balanced_accuracy"] == max_accs.loc[model])].iloc[0]
+        best_model = results[(results["model"] == model) & (results["test_recall"] == max_accs.loc[model])].iloc[0]
         best_metrics = best_model[["model", "fit_time", "score_time", "test_roc_auc", "test_log_loss", "test_precision", "test_recall", "test_balanced_accuracy"]]
         best_params = best_model[params[model]]
         all_best_metrics.append(best_metrics)
