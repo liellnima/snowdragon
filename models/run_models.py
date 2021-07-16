@@ -448,29 +448,29 @@ def evaluate_all_models(data, file_scores=None, file_scores_lables=None, **param
     # set plotting variables:
     # no special labels order (default ascending) and name must be set individually
     save_overall_metrics = True
-    smoothing = 9 # window for smoothing
-    # plotting = {"annot": "eval", "roc_curve": True, "confusion_matrix": True,
-    #             "one_plot": True, "pair_plots": True, "only_preds": True, "only_trues": False,
-    #             "plot_list": None, "bog_plot_preds": "plots/evaluation/", "bog_plot_trues": "plots/evaluation/"}
-    plotting = {"annot": "eval", "roc_curve": False, "confusion_matrix": False,
+    smoothing = 0 # window for smoothing
+    plotting = {"annot": "eval", "roc_curve": True, "confusion_matrix": True,
                 "one_plot": True, "pair_plots": True, "only_preds": True, "only_trues": False,
-                "plot_list": None, "bog_plot_preds": None, "bog_plot_trues": None}
+                "plot_list": None, "bog_plot_preds": "plots/evaluation/", "bog_plot_trues": "plots/evaluation/"}
+    # plotting = {"annot": "eval", "roc_curve": False, "confusion_matrix": False,
+    #             "one_plot": True, "pair_plots": True, "only_preds": True, "only_trues": False,
+    #             "plot_list": None, "bog_plot_preds": None, "bog_plot_trues": None}
 
-    # folders = {"rf": "plots/evaluation/rf",
-    #            "rf_bal": "plots/evaluation/rf_bal",
-    #            "svm": "plots/evaluation/svm",
-    #            "knn": "plots/evaluation/knn",
-    #            "easy_ensemble": "plots/evaluation/easy_ensemble",
-    #            "self_trainer": "plots/evaluation/self_trainer",
-    #            "label_spreading": "plots/evaluation/label_spreading",
-    #            "lstm": "plots/evaluation/lstm",
-    #            "blstm": "plots/evaluation/blstm",
-    #            "enc_dec": "plots/evaluation/enc_dec",
-    #            "baseline": "plots/evaluation/baseline",
-    #            "kmeans": "plots/evaluation/kmeans",
-    #            "gmm": "plots/evaluation/gmm",
-    #            "bmm": "plots/evaluation/bmm"}
-    folders = {"knn": "plots/evaluation/knnSmoothingTest"}
+    folders = {"rf": "plots/evaluation/rf",
+               "rf_bal": "plots/evaluation/rf_bal",
+               "svm": "plots/evaluation/svm",
+               "knn": "plots/evaluation/knn",
+               "easy_ensemble": "plots/evaluation/easy_ensemble",
+               "self_trainer": "plots/evaluation/self_trainer",
+               "label_spreading": "plots/evaluation/label_spreading",
+               "lstm": "plots/evaluation/lstm",
+               "blstm": "plots/evaluation/blstm",
+               "enc_dec": "plots/evaluation/enc_dec",
+               "baseline": "plots/evaluation/baseline",
+               "kmeans": "plots/evaluation/kmeans",
+               "gmm": "plots/evaluation/gmm",
+               "bmm": "plots/evaluation/bmm"}
+    # folders = {"knn": "plots/evaluation/knnSmoothingTest"}
 
     type_implementation = {"rf": "scikit", "rf_bal": "scikit", "svm": "scikit", "knn": "scikit",
                            "easy_ensemble": "scikit", "self_trainer": "scikit",
@@ -480,16 +480,16 @@ def evaluate_all_models(data, file_scores=None, file_scores_lables=None, **param
                            "gmm": "semi_manual", "bmm": "semi_manual"}
 
 
-    # all_models = ["baseline", "kmeans", "gmm", "bmm",
-    #               "rf", "rf_bal", "svm", "knn", "easy_ensemble",
-    #               "self_trainer", "label_spreading",
-    #               "lstm", "blstm", "enc_dec"]
-    # all_names = ["Majority Vote", "K-means", "Gaussian Mixture Model", "Bayesian Gaussian Mixture Model",
-    #              "Random Forest", "Balanced Random Forest", "Support Vector Machine", "K-nearest Neighbors", "Easy Ensemble",
-    #              "Self Trainer", "Label Propagation",
-    #              "LSTM", "BLSTM", "Encoder Decoder"]
-    all_models = ["knn"]
-    all_names = ["K-nearest Neighbors"]
+    all_models = ["baseline", "kmeans", "gmm", "bmm",
+                  "rf", "rf_bal", "svm", "knn", "easy_ensemble",
+                  "self_trainer", "label_spreading",
+                  "lstm", "blstm", "enc_dec"]
+    all_names = ["Majority Vote", "K-means", "Gaussian Mixture Model", "Bayesian Gaussian Mixture Model",
+                 "Random Forest", "Balanced Random Forest", "Support Vector Machine", "K-nearest Neighbors", "Easy Ensemble",
+                 "Self Trainer", "Label Propagation",
+                 "LSTM", "BLSTM", "Encoder Decoder"]
+    # all_models = ["knn"]
+    # all_names = ["K-nearest Neighbors"]
     # save bogplot for true predictions and all true smps in the folder above
     if (plotting["bog_plot_trues"] is not None) or (plotting["only_trues"]):
         # get important vars
