@@ -1,0 +1,4 @@
+__pycache__/
+snowdragon.egg-info/
+.vscode
+.ipynb_checkpoints
