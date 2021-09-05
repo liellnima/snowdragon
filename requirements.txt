@@ -15,7 +15,7 @@ numpy==1.19.4
 pandas==1.1.5
 pandas-flavor==0.2.0
 pingouin==0.3.9
-PyYAML==5.3.1
+PyYAML>=5.4
 requests==2.25.1
 rsa==4.7.2
 scikit-learn==0.24.0
@@ -26,12 +26,11 @@ statsmodels==0.12.2
 tabulate==0.8.7
 tensorboard==2.4.1
 tensorboard-plugin-wit==1.8.0
-tensorflow==2.4.1
+tensorflow>=2.5.1
 tensorflow-estimator==2.4.0
 termcolor==1.1.0
 threadpoolctl==2.1.0
 tqdm==4.56.2
-urllib3==1.26.4
+urllib3>=1.26.5
 Werkzeug==1.0.1
 xarray==0.16.2
-
