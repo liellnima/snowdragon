@@ -1,0 +1,7 @@
+\begin{tabular}{rrrrrrr}
+\hline
+    fit_time &   score_time &   test_roc_auc &   test_log_loss &   test_prec &   test_recall &   test_bal_acc \\
+\hline
+ 0.000748634 &    0.0011909 &            nan &             nan &     0.11528 &      0.339529 &       0.142857 \\
+\hline
+\end{tabular}
