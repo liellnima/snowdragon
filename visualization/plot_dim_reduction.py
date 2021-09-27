@@ -10,13 +10,15 @@ from sklearn.decomposition import PCA
 
 
 # TODO separate between plotting and calculating
-def pca(smp, n=3, dim="both", biplot=True):
+def pca(smp, n=3, dim="both", biplot=True, file_name="output/plots_data/"):
     """ Visualizing 2d and 2d plot with the 2 or 3 principal components that explain the most variance.
     Parameters:
         smp (df.DataFrame): SMP preprocessed data
         n (int): how many principal components should be extracted
         dim (str): 2d, 3d or both - for visualization
         biplot (bool): indicating if the features most used for the principal components should be plotted as biplot
+        file_name (str): path where the pic should be saved. if 'None' the plot is shown.
+            Give it only a directory name "dir/subdir/subsubdir/"! the filenames are determiend by the function
     """
     plt.rcParams.update({"figure.dpi": 120})
     smp_labelled = smp[(smp["label"] != 0) & (smp["label"] != 2)]
@@ -33,12 +35,16 @@ def pca(smp, n=3, dim="both", biplot=True):
     cum_vars = [sum(pca.explained_variance_ratio_[:(i+1)])*100 for i in range(len(pca.explained_variance_ratio_))]
     plt.ylabel("Explained Variance [%]")
     plt.xlabel("Number of Features")
-    plt.title("Cumulatative Explained Variance of PCA Analysis")
+    #plt.title("Cumulatative Explained Variance of PCA Analysis")
     plt.ylim(30,100.5)
     plt.xlim(1, len(pca.explained_variance_ratio_))
     plt.grid()
     plt.plot(range(1, len(pca.explained_variance_ratio_)+1), cum_vars)
-    plt.show()
+    if file_name is None:
+        plt.show()
+    else:
+        plt.savefig(file_name + "pca_explained_var.png")
+        plt.close()
     # 2d plot
     if dim == "2d" or dim == "both":
         g = sns.scatterplot(x="pca-one", y="pca-two", hue="label", palette=COLORS, data=smp_with_pca, alpha=0.3)
@@ -56,7 +62,11 @@ def pca(smp, n=3, dim="both", biplot=True):
         markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='', alpha=0.5) for color in anti_colors.values()]
         plt.legend(markers, anti_colors.keys(), numpoints=1, loc="upper right")#loc="center left", bbox_to_anchor=(1.04, 0.5))
         plt.title("PCA on all Labelled SMP Profiles (2-dim)")
-        plt.show()
+        if file_name is None:
+            plt.show()
+        else:
+            plt.savefig(file_name + "pca2d.png")
+            plt.close()
 
     # 3d plot
     if dim == "3d" or dim == "both":
@@ -69,13 +79,19 @@ def pca(smp, n=3, dim="both", biplot=True):
         markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='') for color in anti_colors.values()]
         plt.legend(markers, anti_colors.keys(), numpoints=1, bbox_to_anchor=(1.04, 0.5), loc=2)
         plt.title("PCA on all Labelled SMP Profiles (3-dim)")
-        plt.show()
+        if file_name is None:
+            plt.show()
+        else:
+            plt.savefig(file_name + "pca3d.png")
+            plt.close()
 
-def tsne(smp, dim="both"):
+def tsne(smp, dim="both", file_name="outputs/plots_data/"):
     """ Visualizing 2d and 2d plot with the 2 or 3 TSNE components.
     Parameters:
         smp (df.DataFrame): SMP preprocessed data
         dim (str): 2d, 3d or both - for visualization
+        file_name (str): path where the pic should be saved. if 'None' the plot is shown.
+            Give it only a directory name "dir/subdir/subsubdir/"! the filenames are determiend by the function
     """
     plt.rcParams.update({"figure.dpi": 120})
     smp_labelled = smp[(smp["label"] != 0) & (smp["label"] != 2)]
@@ -91,8 +107,12 @@ def tsne(smp, dim="both"):
         sns.scatterplot(x="tsne-one", y="tsne-two", hue="label", palette=COLORS, data=smp_with_tsne, alpha=0.3)
         markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='') for color in anti_colors.values()]
         plt.legend(markers, anti_colors.keys(), numpoints=1, loc="upper right")#, bbox_to_anchor=(1.04, 0.5))
-        plt.title("t-SNE on all Labelled SMP Profiles (2-dim)")
-        plt.show()
+        #plt.title("t-SNE on all Labelled SMP Profiles (2-dim)")
+        if file_name is None:
+            plt.show()
+        else:
+            plt.savefig(file_name + "tsne2d.png")
+            plt.close()
 
     if dim == "3d" or dim == "both":
         tsne = TSNE(n_components=3, verbose=1, perplexity=40, n_iter=300, random_state=42)
@@ -107,16 +127,22 @@ def tsne(smp, dim="both"):
         ax.set_zlabel("tsne-three")
         markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='', alpha=0.5) for color in anti_colors.values()]
         plt.legend(markers, anti_colors.keys(), numpoints=1, bbox_to_anchor=(1.04, 0.5), loc=2)
-        plt.title("t-SNE on all Labelled SMP Profiles (3-dim)")
-        plt.show()
+        #plt.title("t-SNE on all Labelled SMP Profiles (3-dim)")
+        if file_name is None:
+            plt.show()
+        else:
+            plt.savefig(file_name + "tsne3d.png")
+            plt.close()
 
 
-def tsne_pca(smp, n=3, dim="both"):
+def tsne_pca(smp, n=3, dim="both", file_name="output/plots_data/"):
     """ Visualizing 2d and 3d plot with the 2 or 3 TSNE components being feed with n principal components of a previous PCA.
     Parameters:
         smp (df.DataFrame): SMP preprocessed data
         n (int): how many pca components should be used -> choose such that at least 90% of the variance is explained by them
         dim (str): 2d, 3d or both - for visualization
+        file_name (str): path where the pic should be saved. if 'None' the plot is shown.
+            Give it only a directory name "dir/subdir/subsubdir/"! the filenames are determiend by the function
     """
     smp_labelled = smp[(smp["label"] != 0) & (smp["label"] != 2)]
     x = smp_labelled.drop(["label", "smp_idx"], axis=1)
@@ -134,7 +160,11 @@ def tsne_pca(smp, n=3, dim="both"):
         sns.scatterplot(x="tsne-pca{}-one".format(n), y="tsne-pca{}-two".format(n), hue="label", palette=COLORS, data=smp_pca_tsne, alpha=0.3)
         markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='') for color in anti_colors.values()]
         plt.legend(markers, anti_colors.keys(), numpoints=1, loc="center left", bbox_to_anchor=(1.04, 0.5))
-        plt.show()
+        if file_name is None:
+            plt.show()
+        else:
+            plt.savefig(file_name + "pca_tsne2d.png")
+            plt.close()
 
     if dim == "3d" or dim == "both":
         tsne = TSNE(n_components=3, verbose=1, perplexity=40, n_iter=300, random_state=42)
@@ -149,4 +179,8 @@ def tsne_pca(smp, n=3, dim="both"):
         ax.set_zlabel("tsne-three")
         markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='') for color in anti_colors.values()]
         plt.legend(markers, anti_colors.keys(), numpoints=1, bbox_to_anchor=(1.04, 0.5), loc=2)
-        plt.show()
+        if file_name is None:
+            plt.show()
+        else:
+            plt.savefig(file_name + "pca_tsne3d.png")
+            plt.close()
