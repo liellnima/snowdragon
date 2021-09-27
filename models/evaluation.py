@@ -1,12 +1,12 @@
 from models.metrics import METRICS, METRICS_PROB
-from models.helper_funcs import reverse_normalize, int_to_idx
+from models.helper_funcs import reverse_normalize, int_to_idx, save_results
 from data_handling.data_parameters import ANTI_LABELS
 from models.semisupervised_models import assign_clusters
 from models.anns import fit_ann_model, predict_ann_model
 from models.baseline import fit_baseline, predict_baseline
 from models.metrics import calculate_metrics_raw, calculate_metrics_per_label
-from models.visualization import smp_pair_both, smp_pair, all_in_one_plot
-from models.visualization import smp_labelled, plot_confusion_matrix, plot_roc_curve
+from visualization.plot_data import all_in_one_plot, plot_confusion_matrix, plot_roc_curve
+from visualization.plot_profile import smp_pair_both, smp_pair, smp_labelled
 
 import time
 import numpy as np
@@ -161,16 +161,8 @@ def metrics_testing(y_test, y_pred, y_pred_prob, fit_time, score_time, labels_or
         del scores["model"]
         scores= pd.DataFrame({"Metrics": scores.keys(), "Values": scores.values(), "Model": [name] * len(scores.keys())})
         # save scores
-        with open(save_dir + "/scores_psql.txt", 'w') as f:
-            f.write(tabulate(scores, headers="keys", showindex=False, tablefmt="psql"))
-        with open(save_dir + "/scores_latex.txt", 'w') as f:
-            f.write(tabulate(scores, headers="keys", showindex=False, tablefmt="latex_raw"))
         scores.to_csv(save_dir + "/scores.csv")
         # save scores per label
-        with open(save_dir + "/scores_per_label_psql.txt", 'w') as f:
-            f.write(tabulate(scores_per_label, headers="keys", tablefmt="psql"))
-        with open(save_dir + "/scores_per_label_latex.txt", 'w') as f:
-            f.write(tabulate(scores_per_label, headers="keys", tablefmt="latex_raw"))
         scores_per_label.to_csv(save_dir + "/scores_per_label.csv")
 
     return scores_output, metrics_per_label
@@ -295,10 +287,11 @@ def plot_testing(y_pred, y_pred_prob, metrics_per_label, x_test, y_test,
         all_in_one_plot(all_smp_preds, show_indices=False, sort=True,
                         title="All SMP Profiles Predicted with {}".format(name), file_name=save_file)
 
-# TODO include smoothing part here
+# TODO during testing: write out results for all models into csv to make united
+# results plots possible (delete single plots later)
 def testing(model, x_train, y_train, x_test, y_test, smp_idx_train, smp_idx_test,
             unlabelled_data=None, smoothing=0, annot="test", name="Model", labels_order=None,
-            impl_type="scikit", save_dir=None, printing=False, **plot_and_fit_params):
+            impl_type="scikit", save_dir=None, save_visualization_data=False, printing=False, **plot_and_fit_params):
     """ Performs testing on a model. Model is fit on training data and evaluated on testing data. Prediction inclusive.
     Parameters:
         model (model): Model on which .fit and .predict can be called. (or baseline )
@@ -325,6 +318,10 @@ def testing(model, x_train, y_train, x_test, y_test, smp_idx_train, smp_idx_test
         save_dir (str): Default None, means that the plots and metrics are shown,
             but not saved. If str, the plots and metrics are saved there without
             showing.
+        save_visualization_data (bool): Default True. Indicates if the raw data
+            should be saved for later visualization processes. The data is saved
+            in the subdir "eval_raw_data" of the model folder, hence save_dir
+            must not be "None".
         printing (bool): if metrics for each model should be printed. Default False.
         **plot_and_fit_params: contains:
             **plotting: contains booleans about plotting. And a param for saving
@@ -334,7 +331,7 @@ def testing(model, x_train, y_train, x_test, y_test, smp_idx_train, smp_idx_test
                 fit call. This is important e.g. for anns, since epochs and
                 batch size must be be specified during fitting.
     Returns:
-        tuple: (Metrics of the results, Metrics per label and confusion matrix)
+        tuple: (Metrics of the results and Metrics per label)
     """
     if labels_order is None:
         labels_order = np.sort(np.unique(y_test))
@@ -367,6 +364,7 @@ def testing(model, x_train, y_train, x_test, y_test, smp_idx_train, smp_idx_test
             Path(save_dir_path / "preds").mkdir(parents=True, exist_ok=True)
             Path(save_dir_path / "pairs").mkdir(parents=True, exist_ok=True)
             Path(save_dir_path / "onesies").mkdir(parents=True, exist_ok=True)
+            Path(save_dir_path / "eval_raw_data").mkdir(parents=True, exist_ok=True)
 
     # print metrics
     print("\tCalculating Metrics...")
@@ -377,6 +375,17 @@ def testing(model, x_train, y_train, x_test, y_test, smp_idx_train, smp_idx_test
     # plot everything
     plot_testing(y_pred, y_pred_prob, metrics_per_label, x_test, y_test,
                 smp_idx_test, labels_order, annot=annot, name=name, save_dir=save_dir, **plot_and_fit_params)
+    # some plots can only be done after testing of all models, in this case save raw data here
+    if save_visualization_data:
+        if save_dir is None:
+            raise ValueError("save_dir cannot be None, if you want to save raw data for later visualization (i.e. save_visualization_data is currently set to True).")
+        # save the relevant data somewhere: metrics_per_label, labels_order, y_test, y_pred_probs
+        raw_data_path = str(save_dir_path) + "/eval_raw_data/"
+        save_results(raw_data_path + "metrics_per_label.pickle", metrics_per_label)
+        save_results(raw_data_path + "labels_order.pickle", labels_order)
+        save_results(raw_data_path + "y_test.pickle", y_test)
+        save_results(raw_data_path + "y_pred_prob.pickle", y_pred_prob)
+
 
     # metrics must be saved from the calling function
     return (scores, metrics_per_label)
