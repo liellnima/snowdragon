@@ -28,6 +28,7 @@ SELF_TRAINER_PARAMS={"criterion": "threshold", "base_model": "best"}
 # not important: max_samples, max_features
 RF_BAL_PARAMS={"n_estimators": 1000, "criterion": "entropy", "max_features": "sqrt",
                "max_samples": 0.4, "resample": True}
+
 # not important: max_features (max_samples is important!!!)
 RF_PARAMS={"n_estimators": 1000, "criterion": "gini", "max_features": "sqrt",
            "max_samples": 0.8, "resample": False}
@@ -47,23 +48,19 @@ EASY_ENSEMBLE_PARAMS={"n_estimators": 500, "sampling_strategy": "all"}
 
 # rnn size=[50, 100, 150]
 # batch_size=[32, 8], epochs=[100], learning_rate=[0.01, 0.001], dropout=[0, 0.2, 0.5], dense_units=[0, 100]
-# hyperparameter tuning suggests: rnn_size 50 and dense_units 0 ?!
 LSTM_PARAMS={"batch_size": 8, "epochs": 100, "learning_rate": 0.01,
-             "rnn_size": 100, "dense_units": 100, "dropout": 0.2}
-
+             "rnn_size": 50, "dense_units": 0, "dropout": 0.5}
 
 # rnn size=[50, 100, 150]
 # batch_size=[32, 8], epochs=[100], learning_rate=[0.01, 0.001], dropout=[0, 0.2, 0.5], dense_units=[0, 100]
-# TODO: tune BLSTM correctly! not a fair comparison between lstm and blstm!
 BLSTM_PARAMS={"batch_size": 8, "epochs": 100, "learning_rate": 0.001,
               "rnn_size": 150, "dense_units": 100, "dropout": 0.5}
 
 # rnn size=[150]
 # batch_size=[32, 8], epochs=[100], learning_rate=[0.001, 0.0001], dropout=[0, 0.5], dense_units=[0, 100],
 # attention=[False, True], bidirectional=[True, False]
-# hyperparameter tuning suggests 0 dense units?!
 ENC_DEC_PARAMS={"batch_size": 8, "epochs": 100, "learning_rate": 0.001,
-                "rnn_size": 150, "dense_units": 100, "dropout": 0.5,
+                "rnn_size": 150, "dense_units": 100, "dropout": 0,
                 "attention": True, "bidirectional": True, "regularize": False}
 
 BEST_PARAMS = {"kmeans": KMEANS_PARAMS, "gmm": GMM_PARAMS, "bmm": BMM_PARAMS,
