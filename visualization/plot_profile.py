@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 from data_handling.data_preprocessing import idx_to_int
 
-def smp_unlabelled(smp, smp_name, file_name=None):
+def smp_unlabelled(smp, smp_name, file_name="output/plots_data/smp_unlabelled.png"):
     """ Plots a SMP profile without labels.
     Parameters:
         smp (df.DataFrame): SMP preprocessed data
@@ -30,7 +30,7 @@ def smp_unlabelled(smp, smp_name, file_name=None):
         plt.close()
 
 
-def smp_labelled(smp, smp_name, title=None, file_name=None):
+def smp_labelled(smp, smp_name, title=None, file_name="output/plots_data/smp_labelled.pngs"):
     """ Plots a SMP profile with labels.
     Parameters:
         smp (df.DataFrame): SMP preprocessed data
@@ -82,7 +82,7 @@ def smp_labelled(smp, smp_name, title=None, file_name=None):
         plt.close()
 
 
-def smp_pair(smp_true, smp_pred, smp_name, title=None, grid=True, file_name=None):
+def smp_pair(smp_true, smp_pred, smp_name, title=None, grid=True, file_name="output/plots_data/smp_pair.png"):
     """ Visualizes the prediced and the observed smp profile in one plot.
     The observation is a bar above/inside the predicted smp profile.
     Parameters:
@@ -166,7 +166,7 @@ def smp_pair(smp_true, smp_pred, smp_name, title=None, grid=True, file_name=None
         plt.savefig(file_name)
         plt.close()
 
-def smp_pair_both(smp_true, smp_pred, smp_name, title=None, file_name=None):
+def smp_pair_both(smp_true, smp_pred, smp_name, title=None, file_name="output/plots_data/smp_pair_both.png"):
     """ Visualizes the prediced and the observed smp profile both in one plot.
     Parameters:
         smp_true (pd.DataFrame): Only one SMP profile -the observed one-, which is already filtered out.
@@ -222,16 +222,22 @@ def smp_pair_both(smp_true, smp_pred, smp_name, title=None, file_name=None):
         plt.savefig(file_name)
         plt.close()
 
-def smp_features(smp, smp_name, features):
+def smp_features(smp, smp_name, features, file_name="output/plots_data/smp_features.png"):
     """ Plots all wished features in the lineplot of a single SMP Profile.
     Parameters:
         smp (df.DataFrame): SMP preprocessed data
         smp_name (String): Name of the wished smp profile
         features (list): features that should be plotted into the smp profile
+        file_name (str): path where the plot should be saved. If None the plot is
+            shown and not stored.
     """
     smp_profile = smp[smp["smp_idx"] == idx_to_int(smp_name)]
     smp_melted = smp_profile.melt(id_vars=["distance"], value_vars=features, var_name="Feature", value_name="Value")
     g = sns.relplot(data=smp_melted, x="distance", y="Value", hue="Feature", kind="line", height=3, aspect=2/1)
     g.fig.suptitle("{} SMP Profile Normalized Distance and Different Features\n".format(smp_name))
     plt.xlabel("Distance")
-    plt.show()
+    if file_name is None:
+        plt.show()
+    else:
+        plt.savefig(file_name)
+        plt.close()
