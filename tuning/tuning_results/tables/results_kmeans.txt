@@ -1,0 +1,10 @@
+\begin{tabular}{rlrrrrrrr}
+\hline
+   num_clusters & find_num_clusters   &   fit_time &   score_time &   test_roc_auc &   test_log_loss &   test_prec &   test_recall &   test_bal_acc \\
+\hline
+             30 & acc                 &  524.04    &   0.00343919 &            nan &             nan &    0.558547 &      0.572693 &       0.366612 \\
+             15 & sil                 &    2.18975 &   0.00312972 &            nan &             nan &    0.389889 &      0.519993 &       0.283969 \\
+             30 & sil                 &    2.20825 &   0.00316968 &            nan &             nan &    0.389889 &      0.519993 &       0.283969 \\
+             15 & acc                 &   71.6711  &   0.00330772 &            nan &             nan &    0.422585 &      0.46117  &       0.283727 \\
+\hline
+\end{tabular}

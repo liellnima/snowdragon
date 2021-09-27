@@ -1,0 +1,8 @@
+,Metrics,Values,Model
+0,eval_balanced_accuracy,0.4395791887141895,K-means
+1,eval_absolute_accuracy,0.6198591549295774,K-means
+2,eval_recall,0.6198591549295774,K-means
+3,eval_precision,0.6085103486218625,K-means
+4,eval_f1,0.6117424067182674,K-means
+5,eval_fit_time,384.65985894203186,K-means
+6,eval_score_time,0.010282516479492188,K-means

@@ -5,7 +5,7 @@ This repository can be used to run and compare different models for the classifi
 The SMP is a fast, high-resolution, portable snow hardness measurement device. The automatic classification and segmentation models can be used for the fast analysis of vast numbers of SMP profiles. For more information about the background of snow layer segmentation and grain type classification please refer to the related thesis. In the thesis the SMP dataset collected during the MOSAiC expedition was used. The plots and results of the different models can be reproduced with this repository.
 
 * Related thesis: "Automatic Snow Classification − A Comparison of Machine Learning Algorithms for the Segmentation and Classification of Snow Micro Penetrometer Profiles" by Julia Kaltenborn
-* About the SMP: [SLF Website](https://www.slf.ch/en/ueber-das-slf/versuchsanlagen-und-labors/kaeltelabor/snowmicropenr.html) 
+* About the SMP: [SLF Website](https://www.slf.ch/en/ueber-das-slf/versuchsanlagen-und-labors/kaeltelabor/snowmicropenr.html)
 * About MOSAiC: [MOSAiC Website](https://mosaic-expedition.org/)
 * Contact: [jkaltenborn@uos.de](mailto:jkaltenborn@uos.de)
 
@@ -55,7 +55,7 @@ To run tuning, run first model evaluation to create a split up (training, valida
 
 ```
 bash tuning/tune_models.sh [path_results_csv]
-``` 
+```
 
 ``[path_results_csv]`` could be e.g. ``tuning/tuning_results/tuning_run01_all.csv``.
 
@@ -71,25 +71,39 @@ After tuning, run ``python -m tuning.eval_tuning`` to aggregate and sort the tun
 
 ### Model Evaluation
 
-Model evaluation consists of preprocessing the complete dataset, and producing evaluation results for each model.
+Model evaluation consists of preprocessing the complete dataset (in contrast to the single smp profiles as in the first step); evaluating each model; and if desired validating each model.
 
-For preprocessing the first time, go into the main of the file and set ``smp_file_name`` and ``output_file`` to the appropiate value, and set ``data_dict`` to None. For example:
-
-```
-smp_file_name = "data/all_smp_profiles.npz"
-output_file = "data/preprocessed_data_k5.txt"
-data_dict = None
-```
-After preprocessing the data for the first time, ``data_dict`` can be set to the ``output_file`` value and preprocessing will be skipped from then on.
-
-To run prepocessing and evaluation, run:
+Preprocessing the complete data set (including data splits and preparing it for model usage) only needs to be done one time:
 
 ```
-python -m models.run_models
+python -m models.run_models --preprocess
 ```
-If ``visualize`` is set to ``True`` the original and preprocessed data will be visualized. The plots are not saved, but all plots were already stored and can be found in the plots folder.
 
-After preprocessing all models are evaluated. All results are stored for each model in the folder ``plots/evaluation``.
+Afterwards one can just include a flag for evaluating or validating: (All results are stored for each model in the folder ``output/evaluation``.)
+
+```
+python -m models.run_models --evaluate --validate
+```
+
+Here is the full command, where the smp file and the preprocessed dataset file can be set:
+
+```
+python -m --smp_npz [path_npz_file] --preprocess_file [path_txt_file] --preprocess --validate --evaluate
+```
+
+* ``[path_npz_file]``: Path to the npz file where the complete SMP dataset was stored. For example: ``data/all_smp_profiles_updated.npz``
+* ``[path_txt_file]``: Path to the txt file where the SMP dataset is or will be stored and the different splits of the dataset can be accessed. For example: ``data/preprocessed_data_k5.txt``
+* ``preprocess``: Preprocesses the ``[path_npz_file]`` data and stores the split, model-ready data in ``[path_txt_file]``.
+* ``evaluate``: Evaluates each model based on the dataset ``[path_txt_file]``. (Go into ``run_models``, function ``evaluate_all_models`` to choose between different models and which evaluation information you want to have from them). Results are stored in ``output/evaluation/``
+* ``validate``: Validates each model based on the dataset ``[path_txt_file]``. Results are stored in ``ouput/tables/``.
+
+### Visualization
+
+The data, preprocessing and results are also visualized. The plots are stored in ``outcome`` and can already be found there. There are three sets of plots that can be created: Visualizations of the original data, the normalized data and the results. Look into the code to see which plots are shown and comment out specific plots in ``run_visualization.py`` if desired.
+
+```
+python -m visualization.run_visualization --original_data --normalized_data --results
+```
 
 ## Structure
 
@@ -99,9 +113,7 @@ After preprocessing all models are evaluated. All results are stored for each mo
 │   └── smp_profiles_updated
 ├── data_handling
 ├── models
-├── plots
-│   ├── data_original
-│   ├── data_preprocessed
+├── output
 │   ├── evaluation
 │   │   ├── baseline
 │   │   ├── blstm
@@ -116,14 +128,15 @@ After preprocessing all models are evaluated. All results are stored for each mo
 │   │   ├── rf
 │   │   ├── rf_bal
 │   │   ├── self_trainer
-│   │   ├── svm
-│   │   └── trues
-│   ├── label_frequency
-│   ├── other
-│   │   └── beautiful
+│   │   └── svm
+│   ├── plots_data
+│   │   ├── normalized
+│   │   └── original
+│   ├── plots_results
+│   ├── scores
 │   └── tables
-└── tuning
-    └── tuning_results
-        └── tables
-
+├── tuning
+│   └── tuning_results
+│       └── tables
+└── visualization
 ```

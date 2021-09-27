@@ -1,11 +1,15 @@
 # here all the different metrics are saved as scoreres
-from sklearn.metrics import make_scorer, balanced_accuracy_score, recall_score, accuracy_score
-from sklearn.metrics import precision_score, roc_auc_score, log_loss, confusion_matrix
+from sklearn.metrics import make_scorer, roc_auc_score, log_loss, confusion_matrix
+from sklearn.metrics import balanced_accuracy_score, accuracy_score, recall_score, precision_score, f1_score
 import numpy as np
+
+from models.helper_funcs import save_results
+
+# Other metrics: https://stats.stackexchange.com/questions/390725/suitable-performance-metric-for-an-unbalanced-multi-class-classification-problem
 
 # Wrapper functions for metrics, see scikit learn docu for more info
 # important: average=None means that the metric is calculated per each label
-# (not avilable for multiclass case in roc auc or log_loss)
+# (not available for multiclass case in roc auc or log_loss)
 def balanced_accuracy(y_true, y_pred):
     return balanced_accuracy_score(y_true, y_pred)
 
@@ -19,6 +23,9 @@ def recall(y_true, y_pred, average="weighted", labels=None):
 def precision(y_true, y_pred, average="weighted", labels=None):
     return precision_score(y_true, y_pred, average=average, labels=labels, zero_division=0)
 
+def f1(y_true, y_pred, average="weighted", labels=None):
+    return f1_score(y_true, y_pred, average=average, labels=labels, zero_division=0)
+
 def roc_auc(y_true, y_pred, labels=None):
     return roc_auc_score(y_true, y_pred, average="weighted", multi_class="ovr", labels=labels)#, labels=np.unique(y_true)) # TODO check if ovo makes more sense
 
@@ -30,12 +37,16 @@ def my_confusion_matrix(y_true, y_pred, labels=None):
 
 # Constant dictionaries collecting the fixed functions.
 SCORERS = {"balanced_accuracy": make_scorer(balanced_accuracy),
+           "absolute_accuracy": make_scorer(overall_accuracy),
            "recall": make_scorer(recall),
-           "precision": make_scorer(precision)}
+           "precision": make_scorer(precision),
+           "f1": make_scorer(f1)}
 # make_scorere wrapper is necessary for cross_validate function from scikit learn
 METRICS = {"balanced_accuracy": balanced_accuracy,
+           "absolute_accuracy": overall_accuracy,
            "recall": recall,
-           "precision": precision}
+           "precision": precision,
+           "f1": f1}
 # for those metrics I use my own cross validation, no make_scorer is necessary for this!
 METRICS_PROB = {"roc_auc": roc_auc,
                 "log_loss": my_log_loss}
@@ -54,6 +65,7 @@ def calculate_metrics_raw(y_trues, y_preds, metrics=METRICS, cv=True, name=None,
     Returns:
         dict: dictionary with different scores
     """
+    print("Calculating the metrics...")
     # convert metrics to list
     funcs = list(metrics.values())
     metric_names = list(metrics.keys())
@@ -68,7 +80,6 @@ def calculate_metrics_raw(y_trues, y_preds, metrics=METRICS, cv=True, name=None,
     else:
         for func, name in zip(funcs, metric_names):
             scores[annot + name] = func(y_trues, y_preds)
-
     return scores
 
 # helper function to calculate all metrics per label (not cv compatible)
@@ -103,5 +114,4 @@ def calculate_metrics_per_label(y_trues, y_preds, name=None, annot="train", labe
     # this used to be "recall" - however recall is in this case the same like accuracy
     scores[annot + "accuracy"] = recall(y_trues, y_preds, average=None, labels=labels_order)
     scores[annot + "precision"] = precision(y_trues, y_preds, average=None, labels=labels_order)
-
     return scores

@@ -1,8 +1,0 @@
-,Metrics,Values,Model
-0,eval_balanced_accuracy,0.5523663238378946,Label Spreading
-1,eval_recall,0.679831223628692,Label Spreading
-2,eval_precision,0.6968820004605057,Label Spreading
-3,eval_fit_time,12.552375555038452,Label Spreading
-4,eval_score_time,2.907194137573242,Label Spreading
-5,eval_roc_auc,0.897854960958405,Label Spreading
-6,eval_log_loss,1.166361903997282,Label Spreading

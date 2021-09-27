@@ -1,8 +1,0 @@
-,Metrics,Values,Model
-0,eval_balanced_accuracy,0.605080749894811,LSTM
-1,eval_recall,0.7012658227848101,LSTM
-2,eval_precision,0.7115550338003753,LSTM
-3,eval_fit_time,487.53843092918396,LSTM
-4,eval_score_time,2.063505172729492,LSTM
-5,eval_roc_auc,0.8955379875028784,LSTM
-6,eval_log_loss,1.0553090286486277,LSTM

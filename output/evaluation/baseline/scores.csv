@@ -1,0 +1,8 @@
+,Metrics,Values,Model
+0,eval_balanced_accuracy,0.14285714285714285,Baseline
+1,eval_absolute_accuracy,0.39,Baseline
+2,eval_recall,0.39,Baseline
+3,eval_precision,0.1521,Baseline
+4,eval_f1,0.21884892086330932,Baseline
+5,eval_fit_time,0.0007596015930175781,Baseline
+6,eval_score_time,4.220008850097656e-05,Baseline

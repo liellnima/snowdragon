@@ -1,9 +1,0 @@
-+------------------------+--------------+------------------------+
-| Metrics                |       Values | Model                  |
-|------------------------+--------------+------------------------|
-| eval_balanced_accuracy |   0.338529   | Gaussian Mixture Model |
-| eval_recall            |   0.588692   | Gaussian Mixture Model |
-| eval_precision         |   0.566436   | Gaussian Mixture Model |
-| eval_fit_time          | 162.135      | Gaussian Mixture Model |
-| eval_score_time        |   0.00770283 | Gaussian Mixture Model |
-+------------------------+--------------+------------------------+

@@ -50,6 +50,28 @@ ANTI_LABELS = {
     17: "rare",
 }
 
+ANTI_LABELS_LONG = {
+    0: "Not labelled",
+    1: "Surface",
+    2: "Ground",
+    3: "Depth Hoar",
+    4: "Depth Hoar\nIndurated",
+    5: "Melted Form\nDepth Hoar",
+    6: "Rounded Grains\nWind Packed",
+    7: "Decomposed\nand Fragmented\nPrecipitation Particles",
+    8: "Ice Formation",
+    9: "Ice Formation\nWind Packed",
+    10: "Surface Hoar",
+    11: "Snow Ice",
+    12: "Depth Hoar\nWind Packed",
+    13: "Melted Form\nClustered Rounded Grains",
+    14: "Melted Form\nSlush",
+    15: "Melt-freeze\nCrust",
+    16: "Precipitation\nParticles",
+    17: "Rare",
+
+}
+
 COLORS = {
     0: "dimgray",
     1: "chocolate",
@@ -84,7 +106,7 @@ PARAMS = {
 
 # Colors for the different models
 # TODO: Pick good colors
-MODEL_COLORS = {
+MODEL_COLORS02 = {
     "Majority Vote": "grey",
     "K-means": "fuchsia",
     "Gaussian Mixture Model": "orchid",
@@ -100,7 +122,33 @@ MODEL_COLORS = {
     "BLSTM": "springgreen",
     "Encoder Decoder": "lime",
 }
+
+# experimenting with the colors
+# group 01: GRAY - baseline
+# group 02: ORANGE/RED semi-supervised
+#   kmeans, gmm, bgm, self-trainer, label propagation
+# group 03: BLUE supervised
+#   random forest, rf balanced, svm, knn, easy ensemble
+# group 04: GREEN ANNs
+#   lstm, blstm, enc dec
+MODEL_COLORS = {
+    "Majority Vote": "grey",
+    "K-means": "xkcd:dandelion",
+    "Gaussian Mixture Model": "xkcd:golden rod",
+    "Bayesian Gaussian Mixture Model": "xkcd:orange",
+    "Self Trainer": "xkcd:red",
+    "Label Propagation": "xkcd:crimson",
+    "Random Forest": "indigo",
+    "Balanced Random Forest": "navy",
+    "Support Vector Machine": "blue",
+    "K-nearest Neighbors": "xkcd:sky blue",
+    "Easy Ensemble": "xkcd:light teal",
+    "LSTM": "xkcd:green apple", #"xkcd:slime green" #apple
+    "BLSTM": "xkcd:emerald",
+    "Encoder Decoder": "xkcd:forest green",
+}
+
 # Selection of snow layer types that we use
 # TODO: Turn into dictionary with colors?
 # Sorted by amount of examples?
-SNOW_TYPES_SELECTION = ["rgwp", "dh", "dhid", "mfcl", "mfdh", "pp", "rare"]
+SNOW_TYPES_SELECTION = ["rgwp", "dh", "dhid", "dhwp", "mfdh", "pp", "rare"]
