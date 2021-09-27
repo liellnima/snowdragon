@@ -1,8 +1,0 @@
-,Metrics,Values,Model
-0,eval_balanced_accuracy,0.5479060486602647,K-nearest Neighbors
-1,eval_recall,0.6632911392405063,K-nearest Neighbors
-2,eval_precision,0.6820445096650469,K-nearest Neighbors
-3,eval_fit_time,0.006177425384521484,K-nearest Neighbors
-4,eval_score_time,2.1948704719543457,K-nearest Neighbors
-5,eval_roc_auc,0.8513020248102808,K-nearest Neighbors
-6,eval_log_loss,5.523638461116591,K-nearest Neighbors
