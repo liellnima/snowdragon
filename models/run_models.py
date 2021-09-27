@@ -565,11 +565,11 @@ def evaluate_all_models(data, file_scores=None, file_scores_lables=None, **param
     # print all general scores and save them in evaluation
     print(tabulate(pd.concat(all_scores, axis=0, ignore_index=True), headers="keys", tablefmt="psql"))
     if save_overall_metrics:
-        with open("data/scores/all_scores_psql.txt", 'w') as f:
+        with open("output/scores/all_scores_psql.txt", 'w') as f:
             f.write(tabulate(pd.concat(all_scores, axis=0, ignore_index=True), headers="keys", tablefmt="psql"))
-        with open("data/scores/all_scores_latex.txt", 'w') as f:
+        with open("output/scores/all_scores_latex.txt", 'w') as f:
             f.write(tabulate(pd.concat(all_scores, axis=0, ignore_index=True), headers="keys", tablefmt="latex_raw"))
-        pd.concat(all_scores, axis=0, ignore_index=True).to_csv("data/scores/all_scores.csv")
+        pd.concat(all_scores, axis=0, ignore_index=True).to_csv("output/scores/all_scores.csv")
 
     # here, we can pick out the interesting stuff, like comparing the labels
     # based on accuracy  and precision for all models
@@ -586,21 +586,21 @@ def evaluate_all_models(data, file_scores=None, file_scores_lables=None, **param
     print("Accuracies:")
     print(tabulate(acc_per_label, headers="keys", showindex=False, tablefmt="psql"))
     if save_overall_metrics:
-        with open("data/scores/acc_labels_psql.txt", 'w') as f:
+        with open("output/scores/acc_labels_psql.txt", 'w') as f:
             f.write(tabulate(acc_per_label, headers="keys", showindex=False, tablefmt="psql"))
-        with open("data/scores/acc_labels_latex.txt", 'w') as f:
+        with open("output/scores/acc_labels_latex.txt", 'w') as f:
             f.write(tabulate(acc_per_label, headers="keys", showindex=False, tablefmt="latex_raw"))
-        acc_per_label.to_csv("data/scores/acc_labels.csv")
+        acc_per_label.to_csv("output/scores/acc_labels.csv")
 
     # save prec
     print("Precisions:")
     print(tabulate(prec_per_label, headers="keys", showindex=False, tablefmt="psql"))
     if save_overall_metrics:
-        with open("data/scores/prec_labels_psql.txt", 'w') as f:
+        with open("output/scores/prec_labels_psql.txt", 'w') as f:
             f.write(tabulate(prec_per_label, headers="keys", showindex=False, tablefmt="psql"))
-        with open("data/scores/prec_labels_latex.txt", 'w') as f:
+        with open("output/scores/prec_labels_latex.txt", 'w') as f:
             f.write(tabulate(prec_per_label, headers="keys", showindex=False, tablefmt="latex_raw"))
-        prec_per_label.to_csv("data/scores/prec_labels.csv")
+        prec_per_label.to_csv("output/scores/prec_labels.csv")
 
 
 
