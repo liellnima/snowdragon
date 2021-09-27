@@ -1,5 +1,5 @@
 from models.cv_handler import calculate_metrics_cv
-from models.visualization import visualize_tree
+from visualization.plot_data import visualize_tree
 
 import pandas as pd
 from sklearn.svm import SVC
@@ -10,7 +10,6 @@ from imblearn.ensemble import BalancedRandomForestClassifier
 
 
 # TODO make return_train_score a parameter
-
 
 def random_forest(x_train, y_train, cv, name="RandomForest", resample=False,
                   n_estimators=10, criterion="entropy", max_samples=0.6, max_features="sqrt", visualize=False, only_model=False, **kwargs):
@@ -49,7 +48,7 @@ def random_forest(x_train, y_train, cv, name="RandomForest", resample=False,
                                     random_state = 42)
 
     if visualize:
-        visualize_tree(rf, x_train, y_train, file_name="plots/forests/tree")
+        visualize_tree(rf, x_train, y_train, file_name="plots/tree")
 
     if only_model:
         return rf
