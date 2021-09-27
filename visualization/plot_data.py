@@ -1,8 +1,8 @@
 # import from other snowdragon modules
-from data_handling.data_loader import load_data
 from data_handling.data_preprocessing import idx_to_int
-from data_handling.data_parameters import LABELS, ANTI_LABELS, COLORS, ANTI_LABELS_LONG
 from models.helper_funcs import int_to_idx
+from visualization.plot_profile import smp_unlabelled
+from data_handling.data_parameters import LABELS, ANTI_LABELS, COLORS, ANTI_LABELS_LONG
 
 import os
 import math
@@ -12,6 +12,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 import matplotlib.ticker as ticker
+
 
 from tqdm import tqdm
 from scipy import stats
@@ -23,13 +24,15 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_selection import SelectKBest
 from sklearn.metrics import roc_curve, auc
 
+import matplotlib.lines as lines
+
 # important setting to scale the pictures correctly
 plt.rcParams.update({"figure.dpi": 250})
 plt.rcParams['axes.spines.right'] = False
 plt.rcParams['axes.spines.top'] = False
 
 def plot_balancing(smp, title="Distribution of Labels in the Labelled SMP Dataset",
-    file_name="plots/data_visual/balance_of_dataset.svg"):
+    file_name="output/plots_data/balance_of_dataset.svg"):
     """ Produces a plot that shows how balanced the dataset is.
     Parameters:
         smp (df.DataFrame): SMP preprocessed data
@@ -62,7 +65,7 @@ def plot_balancing(smp, title="Distribution of Labels in the Labelled SMP Datase
     # legend
     anti_colors = {ANTI_LABELS_LONG[key] : value for key, value in COLORS.items() if key in labelled_smp["label"].unique()}
     markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='', alpha=1) for color in anti_colors.values()]
-    plt.legend(markers, anti_colors.keys(), numpoints=1, loc="upper right")
+    plt.legend(markers, anti_colors.keys(), numpoints=1, loc="upper right", fontsize=8)
 
     if file_name is None:
         plt.show()
@@ -71,7 +74,7 @@ def plot_balancing(smp, title="Distribution of Labels in the Labelled SMP Datase
         plt.close()
 
 def all_in_one_plot(smp, show_indices=False, sort=True, title="SMP Profiles with Labels",
-    file_name="plots/bogplots/all_in_one_labels.png", profile=None):
+    file_name="output/plots_data/all_in_one_labels.png", profile_name=None):
     """ Creates a plot where all profiles are visible with their labels.
     Plot can only be saved, not shown (GUI too slow for the plot).
     Parameters:
@@ -80,7 +83,7 @@ def all_in_one_plot(smp, show_indices=False, sort=True, title="SMP Profiles with
         sort (bool): if the SMP profiles should be sorted according to length
         title (str): Title of the plot
         file_name (str): where the resulting picture should be saved
-        profile (str): Default is None, meaning no additional profile is plotted
+        profile_name (str): Default is None, meaning no additional profile is plotted
             within the figure. If there is a string indicating a profile this one
             is plotted within the overview plot (with arrow).
     """
@@ -110,51 +113,67 @@ def all_in_one_plot(smp, show_indices=False, sort=True, title="SMP Profiles with
 
     # iterate through each mm of all profiles
     # plot a 1mm bar and assign the label corresponding colors
-    limit = 0
     for cur_mm in tqdm(reversed(range(max_distance)), total=len(range(max_distance))):
         label_colors = [COLORS[cur_label] if cur_label != 0 else "white" for cur_label in smp_idx_labels_filled[:, cur_mm]]
         plt.bar(x_ticks, np.repeat(1 + cur_mm, len(smp_indices)), width=bar_width, color=label_colors)
-        if limit > 20:
-            break
-        limit += 1
 
     # producing the legend for the labels
-    anti_colors = {ANTI_LABELS[key] : value for key, value in COLORS.items() if key in labelled_smp["label"].unique()}
+    anti_colors = {ANTI_LABELS_LONG[key] : value for key, value in COLORS.items() if key in labelled_smp["label"].unique()}
     markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='') for color in anti_colors.values()]
     plt.yticks(range(0, max_distance, 100))
-    plt.legend(markers, anti_colors.keys(), numpoints=1, loc="upper left")#, markerscale=3)
-    plt.ylabel("Distance from Ground")
+    plt.legend(markers, anti_colors.keys(), numpoints=1, title="Snow Grain Types", loc="center left", bbox_to_anchor=(1, 0.5), handletextpad=0.8, labelspacing=0.8)#, markerscale=3)
+    plt.ylabel("Distance from Ground [mm]", fontsize=14)
 
     if title is not None:
         plt.title(title)
 
+    # get the labels
+    labels = [int_to_idx(smp_index) for smp_index in smp_indices]
+
     if show_indices:
         #labels = [str(int(smp_index)) for smp_index in smp_indices]
-        labels = [int_to_idx(smp_index) for smp_index in smp_indices]
-        plt.xticks(labels=labels, ticks=x_ticks, rotation=90, fontsize=7)
+        plt.xticks(labels=labels, ticks=x_ticks, rotation=90, fontsize=3)
     else:
         plt.xticks([])
 
-    plt.xlabel("SMP Profile Indices")
+    plt.xlabel("SMP Profile", fontsize=14)
     plt.xlim(0.0, 1.0)
     plt.ylim(0, int(math.ceil(max_distance / 100.0)) * 100) # rounds up to next hundred
 
     # add plot within plot
-    # TODO
-    #figure = plt.gcf()  # get current figure
-    #figure.set_size_inches(28.2, 15.2) # set size of figure
+    ax = plt.gca()
+    fig = plt.gcf()
+    ax_in_plot = ax.inset_axes([0.15,0.5,0.4,0.4])
+    if isinstance(profile_name, str):
+        smp_wanted = idx_to_int(profile_name)
+    else:
+        smp_wanted = profile_name
+    smp_profile = smp[smp["smp_idx"] == smp_wanted]
+    sns.lineplot(smp_profile["distance"], smp_profile["mean_force"], ax=ax_in_plot)
+    ax_in_plot.set_xlabel("Snow Depth [mm]")
+    ax_in_plot.set_ylabel("Mean Force [N]")
+    ax_in_plot.set_xlim(0, len(smp_profile)-1)
+    ax_in_plot.set_ylim(0)
+    ax_in_plot.set_title("SMP Signal of\nProfile {}".format(profile_name))
+
+    # find location of smp profile
+    profile_loc = (labels.index(profile_name) / len(labels)) + (bar_width*1.5)
+    # draw arrow between plot and smp profile
+    ax.annotate("", xy=(profile_loc, 80), xytext=(0.55, 400), arrowprops=dict(shrink=0.05)) # facecolor="black",
+    fig.set_size_inches(10, 5) # set size of figure
     #plt.savefig(file_name, bbox_inches="tight", dpi=300)
     #ax.set_aspect(aspect=0.5)
-    plt.savefig(file_name, bbox_inches="tight")
+    plt.savefig(file_name, bbox_inches="tight", dpi=200)
     plt.close()
 
 # Longterm TODO: more beautiful heatmaps: https://towardsdatascience.com/better-heatmaps-and-correlation-matrix-plots-in-python-41445d0f2bec
-def corr_heatmap(smp, labels=None):
+def corr_heatmap(smp, labels=None, file_name="output/plots_data/corr_heatmap.png"):
     """ Plots a correlation heatmap of all features.
     Parameters:
         smp (df.Dataframe): SMP preprocessed data
         labels (list): Default None - usual complete correlation heatmap is calculated.
             Else put in the labels for which the correlation heatmap should be calculated
+        file_name (str): where the resulting pic should be saved
     """
     if labels is None:
         smp_filtered = smp.drop("label", axis=1)
@@ -177,7 +196,11 @@ def corr_heatmap(smp, labels=None):
                     fontsize=7)
         plt.tight_layout(rect=[-0.02, 0, 1.07, 0.95])
         plt.title("Correlation Heatmap of SMP Features")
-        plt.show()
+        if file_name is not None:
+            plt.savefig(file_name, dpi=200)
+            plt.close()
+        else:
+            plt.show()
     else:
         col_names = []
         # this makes only sense for labelled data
@@ -210,7 +233,11 @@ def corr_heatmap(smp, labels=None):
         plt.xlabel("Features of SMP Data")
         plt.ylabel("Snow Grain Types")
         plt.title("Correlation Heat Map of SMP Features with Different Labels")
-        plt.show()
+        if file_name is not None:
+            plt.savefig(file_name, dpi=200)
+            plt.close()
+        else:
+            plt.show()
 
 
 def anova(smp, file_name=None, tablefmt='psql'):
@@ -293,13 +320,14 @@ def forest_extractor(smp, file_name=None, tablefmt="psql", plot=False):
         plt.tight_layout()
         plt.show()
 
-def pairwise_features(smp, features, samples=None, kde=False):
+def pairwise_features(smp, features, samples=None, kde=False, file_name="output/plots_data/pairwise_features.png"):
     """ Produces a plot that shows the relation between all the feature given in the features list.
     Parameters:
         smp (df.DataFrame): SMP preprocessed data
         features (list): contains all features that should be displayed for pairwise comparison
         samples (int): Default None, how many samples should be drawn from the labelled dataset
         kde (bool): Default False, whether the lower triangle should overlay kde plots
+        file_name (str): where the pic should be saved. If 'None' the plot is shown.
     """
     # use only data that is already labelled
     labelled_smp = smp[(smp["label"] != 0) & (smp["label"] != 1) & (smp["label"] != 2)]
@@ -308,11 +336,15 @@ def pairwise_features(smp, features, samples=None, kde=False):
     if kde : g.map_lower(sns.kdeplot, levels=4, color=".2")
     new_labels = [ANTI_LABELS[int(float(text.get_text()))] for text in g._legend.texts]
     for t, l in zip(g._legend.texts, new_labels): t.set_text(l)
-    plt.show()
+    if file_name is not None:
+        plt.savefig(file_name, dpi=200)
+        plt.close()
+    else:
+        plt.show()
 
 
 
-def bog_plot(smp, sort=True, file_name=None):
+def bog_plot(smp, sort=True, file_name="output/plots_data/bogplot.png"):
     """ Creates a bog plot for the given smp profiles. Makes the mean force visible.
     Parameters:
         smp (pd.DataFrame): dataframe containing smp profiles
@@ -377,7 +409,7 @@ def prune(decisiontree, min_samples_leaf = 1):
                 tree.children_left[i]=-1
                 tree.children_right[i]=-1
 
-def visualize_tree(rf, x_train, y_train, tree_idx=0, min_samples_leaf=1000, file_name="tree"):
+def visualize_tree(rf, x_train, y_train, tree_idx=0, min_samples_leaf=1000, file_name="output/tree"):
     """ Visualizes a single tree from a decision tree. Works only explicitly for my current data.
     Parameters:
         rf (RandomForestClassifier): the scikit learn random forest classfier
@@ -385,7 +417,7 @@ def visualize_tree(rf, x_train, y_train, tree_idx=0, min_samples_leaf=1000, file
         y_train: Target data for training
         tree_idx: Indicates which tree from the random forest should be visualized?
         min_samples_leaf: Indicates how many samples should be sorted to a leaf minimally
-        file_name: The name under which the resulting png should be saved
+        file_name: The name under which the resulting png should be saved (without extension!)
     """
     # deciding directly which label gets which decision tree label
     y_train[y_train==6.0] = 0
@@ -414,14 +446,14 @@ def visualize_tree(rf, x_train, y_train, tree_idx=0, min_samples_leaf=1000, file
     os.system("dot -Tpng "+ file_name + ".dot -o " + file_name + ".png")
     os.system("rm " + file_name + ".dot")
 
-def plot_confusion_matrix(confusion_matrix, labels, name="", save_file=None):
+def plot_confusion_matrix(confusion_matrix, labels, name="", file_name="output/plots_data/confusion_matrix.png"):
     """ Plot confusion matrix with relative prediction frequencies per label as heatmap.
     Parameters:
         confusion_matrix (nested list): 2d nested list with frequencies
         labels (list): list of tags or labels that should be used for the plot.
             Must be in the same order like the label order of the confusion matrix.
         name (str): Name of the model for the plot
-        save_file (str): path where the plot should be saved. If None the plot is
+        file_name (str): path where the plot should be saved. If None the plot is
             shown and not stored.
     """
     # "accuracy per label" so to say (diagonal at least is acc)
@@ -452,13 +484,13 @@ def plot_confusion_matrix(confusion_matrix, labels, name="", save_file=None):
     plt.ylabel("True Label")
     plt.xlabel("Predicted Label" + stats_text)
     plt.title("Confusion Matrix of {} Model \n".format(name))
-    if save_file is None:
+    if file_name is None:
         plt.show()
     else:
-        plt.savefig(save_file)
+        plt.savefig(file_name, dpi=200)
         plt.close()
 
-def plot_roc_curve(y_trues, y_prob_preds, labels, name="", save_file=None):
+def plot_roc_curve(y_trues, y_prob_preds, labels, name="", file_name="output/plots_data/roc_curve.png"):
     """ Plotting ROC curves for all labels of a multiclass classification problem.
     Inspired from: https://scikit-learn.org/stable/auto_examples/model_selection/plot_roc.html
     Parameters:
@@ -466,7 +498,7 @@ def plot_roc_curve(y_trues, y_prob_preds, labels, name="", save_file=None):
         y_prob_preds
         labels
         name
-        save_file (str): path where the plot should be saved. If None the plot is
+        file_name (str): path where the plot should be saved. If None the plot is
             shown and not stored.
     """
     n_classes = len(labels)
@@ -522,8 +554,8 @@ def plot_roc_curve(y_trues, y_prob_preds, labels, name="", save_file=None):
     plt.ylabel("True Positive Rate")
     plt.title("Receiver Operating Characteristics for Model {}\n".format(name))
     plt.legend(loc="lower right", prop={'size': 7})
-    if save_file is None:
+    if file_name is None:
         plt.show()
     else:
-        plt.savefig(save_file)
+        plt.savefig(file_name)
         plt.close()
