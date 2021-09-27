@@ -3,6 +3,7 @@ from data_handling.data_parameters import ANTI_LABELS, COLORS
 
 import numpy as np
 import pandas as pd
+import seaborn as sns
 import matplotlib.pyplot as plt
 
 from sklearn.manifold import TSNE
