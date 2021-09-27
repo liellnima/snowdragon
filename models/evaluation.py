@@ -209,13 +209,13 @@ def plot_testing(y_pred, y_pred_prob, metrics_per_label, x_test, y_test,
     if confusion_matrix:
         print("\tPlotting Confusion Matrix...")
         tags = [ANTI_LABELS[label] for label in labels_order]
-        plot_confusion_matrix(metrics_per_label[annot + "_" + "confusion_matrix"], labels=tags, name=name, save_file=save_dir + "/confusion_matrix.png")
+        plot_confusion_matrix(metrics_per_label[annot + "_" + "confusion_matrix"], labels=tags, name=name, file_name=save_dir + "/confusion_matrix.png")
         print("\t...done.\n")
 
     # print roc auc curve
     if roc_curve and (y_pred_prob is not None):
         print("\tPlotting ROC Curve...")
-        plot_roc_curve(y_test, y_pred_prob, labels_order, name=name, save_file=save_dir + "/roc_curve.png")
+        plot_roc_curve(y_test, y_pred_prob, labels_order, name=name, file_name=save_dir + "/roc_curve.png")
         print("\t...done.\n")
 
     smp_trues = []
@@ -246,7 +246,7 @@ def plot_testing(y_pred, y_pred_prob, metrics_per_label, x_test, y_test,
         for smp_name, smp_true in tqdm(zip(smp_names, smp_trues), total=len(smp_names)):
             smp_name_str = int_to_idx(smp_name)
             save_file = save_dir + "/trues/smp_" + smp_name_str + ".png" if save_dir is not None else None
-            smp_labelled(smp_true, smp_name, title="{} SMP Profile Observed\n".format(smp_name_str), save_file=save_file)
+            smp_labelled(smp_true, smp_name, title="{} SMP Profile Observed\n".format(smp_name_str), file_name=save_file)
 
     # plot all the predicted profiles
     if only_preds:
@@ -254,7 +254,7 @@ def plot_testing(y_pred, y_pred_prob, metrics_per_label, x_test, y_test,
         for smp_name, smp_pred in tqdm(zip(smp_names, smp_preds), total=len(smp_names)):
             smp_name_str = int_to_idx(smp_name)
             save_file = save_dir + "/preds/smp_" + smp_name_str + ".png" if save_dir is not None else None
-            smp_labelled(smp_pred, smp_name, title="SMP Profile {}\nPredicted with {}".format(smp_name_str, name), save_file=save_file)
+            smp_labelled(smp_pred, smp_name, title="SMP Profile {}\nPredicted with {}".format(smp_name_str, name), file_name=save_file)
 
     # plot all pairs of true and observed profiles
     if pair_plots:
@@ -262,7 +262,7 @@ def plot_testing(y_pred, y_pred_prob, metrics_per_label, x_test, y_test,
         for smp_name, smp_true, smp_pred in tqdm(zip(smp_names, smp_trues, smp_preds), total=len(smp_names)):
             smp_name_str = int_to_idx(smp_name)
             save_file = save_dir + "/pairs/smp_" + smp_name_str + ".png" if save_dir is not None else None
-            smp_pair_both(smp_true, smp_pred, smp_name, title="Observed and with {} Predicted\nSMP Profile {}".format(name, smp_name_str), save_file=save_file)
+            smp_pair_both(smp_true, smp_pred, smp_name, title="Observed and with {} Predicted\nSMP Profile {}".format(name, smp_name_str), file_name=save_file)
 
     # one plot: observation as bar above everything
     if one_plot:
@@ -270,7 +270,7 @@ def plot_testing(y_pred, y_pred_prob, metrics_per_label, x_test, y_test,
         for smp_name, smp_true, smp_pred in tqdm(zip(smp_names, smp_trues, smp_preds), total=len(smp_names)):
             smp_name_str = int_to_idx(smp_name)
             save_file = save_dir + "/onesies/smp_" + smp_name_str + ".png" if save_dir is not None else None
-            smp_pair(smp_true, smp_pred, smp_name, title="Observed and with {} Predicted\nSMP Profile {}".format(name, smp_name_str), save_file=save_file)
+            smp_pair(smp_true, smp_pred, smp_name, title="Observed and with {} Predicted\nSMP Profile {}".format(name, smp_name_str), file_name=save_file)
 
     # put all smps together in one plot
     if bog_plot_trues is not None:
