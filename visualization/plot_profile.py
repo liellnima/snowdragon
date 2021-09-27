@@ -3,13 +3,13 @@ import matplotlib.pyplot as plt
 
 from data_handling.data_preprocessing import idx_to_int
 
-def smp_unlabelled(smp, smp_name, save_file=None):
+def smp_unlabelled(smp, smp_name, file_name=None):
     """ Plots a SMP profile without labels.
     Parameters:
         smp (df.DataFrame): SMP preprocessed data
         smp_name (String or float/int): Name of the wished smp profile or
             alternatively its converted index number
-        save_file (str): path where the plot should be saved. If None the plot is
+        file_name (str): path where the plot should be saved. If None the plot is
             shown and not stored.
     """
     if isinstance(smp_name, str):
@@ -23,14 +23,14 @@ def smp_unlabelled(smp, smp_name, save_file=None):
     ax.set_ylabel("Mean Force [N]")
     ax.set_xlim(0, len(smp_profile)-1)
     ax.set_ylim(0)
-    if save_file is None:
+    if file_name is None:
         plt.show()
     else:
-        plt.savefig(save_file)
+        plt.savefig(file_name)
         plt.close()
 
 
-def smp_labelled(smp, smp_name, title=None, save_file=None):
+def smp_labelled(smp, smp_name, title=None, file_name=None):
     """ Plots a SMP profile with labels.
     Parameters:
         smp (df.DataFrame): SMP preprocessed data
@@ -38,7 +38,7 @@ def smp_labelled(smp, smp_name, title=None, save_file=None):
             alternatively its converted index number
         title (str): if None, a simple headline for the plot is used.
             Please specify with string.
-        save_file (str): path where the plot should be saved. If None the plot is
+        file_name (str): path where the plot should be saved. If None the plot is
             shown and not stored.
     """
     # SHOW THE SAME PROFILE WITH LABELS
@@ -75,14 +75,14 @@ def smp_labelled(smp, smp_name, title=None, save_file=None):
     ax.set_xlim(0, len(smp_profile)-1)
     ax.set_ylim(0)
     plt.tight_layout()
-    if save_file is None:
+    if file_name is None:
         plt.show()
     else:
-        plt.savefig(save_file)
+        plt.savefig(file_name)
         plt.close()
 
 
-def smp_pair(smp_true, smp_pred, smp_name, title=None, grid=True, save_file=None):
+def smp_pair(smp_true, smp_pred, smp_name, title=None, grid=True, file_name=None):
     """ Visualizes the prediced and the observed smp profile in one plot.
     The observation is a bar above/inside the predicted smp profile.
     Parameters:
@@ -91,7 +91,7 @@ def smp_pair(smp_true, smp_pred, smp_name, title=None, grid=True, save_file=None
         smp_name (num or str): Name of the SMP profile that is observed and predicted.
         title (str): Title of the plot.
         grid (bool): If a grid should be plotted over the plot.
-        save_file (str): path where the plot should be saved. If None the plot is
+        file_name (str): path where the plot should be saved. If None the plot is
             shown and not stored.
     """
     if isinstance(smp_name, str):
@@ -160,20 +160,20 @@ def smp_pair(smp_true, smp_pred, smp_name, title=None, grid=True, save_file=None
     fig.subplots_adjust(hspace=0.002)
 
     # show or save plot
-    if save_file is None:
+    if file_name is None:
         plt.show()
     else:
-        plt.savefig(save_file)
+        plt.savefig(file_name)
         plt.close()
 
-def smp_pair_both(smp_true, smp_pred, smp_name, title=None, save_file=None):
+def smp_pair_both(smp_true, smp_pred, smp_name, title=None, file_name=None):
     """ Visualizes the prediced and the observed smp profile both in one plot.
     Parameters:
         smp_true (pd.DataFrame): Only one SMP profile -the observed one-, which is already filtered out.
         smp_pred (pd.DataFrame): Only one SMP profile -the predicted one-, which is already filtered out.
         smp_name (num or str): Name of the SMP profile that is observed and predicted.
         title (str): Title of the plot.
-        save_file (str): path where the plot should be saved. If None the plot is
+        file_name (str): path where the plot should be saved. If None the plot is
             shown and not stored.
     """
     if isinstance(smp_name, str):
@@ -216,10 +216,10 @@ def smp_pair_both(smp_true, smp_pred, smp_name, title=None, save_file=None):
     fig.text(0.015,0.5, "Mean Force [N]", ha="center", va="center", rotation=90)
     plt.xlabel("Snow Depth [mm]")
     plt.tight_layout()
-    if save_file is None:
+    if file_name is None:
         plt.show()
     else:
-        plt.savefig(save_file)
+        plt.savefig(file_name)
         plt.close()
 
 def smp_features(smp, smp_name, features):
