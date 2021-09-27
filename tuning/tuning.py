@@ -18,7 +18,7 @@ parser = argparse.ArgumentParser(description="Can be used for tuning, runs a sin
 parser.add_argument("output", type=str, help="Name of the csv output file where the results are saved. Must have a .csv ending.")
 
 # model and data arguments
-parser.add_argument("--data_file", default="data/preprocessed_data_k5.txt", type=str,
+parser.add_argument("--data_file", default="data/preprocessed_data_k5_updated02.txt", type=str,
                     help="Name of the file where the preprocessed data is stored.")
 parser.add_argument("--model_type", default="baseline", type=str,
                     help="""Must be one of the following models: \"baseline\",

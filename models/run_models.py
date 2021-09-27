@@ -1,7 +1,6 @@
 # import from other snowdragon modules
 from data_handling.data_loader import load_data
 from data_handling.data_parameters import LABELS, ANTI_LABELS, COLORS
-from models.visualization import visualize_original_data, visualize_normalized_data # TODO or something like this
 from models.cv_handler import cv_manual, mean_kfolds
 from models.supervised_models import svm, random_forest, ada_boost, knn
 from models.semisupervised_models import kmeans, gaussian_mix, bayesian_gaussian_mix, label_spreading, self_training
@@ -9,28 +8,44 @@ from models.baseline import majority_class_baseline
 from models.helper_funcs import normalize, save_results, load_results, reverse_normalize, int_to_idx
 from models.anns import ann, get_ann_model
 from models.evaluation import testing
-from models.visualization import all_in_one_plot, smp_labelled
+from visualization.plot_data import all_in_one_plot
+from visualization.plot_profile import smp_labelled
+from visualization.run_visualization import visualize_original_data, visualize_normalized_data # TODO or something like this
 from tuning.tuning_parameters import BEST_PARAMS
 
 import pickle
 import random
+import argparse
 import numpy as np
 import pandas as pd
+# surpress pandas warning SettingWithCopyWarning
+pd.options.mode.chained_assignment = None
 
 from tqdm import tqdm
 from pathlib import Path
 from tabulate import tabulate
 from sklearn.manifold import TSNE
-# Other metrics: https://stats.stackexchange.com/questions/390725/suitable-performance-metric-for-an-unbalanced-multi-class-classification-problem
 from sklearn.model_selection import train_test_split, StratifiedKFold #, cross_validate, cross_val_score, cross_val_predict
 from sklearn.neighbors import KNeighborsClassifier
 from imblearn.ensemble import BalancedRandomForestClassifier
 
-# TODO remove all the following imports!!!
-from models.metrics import balanced_accuracy
-from models.cv_handler import calculate_metrics_cv
-from data_handling.data_preprocessing import remove_negatives
-# from sklearn.multioutput import MultiOutputClassifier
+# filenames where data and preprocessed data is stored
+SMP_NPZ = "data/all_smp_profiles_updated.npz"
+PREPROCESS_FILE = "data/preprocessed_data_k5.txt"
+
+# Explanation
+# python -m models.run_models --preprocess
+
+# parser
+parser = argparse.ArgumentParser(description="Evaluate or validate the models performances. If not already done, preprocess the data beforehand.")
+
+# File arguments
+parser.add_argument("--smp_npz", default=SMP_NPZ, type=str, help="Name of the united npz file")
+parser.add_argument("--preprocess_file", default=PREPROCESS_FILE, type=str, help="Name of the txt file where the preprocessed data is stored.")
+# what-is-done-arguments
+parser.add_argument("--preprocess", action="store_true", help="Data must be preprocessed and stored in 'preprocessing_file'.")
+parser.add_argument("--evaluate", action="store_true", help="Models are evaluated. Data from 'smp_npz' is used.")
+parser.add_argument("--validate", action="store_true", help="Models are validated. Data from 'smp_npz' is used.")
 
 # TODO put most of those functions here in helper_funcs
 
@@ -176,9 +191,26 @@ def preprocess_dataset(smp_file_name, output_file=None, visualize=False, sample_
     # 3. Normalize
     smp = normalize_mosaic(smp_org)
 
+    # CHANGE HERE - YOUR FAVORITE LABELS IN THE DATA!
+
     # 4. Sum up certain classes if necessary (alternative: do something to balance the dataset)
-    # (keep: 6, 3, 4, 12, 5, 16: rgwp, dh, dhid, dhwp, mfdh, pp)
-    smp = sum_up_labels(smp, ["df", "ifwp", "if", "sh", "snow-ice", "mfcl", "mfsl", "mfcr"], name="rare", label_idx=17)
+    # check: which profiles (and how many) have melted datapoints?
+    #print("Profiles in which melted forms occur:")
+    meltform_profiles = smp.loc[(smp["label"] == LABELS["mfcl"]) | (smp["label"] == LABELS["mfcr"]), "smp_idx"].unique()
+    print(smp.loc[(smp["label"] == LABELS["sh"]), "smp_idx"].unique())
+    #meltform_profiles_str = [int_to_idx(profile) for profile in meltform_profiles]
+    # exclude these profiles!
+    smp = smp[~smp["smp_idx"].isin(meltform_profiles)]
+    # rename all df points to pp
+    smp.loc[smp["label"] == LABELS["df"], "label"] = LABELS["pp"]
+    # keep: 6, 3, 4, 12, 5, 16, 8, 10: rgwp, dh, dhid, dhwp, mfdh, pp(, if, sh)
+    smp = sum_up_labels(smp, ["if", "sh"], name="rare", label_idx=17)
+
+    print(smp["label"].value_counts())
+
+    # save normalized data
+    dict = smp.to_dict(orient="list")
+    np.savez_compressed("data/all_smp_profiles_updated_normalized.npz", **dict)
 
     # 5. Visualize the data after normalization
     if visualize: visualize_normalized_data(smp)
@@ -218,7 +250,7 @@ def preprocess_dataset(smp_file_name, output_file=None, visualize=False, sample_
     y_train_all = pd.concat([y_train, unlabelled_y])
 
     # 8. Make crossvalidation split
-    k = 10
+    k = 5
     # Note: if we want to use StratifiedKFold, we can just hand over an integer to the functions
     cv_stratified = StratifiedKFold(n_splits=k, shuffle=True, random_state=42).split(x_train, y_train)
     cv_stratified = list(cv_stratified)
@@ -428,29 +460,36 @@ def evaluate_all_models(data, file_scores=None, file_scores_lables=None, **param
     Results can be saved intermediately in a file.
     Parameters:
         data (dict): dictionary produced by preprocess_dataset containing all necessary information
+        file_scores (path): where to save results intermediately
+        file_scores_labels (path): where to save the labels of the results intermediately
         **params: A list for all necessary parameters for the models.
     """
     # set plotting variables:
     # no special labels order (default ascending) and name must be set individually
-    save_overall_metrics = False
+    save_overall_metrics = True
+    smoothing = 0 # window for smoothing (later: one could also set different smoothing parameters for the different models!)
     plotting = {"annot": "eval", "roc_curve": True, "confusion_matrix": True,
                 "one_plot": True, "pair_plots": True, "only_preds": True, "only_trues": False,
-                "plot_list": None, "bog_plot_preds": "plots/evaluation/", "bog_plot_trues": None} #"plots/evaluation/"
+                "plot_list": None, "bog_plot_preds": "output/evaluation/", "bog_plot_trues": "output/evaluation/"}
+    plotting = {"annot": "eval", "roc_curve": True, "confusion_matrix": True,
+                "one_plot": True, "pair_plots": False, "only_preds": False, "only_trues": False,
+                "plot_list": None, "bog_plot_preds": None, "bog_plot_trues": None}
 
-    folders = {"rf": "plots/evaluation/rf",
-               "rf_bal": "plots/evaluation/rf_bal",
-               "svm": "plots/evaluation/svm",
-               "knn": "plots/evaluation/knn",
-               "easy_ensemble": "plots/evaluation/easy_ensemble",
-               "self_trainer": "plots/evaluation/self_trainer",
-               "label_spreading": "plots/evaluation/label_spreading",
-               "lstm": "plots/evaluation/lstm",
-               "blstm": "plots/evaluation/blstm",
-               "enc_dec": "plots/evaluation/enc_dec",
-               "baseline": "plots/evaluation/baseline",
-               "kmeans": "plots/evaluation/kmeans",
-               "gmm": "plots/evaluation/gmm",
-               "bmm": "plots/evaluation/bmm"}
+    folders = {"rf": "output/evaluation/rf",
+               "rf_bal": "output/evaluation/rf_bal",
+               "svm": "output/evaluation/svm",
+               "knn": "output/evaluation/knn",
+               "easy_ensemble": "output/evaluation/easy_ensemble",
+               "self_trainer": "output/evaluation/self_trainer",
+               "label_spreading": "output/evaluation/label_spreading",
+               "lstm": "output/evaluation/lstm",
+               "blstm": "output/evaluation/blstm",
+               "enc_dec": "output/evaluation/enc_dec",
+               "baseline": "output/evaluation/baseline",
+               "kmeans": "output/evaluation/kmeans",
+               "gmm": "output/evaluation/gmm",
+               "bmm": "output/evaluation/bmm"}
+    # folders = {"knn": "output/evaluation/knnSmoothingTest"}
 
     type_implementation = {"rf": "scikit", "rf_bal": "scikit", "svm": "scikit", "knn": "scikit",
                            "easy_ensemble": "scikit", "self_trainer": "scikit",
@@ -466,9 +505,10 @@ def evaluate_all_models(data, file_scores=None, file_scores_lables=None, **param
                   "lstm", "blstm", "enc_dec"]
     all_names = ["Majority Vote", "K-means", "Gaussian Mixture Model", "Bayesian Gaussian Mixture Model",
                  "Random Forest", "Balanced Random Forest", "Support Vector Machine", "K-nearest Neighbors", "Easy Ensemble",
-                 "Self Trainer", "Label Spreading",
+                 "Self Trainer", "Label Propagation",
                  "LSTM", "BLSTM", "Encoder Decoder"]
-
+    all_models = ["baseline", "knn"]
+    all_names = ["Baseline", "K-nearest Neighbors"]
     # save bogplot for true predictions and all true smps in the folder above
     if (plotting["bog_plot_trues"] is not None) or (plotting["only_trues"]):
         # get important vars
@@ -490,13 +530,13 @@ def evaluate_all_models(data, file_scores=None, file_scores_lables=None, **param
         if plotting["only_trues"]:
             print("Plotting the observed SMP Profiles:")
             # create trues folder if it doesnt exist yet
-            path_to_truth = Path.cwd() / "plots/evaluation/trues"
+            path_to_truth = Path.cwd() / "output/evaluation/trues"
             if not path_to_truth.is_dir():
                 path_to_truth.mkdir(parents=True, exist_ok=True)
             for smp_name, smp_true in tqdm(zip(smp_names, smp_trues), total=len(smp_names)):
                 smp_name_str = int_to_idx(smp_name)
-                save_file = "plots/evaluation/trues/smp_" + smp_name_str + ".png"
-                smp_labelled(smp_true, smp_name, title="{} SMP Profile Observed\n".format(smp_name_str), save_file=save_file)
+                save_file = "output/evaluation/trues/smp_" + smp_name_str + ".png"
+                smp_labelled(smp_true, smp_name, title="{} SMP Profile Observed\n".format(smp_name_str), file_name=save_file)
                 # set the plotting value to False now
                 plotting["only_trues"] = False
 
@@ -519,7 +559,9 @@ def evaluate_all_models(data, file_scores=None, file_scores_lables=None, **param
         if (model_type != "label_spreading") and (model_type != "self_trainer"):
             scores = testing(model, **data, name=name,
                              impl_type=type_implementation[model_type],
-                             save_dir=folders[model_type], printing=True,
+                             save_dir=folders[model_type],
+                             save_visualization_data=True,
+                             smoothing=smoothing, printing=True,
                              **plotting, **BEST_PARAMS[model_type])
         # if the semi supervised sciktit models are used, x_train and y_train
         # must be x_train_all and y_train_all
@@ -528,7 +570,9 @@ def evaluate_all_models(data, file_scores=None, file_scores_lables=None, **param
                              data["x_test"], data["y_test"],
                              data["smp_idx_train"], data["smp_idx_test"],
                              name=name, impl_type=type_implementation[model_type],
-                             save_dir=folders[model_type], printing=True,
+                             save_dir=folders[model_type],
+                             save_visualization_data=True,
+                             smoothing=smoothing, printing=True,
                              **plotting, **BEST_PARAMS[model_type])
 
         all_scores.append(scores[0])
@@ -540,14 +584,15 @@ def evaluate_all_models(data, file_scores=None, file_scores_lables=None, **param
     # print all general scores and save them in evaluation
     print(tabulate(pd.concat(all_scores, axis=0, ignore_index=True), headers="keys", tablefmt="psql"))
     if save_overall_metrics:
-        with open("plots/evaluation/all_scores_psql.txt", 'w') as f:
+        with open("output/scores/all_scores_psql.txt", 'w') as f:
             f.write(tabulate(pd.concat(all_scores, axis=0, ignore_index=True), headers="keys", tablefmt="psql"))
-        with open("plots/evaluation/all_scores_latex.txt", 'w') as f:
+        with open("output/scores/all_scores_latex.txt", 'w') as f:
             f.write(tabulate(pd.concat(all_scores, axis=0, ignore_index=True), headers="keys", tablefmt="latex_raw"))
+        pd.concat(all_scores, axis=0, ignore_index=True).to_csv("output/scores/all_scores.csv")
 
     # here, we can pick out the interesting stuff, like comparing the labels
     # based on accuracy  and precision for all models
-    str_labels = [ANTI_LABELS[label] for label in [3, 4, 5, 6, 13, 16, 17]]
+    str_labels = [ANTI_LABELS[label] for label in [3, 4, 5, 6, 12, 16, 17]]
     acc_per_label = pd.DataFrame(columns=str_labels)
     prec_per_label = pd.DataFrame(columns=str_labels)
     for i, model in enumerate(all_scores_per_label):
@@ -557,20 +602,24 @@ def evaluate_all_models(data, file_scores=None, file_scores_lables=None, **param
     prec_per_label["model"] = [model_coll["model"] for model_coll in all_scores_per_label]
 
     # save acc
+    print("Accuracies:")
     print(tabulate(acc_per_label, headers="keys", showindex=False, tablefmt="psql"))
     if save_overall_metrics:
-        with open("plots/evaluation/acc_labels_psql.txt", 'w') as f:
+        with open("output/scores/acc_labels_psql.txt", 'w') as f:
             f.write(tabulate(acc_per_label, headers="keys", showindex=False, tablefmt="psql"))
-        with open("plots/evaluation/acc_labels_latex.txt", 'w') as f:
+        with open("output/scores/acc_labels_latex.txt", 'w') as f:
             f.write(tabulate(acc_per_label, headers="keys", showindex=False, tablefmt="latex_raw"))
+        acc_per_label.to_csv("output/scores/acc_labels.csv")
 
     # save prec
+    print("Precisions:")
     print(tabulate(prec_per_label, headers="keys", showindex=False, tablefmt="psql"))
     if save_overall_metrics:
-        with open("plots/evaluation/prec_labels_psql.txt", 'w') as f:
+        with open("output/scores/prec_labels_psql.txt", 'w') as f:
             f.write(tabulate(prec_per_label, headers="keys", showindex=False, tablefmt="psql"))
-        with open("plots/evaluation/prec_labels_latex.txt", 'w') as f:
+        with open("output/scores/prec_labels_latex.txt", 'w') as f:
             f.write(tabulate(prec_per_label, headers="keys", showindex=False, tablefmt="latex_raw"))
+        prec_per_label.to_csv("output/scores/prec_labels.csv")
 
 
 
@@ -707,60 +756,44 @@ def validate_all_models(data, intermediate_file=None):
     if intermediate_file is not None: save_results(intermediate_file, all_scores)
     print("...finished Encoder-Decoder Model.\n")
 
-# parameters for this:
-# data_dict (str): npz file name with dictionary or None, if no preprocessing file exists yet.
-# TODO one parameter should be the table format of the output
 def main():
-    smp_file_name = "data/all_smp_profiles.npz"
-    output_file = "data/preprocessed_data_k5.txt"
-    data_dict = "data/preprocessed_data_k5.txt"
+    args = parser.parse_args()
+    test = "data/preprocessed_data_test.txt"
 
-    if data_dict is None:
-        data = preprocess_dataset(smp_file_name=smp_file_name, output_file=output_file, visualize=True)
+    if args.preprocess:
+        data = preprocess_dataset(smp_file_name=args.smp_npz, output_file=args.preprocess_file, visualize=False) #
     else:
-        with open(data_dict, "rb") as myFile:
+        with open(args.preprocess_file, "rb") as myFile:
             data = pickle.load(myFile)
 
-    # TSNE DATA: takes too long - not enough resources for this at the moment
-    # tsne_dict = None #"preprocessed_tsne_dict.txt"
-    # if tsne_dict is None:
-    #     tsne_data = preprocess_dataset(smp_file_name="smp_all_03.npz", output_file="preprocessed_tsne_dict.txt", tsne=3)
-    # else:
-    #     with open(tsne_dict, "rb") as myFile:
-    #         tsne_data = pickle.load(myFile)
-    #run_single_model(model_type="kmeans", data=tsne_data)
-
     # EVALUATION
-    evaluate_all_models(data)
-
-    # remove this exit, if you want to run the validation
-    exit(0)
+    if args.evaluate: evaluate_all_models(data)
 
     # VALIDATION
-    # Instead of the evaluation, also a validation can be done:
-    intermediate_results = "data/validation_results.txt"
-    validate_all_models(data, intermediate_results)
+    if args.validate:
+        intermediate_results = "data/validation_results.txt"
+        validate_all_models(data, intermediate_results)
 
-    all_scores = load_results(intermediate_results)
+        all_scores = load_results(intermediate_results)
 
-    # print and save results the validation results
-    all_scores = pd.DataFrame(all_scores).rename(columns={"test_balanced_accuracy": "test_bal_acc",
-                                                         "train_balanced_accuracy": "train_bal_acc",
-                                                         "test_recall": "test_rec",
-                                                         "train_recall": "train_rec",
-                                                         "test_precision": "test_prec",
-                                                         "train_precision": "train_prec",
-                                                         "train_roc_auc": "train_roc",
-                                                         "test_roc_auc": "test_roc",
-                                                         "train_log_loss": "train_ll",
-                                                         "test_log_loss": "test_ll"})
-    print(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
+        # print and save results the validation results
+        all_scores = pd.DataFrame(all_scores).rename(columns={"test_balanced_accuracy": "test_bal_acc",
+                                                             "train_balanced_accuracy": "train_bal_acc",
+                                                             "test_recall": "test_rec",
+                                                             "train_recall": "train_rec",
+                                                             "test_precision": "test_prec",
+                                                             "train_precision": "train_prec",
+                                                             "train_roc_auc": "train_roc",
+                                                             "test_roc_auc": "test_roc",
+                                                             "train_log_loss": "train_ll",
+                                                             "test_log_loss": "test_ll"})
+        print(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
 
-    with open('plots/tables/models_160smp_test01.txt', 'w') as f:
-        f.write(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
+        with open('output/tables/models_160smp_test01.txt', 'w') as f:
+            f.write(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
 
-    with open('plots/tables/models_160smp_test01_latex.txt', 'w') as f:
-        f.write(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='latex_raw'))
+        with open('output/tables/models_160smp_test01_latex.txt', 'w') as f:
+            f.write(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='latex_raw'))
 
 
 

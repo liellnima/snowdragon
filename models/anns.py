@@ -30,9 +30,10 @@ def lstm_architecture(input_shape, output_shape, rnn_size=100, dropout=0, dense_
     Return:
         model: a compiled model ready for fitting
     """
+
     # architecture
     model = Sequential()
-    model.add(Masking(mask_value=0.0, input_shape=input_shape))
+    model.add(Masking(mask_value=0.0, input_shape=(None, input_shape[1])))
     if dense_units > 0:
         model.add(Dense(units=dense_units, activation="relu"))
         model.add(Dropout(dropout))
@@ -43,7 +44,6 @@ def lstm_architecture(input_shape, output_shape, rnn_size=100, dropout=0, dense_
 
     optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
     model.compile(optimizer=optimizer, loss="categorical_crossentropy", metrics=["acc"])
-
     return model
 
 
@@ -62,7 +62,7 @@ def blstm_architecture(input_shape, output_shape, rnn_size=100, dropout=0, dense
     # architecture
     # change this: https://stackoverflow.com/questions/62991082/bidirectional-lstm-merge-mode-explanation
     model = Sequential()
-    model.add(Masking(mask_value=0.0, input_shape=input_shape))
+    model.add(Masking(mask_value=0.0, input_shape=(None, input_shape[1])))
     if dense_units > 0:
         model.add(Dense(units=dense_units, activation="relu"))
         model.add(Dropout(dropout))
@@ -99,7 +99,7 @@ def enc_dec_architecture(input_shape, output_shape, rnn_size=100, dropout=0.2, d
     enc_return_seq = True if attention else False
 
     model = Sequential()
-    model.add(Masking(mask_value=0.0, input_shape=input_shape))
+    model.add(Masking(mask_value=0.0, input_shape=(None, input_shape[1])))
     # TODO a boolean to decide if there should be stacked (B)LSTMs instead of a dense layer
     # first dense layer
     if dense_units > 0:
@@ -361,7 +361,7 @@ def tune_lstm(x_train, x_valid, y_train, y_valid, profile_len_train, profile_len
                                 exit(0)
                                 # write the results continously in a csv
                                 # TODO find out if this works now as intended
-                                with open("plots/tables/lstm_test.csv", "a+") as text_file:
+                                with open("output/tables/lstm_test.csv", "a+") as text_file:
                                     row_content = ",".join([str(x) for x in result_list])
                                     text_file.write(row_content+'\n')
 
@@ -547,7 +547,7 @@ def predict_ann_model(model, x_valid, y_valid, smp_idx_valid, predict_proba=Fals
 # TODO include print tuning and tuning function somewhere else:
     # read out csv and check results
     # TODO delete this
-    #print_tuning("plots/tables/lstm02.csv")
+    #print_tuning("output/tables/lstm02.csv")
 # TODO fix warning with incompatible shape
 def ann(x_train, y_train, smp_idx_train, ann_type="lstm", name="LSTM", cv_timeseries=0.2, plot_loss=False, plot_loss_name=None, **params):
     """ The wrapper function to run any ANN architecture provided in this file.

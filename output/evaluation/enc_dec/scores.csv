@@ -1,0 +1,10 @@
+,Metrics,Values,Model
+0,eval_balanced_accuracy,0.5409200548161873,Encoder Decoder
+1,eval_absolute_accuracy,0.78,Encoder Decoder
+2,eval_recall,0.78,Encoder Decoder
+3,eval_precision,0.7803179139389257,Encoder Decoder
+4,eval_f1,0.7740563723743739,Encoder Decoder
+5,eval_fit_time,2911.2466855049133,Encoder Decoder
+6,eval_score_time,5.754666566848755,Encoder Decoder
+7,eval_roc_auc,0.942826230238508,Encoder Decoder
+8,eval_log_loss,0.6422057370088575,Encoder Decoder
