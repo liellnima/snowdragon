@@ -1,0 +1,8 @@
+,Metrics,Values,Model
+0,eval_balanced_accuracy,0.3633431030918556,Gaussian Mixture Model
+1,eval_absolute_accuracy,0.6490140845070422,Gaussian Mixture Model
+2,eval_recall,0.6490140845070422,Gaussian Mixture Model
+3,eval_precision,0.5864010878477784,Gaussian Mixture Model
+4,eval_f1,0.6119013653667522,Gaussian Mixture Model
+5,eval_fit_time,151.3497679233551,Gaussian Mixture Model
+6,eval_score_time,0.00830531120300293,Gaussian Mixture Model

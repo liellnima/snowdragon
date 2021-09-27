@@ -1,0 +1,10 @@
+,Metrics,Values,Model
+0,eval_balanced_accuracy,0.6691890228284124,Self Trainer
+1,eval_absolute_accuracy,0.6916901408450704,Self Trainer
+2,eval_recall,0.6916901408450704,Self Trainer
+3,eval_precision,0.7356613211827566,Self Trainer
+4,eval_f1,0.7077361292216335,Self Trainer
+5,eval_fit_time,19.3317928314209,Self Trainer
+6,eval_score_time,0.2923927307128906,Self Trainer
+7,eval_roc_auc,0.9178227215087873,Self Trainer
+8,eval_log_loss,0.8395083683472725,Self Trainer

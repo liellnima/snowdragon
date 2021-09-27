@@ -1,0 +1,10 @@
+,Metrics,Values,Model
+0,eval_balanced_accuracy,0.5377867287463184,Label Propagation
+1,eval_absolute_accuracy,0.713943661971831,Label Propagation
+2,eval_recall,0.713943661971831,Label Propagation
+3,eval_precision,0.7168121351290204,Label Propagation
+4,eval_f1,0.7113477598232875,Label Propagation
+5,eval_fit_time,10.455229759216309,Label Propagation
+6,eval_score_time,3.3516476154327393,Label Propagation
+7,eval_roc_auc,0.9162590846575729,Label Propagation
+8,eval_log_loss,1.4985880908547449,Label Propagation
