@@ -517,7 +517,7 @@ def evaluate_all_models(data, file_scores=None, file_scores_lables=None, **param
             for smp_name, smp_true in tqdm(zip(smp_names, smp_trues), total=len(smp_names)):
                 smp_name_str = int_to_idx(smp_name)
                 save_file = "output/evaluation/trues/smp_" + smp_name_str + ".png"
-                smp_labelled(smp_true, smp_name, title="{} SMP Profile Observed\n".format(smp_name_str), save_file=save_file)
+                smp_labelled(smp_true, smp_name, title="{} SMP Profile Observed\n".format(smp_name_str), file_name=save_file)
                 # set the plotting value to False now
                 plotting["only_trues"] = False
 
