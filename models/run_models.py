@@ -15,6 +15,7 @@ from tuning.tuning_parameters import BEST_PARAMS
 
 import pickle
 import random
+import argparse
 import numpy as np
 import pandas as pd
 # surpress pandas warning SettingWithCopyWarning
@@ -27,6 +28,24 @@ from sklearn.manifold import TSNE
 from sklearn.model_selection import train_test_split, StratifiedKFold #, cross_validate, cross_val_score, cross_val_predict
 from sklearn.neighbors import KNeighborsClassifier
 from imblearn.ensemble import BalancedRandomForestClassifier
+
+# filenames where data and preprocessed data is stored
+SMP_NPZ = "data/all_smp_profiles_updated.npz"
+PREPROCESS_FILE = "data/preprocessed_data_k5.txt"
+
+# Explanation
+# python -m models.run_models --preprocess
+
+# parser
+parser = argparse.ArgumentParser(description="Evaluate or validate the models performances. If not already done, preprocess the data beforehand.")
+
+# File arguments
+parser.add_argument("--smp_npz", default=SMP_NPZ, type=str, help="Name of the united npz file")
+parser.add_argument("--preprocess_file", default=PREPROCESS_FILE, type=str, help="Name of the txt file where the preprocessed data is stored.")
+# what-is-done-arguments
+parser.add_argument("--preprocess", action="store_true", help="Data must be preprocessed and stored in 'preprocessing_file'.")
+parser.add_argument("--evaluate", action="store_true", help="Models are evaluated. Data from 'smp_npz' is used.")
+parser.add_argument("--validate", action="store_true", help="Models are validated. Data from 'smp_npz' is used.")
 
 # TODO put most of those functions here in helper_funcs
 
@@ -737,60 +756,44 @@ def validate_all_models(data, intermediate_file=None):
     if intermediate_file is not None: save_results(intermediate_file, all_scores)
     print("...finished Encoder-Decoder Model.\n")
 
-# parameters for this:
-# data_dict (str): npz file name with dictionary or None, if no preprocessing file exists yet.
-# TODO one parameter should be the table format of the output
 def main():
-    smp_file_name = "data/all_smp_profiles_updated.npz"
-    output_file = "data/preprocessed_data_k5.txt"
-    data_dict = "data/preprocessed_data_k5.txt"#None
+    args = parser.parse_args()
+    test = "data/preprocessed_data_test.txt"
 
-    if data_dict is None:
-        data = preprocess_dataset(smp_file_name=smp_file_name, output_file=output_file, visualize=True) # True
+    if args.preprocess:
+        data = preprocess_dataset(smp_file_name=args.smp_npz, output_file=args.preprocess_file, visualize=False) #
     else:
-        with open(data_dict, "rb") as myFile:
+        with open(args.preprocess_file, "rb") as myFile:
             data = pickle.load(myFile)
 
-    # TSNE DATA: takes too long - not enough resources for this at the moment
-    # tsne_dict = None #"preprocessed_tsne_dict.txt"
-    # if tsne_dict is None:
-    #     tsne_data = preprocess_dataset(smp_file_name="smp_all_03.npz", output_file="preprocessed_tsne_dict.txt", tsne=3)
-    # else:
-    #     with open(tsne_dict, "rb") as myFile:
-    #         tsne_data = pickle.load(myFile)
-    #run_single_model(model_type="kmeans", data=tsne_data)
-
     # EVALUATION
-    evaluate_all_models(data)
-
-    # remove this exit, if you want to run the validation
-    exit(0)
+    if args.evaluate: evaluate_all_models(data)
 
     # VALIDATION
-    # Instead of the evaluation, also a validation can be done:
-    intermediate_results = "data/validation_results.txt"
-    validate_all_models(data, intermediate_results)
+    if args.validate:
+        intermediate_results = "data/validation_results.txt"
+        validate_all_models(data, intermediate_results)
 
-    all_scores = load_results(intermediate_results)
+        all_scores = load_results(intermediate_results)
 
-    # print and save results the validation results
-    all_scores = pd.DataFrame(all_scores).rename(columns={"test_balanced_accuracy": "test_bal_acc",
-                                                         "train_balanced_accuracy": "train_bal_acc",
-                                                         "test_recall": "test_rec",
-                                                         "train_recall": "train_rec",
-                                                         "test_precision": "test_prec",
-                                                         "train_precision": "train_prec",
-                                                         "train_roc_auc": "train_roc",
-                                                         "test_roc_auc": "test_roc",
-                                                         "train_log_loss": "train_ll",
-                                                         "test_log_loss": "test_ll"})
-    print(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
+        # print and save results the validation results
+        all_scores = pd.DataFrame(all_scores).rename(columns={"test_balanced_accuracy": "test_bal_acc",
+                                                             "train_balanced_accuracy": "train_bal_acc",
+                                                             "test_recall": "test_rec",
+                                                             "train_recall": "train_rec",
+                                                             "test_precision": "test_prec",
+                                                             "train_precision": "train_prec",
+                                                             "train_roc_auc": "train_roc",
+                                                             "test_roc_auc": "test_roc",
+                                                             "train_log_loss": "train_ll",
+                                                             "test_log_loss": "test_ll"})
+        print(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
 
-    with open('output/tables/models_160smp_test01.txt', 'w') as f:
-        f.write(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
+        with open('output/tables/models_160smp_test01.txt', 'w') as f:
+            f.write(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
 
-    with open('output/tables/models_160smp_test01_latex.txt', 'w') as f:
-        f.write(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='latex_raw'))
+        with open('output/tables/models_160smp_test01_latex.txt', 'w') as f:
+            f.write(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='latex_raw'))
 
 
 
