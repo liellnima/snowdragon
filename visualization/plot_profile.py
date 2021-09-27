@@ -2,6 +2,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 from data_handling.data_preprocessing import idx_to_int
+from data_handling.data_parameters import COLORS, ANTI_LABELS
 
 def smp_unlabelled(smp, smp_name, file_name="output/plots_data/smp_unlabelled.png"):
     """ Plots a SMP profile without labels.
@@ -21,8 +22,8 @@ def smp_unlabelled(smp, smp_name, file_name="output/plots_data/smp_unlabelled.pn
     plt.title("Unlabelled SMP Profile {}".format(smp_name))
     ax.set_xlabel("Snow Depth [mm]")
     ax.set_ylabel("Mean Force [N]")
-    ax.set_xlim(0, len(smp_profile)-1)
     ax.set_ylim(0)
+    ax.set_xlim(0, len(smp_profile)-1)
     if file_name is None:
         plt.show()
     else:
