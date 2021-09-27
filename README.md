@@ -71,23 +71,31 @@ After tuning, run ``python -m tuning.eval_tuning`` to aggregate and sort the tun
 
 ### Model Evaluation
 
-Model evaluation consists of preprocessing the complete dataset, and producing evaluation results for each model.
+Model evaluation consists of preprocessing the complete dataset (in contrast to the single smp profiles as in the first step); evaluating each model; and if desired validating each model.
 
-For preprocessing the first time, go into the main of the file and set ``smp_file_name`` and ``output_file`` to the appropiate value, and set ``data_dict`` to None. For example:
-
-```
-smp_file_name = "data/all_smp_profiles.npz"
-output_file = "data/preprocessed_data_k5.txt"
-data_dict = None
-```
-After preprocessing the data for the first time, ``data_dict`` can be set to the ``output_file`` value and preprocessing will be skipped from then on.
-
-To run prepocessing and evaluation, run:
+Preprocessing the complete data set (including data splits and preparing it for model usage) only needs to be done one time:
 
 ```
-python -m models.run_models
+python -m models.run_models --preprocess
 ```
-After preprocessing all models are evaluated. All results are stored for each model in the folder ``output/evaluation``.
+
+Afterwards one can just include a flag for evaluating or validating: (All results are stored for each model in the folder ``output/evaluation``.)
+
+```
+python -m models.run_models --evaluate --validate
+```
+
+Here is the full command, where the smp file and the preprocessed dataset file can be set:
+
+```
+python -m --smp_npz [path_npz_file] --preprocess_file [path_txt_file] --preprocess --validate --evaluate
+```
+
+* ``[path_npz_file]``: Path to the npz file where the complete SMP dataset was stored. For example: ``data/all_smp_profiles_updated.npz``
+* ``[path_txt_file]``: Path to the txt file where the SMP dataset is or will be stored and the different splits of the dataset can be accessed. For example: ``data/preprocessed_data_k5.txt``
+* ``preprocess``: Preprocesses the ``[path_npz_file]`` data and stores the split, model-ready data in ``[path_txt_file]``.
+* ``evaluate``: Evaluates each model based on the dataset ``[path_txt_file]``. (Go into ``run_models``, function ``evaluate_all_models`` to choose between different models and which evaluation information you want to have from them). Results are stored in ``output/evaluation/``
+* ``validate``: Validates each model based on the dataset ``[path_txt_file]``. Results are stored in ``ouput/tables/``.
 
 ### Visualization
 
