@@ -5,7 +5,7 @@ This repository can be used to run and compare different models for the classifi
 The SMP is a fast, high-resolution, portable snow hardness measurement device. The automatic classification and segmentation models can be used for the fast analysis of vast numbers of SMP profiles. For more information about the background of snow layer segmentation and grain type classification please refer to the related thesis. In the thesis the SMP dataset collected during the MOSAiC expedition was used. The plots and results of the different models can be reproduced with this repository.
 
 * Related thesis: "Automatic Snow Classification − A Comparison of Machine Learning Algorithms for the Segmentation and Classification of Snow Micro Penetrometer Profiles" by Julia Kaltenborn
-* About the SMP: [SLF Website](https://www.slf.ch/en/ueber-das-slf/versuchsanlagen-und-labors/kaeltelabor/snowmicropenr.html) 
+* About the SMP: [SLF Website](https://www.slf.ch/en/ueber-das-slf/versuchsanlagen-und-labors/kaeltelabor/snowmicropenr.html)
 * About MOSAiC: [MOSAiC Website](https://mosaic-expedition.org/)
 * Contact: [jkaltenborn@uos.de](mailto:jkaltenborn@uos.de)
 
@@ -55,7 +55,7 @@ To run tuning, run first model evaluation to create a split up (training, valida
 
 ```
 bash tuning/tune_models.sh [path_results_csv]
-``` 
+```
 
 ``[path_results_csv]`` could be e.g. ``tuning/tuning_results/tuning_run01_all.csv``.
 
@@ -87,9 +87,15 @@ To run prepocessing and evaluation, run:
 ```
 python -m models.run_models
 ```
-If ``visualize`` is set to ``True`` the original and preprocessed data will be visualized. The plots are not saved, but all plots were already stored and can be found in the plots folder.
+After preprocessing all models are evaluated. All results are stored for each model in the folder ``output/evaluation``.
 
-After preprocessing all models are evaluated. All results are stored for each model in the folder ``plots/evaluation``.
+### Visualization
+
+The data, preprocessing and results are also visualized. The plots are stored in ``outcome`` and can already be found there. There are three sets of plots that can be created: Visualizations of the original data, the normalized data and the results. Look into the code to see which plots are shown and comment out specific plots in ``run_visualization.py`` if desired.
+
+```
+python -m visualization.run_visualization --original_data --normalized_data --results
+```
 
 ## Structure
 
