@@ -4,27 +4,29 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from data_handling.data_parameters import MODEL_COLORS, SNOW_TYPES_SELECTION, ANTI_LABELS
+from data_handling.data_parameters import MODEL_COLORS, SNOW_TYPES_SELECTION
+from data_handling.data_parameters import ANTI_LABELS, ANTI_LABELS_LONG, LABELS
 from models.helper_funcs import load_results
 
-
-def plot_model_comparison(performances, plot_rare=False, save_path=""):
+def plot_model_comparison(performances, plot_rare=False, file_name="", metric_name="accuracy"):
     """Visualize the model accuracies for all classes
 
     Parameters:
         performances (df.DataFrame): Accuracies of the different models
         on individual classes
+        plot_rate (bool): Default=False. If the class rare should be included or not.
+        file_name (str): If empty, the plot is shown. Else the plot is saved at the given path.
+        metric_name (str): Default is "accuracy". Name of the performance metric
     """
-
     # Rearrange the DataFrame
-    performances_rs = pd.DataFrame(columns={"class", "accuracy", "model"})
+    performances_rs = pd.DataFrame(columns={"class", metric_name, "model"})
     for row in performances.index:
         for c in SNOW_TYPES_SELECTION:
             if c != "model":
                 performances_rs = performances_rs.append(
                     {
                         "class": c,
-                        "accuracy": performances.loc[row][c],
+                        metric_name: performances.loc[row][c],
                         "model": performances.loc[row]["model"],
                     },
                     ignore_index=True,
@@ -35,30 +37,52 @@ def plot_model_comparison(performances, plot_rare=False, save_path=""):
     else:
         data = performances_rs[performances_rs["class"] != "rare"]
 
+    # TODO: individual alpha values, the higher the performance the higher the alpha
     plt.figure(figsize=(15, 7))
     ax = sns.pointplot(
         data=data,
         x="class",
-        y="accuracy",
+        y=metric_name,
         hue="model",
         palette=MODEL_COLORS,
-        scale=2,
+        scale=2
     )
-    plt.setp(ax.lines, alpha=0.7)
-    plt.legend(loc=0, bbox_to_anchor=(1.0, 1), fontsize=15)
-    plt.xticks(fontsize=20)
+    plt.setp(ax.lines, alpha=0.6, linestyle="-")
+
+    # set up legend
+    handles, labels = ax.get_legend_handles_labels()
+    changed_labels = []
+    # add balanced accuracy to legend
+    for label in labels:
+        model_data = data[data["model"]==label]
+        overall_acc = model_data[metric_name].sum()/ len(model_data)
+        changed_labels.append("%s (%4.2f)" % (label, overall_acc))
+
+    plt.legend(loc=0, bbox_to_anchor=(1.0, 1),
+        title="Models (balanced {})".format(metric_name),
+        title_fontsize=20, fontsize = 15,
+        labelspacing=0.75,
+        labels=changed_labels, handles=handles)
+
+    # set up x tick labels and the other labels
+    long_xtick_labels = []
+    xtick_locs, xtick_labels = plt.xticks()
+    for xlabel in xtick_labels:
+        xlabel = xlabel.get_text()
+        long_xtick_labels.append(ANTI_LABELS_LONG[LABELS[xlabel]])
+    plt.xticks(fontsize=15, ticks=xtick_locs, labels=long_xtick_labels)
     plt.yticks(fontsize=20)
-    plt.xlabel("")
-    plt.ylabel("Accuracy", fontsize=20)
+    plt.xlabel("Snow Grain Types", fontsize=20)
+    plt.ylabel(metric_name.title(), fontsize=20)
     ax.spines["right"].set_visible(False)
     ax.spines["top"].set_visible(False)
-    if len(save_path) > 0:
+    if len(file_name) > 0:
         # TODO: Look up dpi and format requirements of journal
-        plt.savefig(save_path, bbox_inches="tight", dpi=300)
+        plt.savefig(file_name, bbox_inches="tight", dpi=300)
     else:
         plt.show()
 
-def plot_confusion_matrix(confusion_matrices, label_orders, names, save_file=None):
+def plot_confusion_matrix(confusion_matrices, label_orders, names, file_name=None):
     """ Plot confusion matrix with relative prediction frequencies per label as heatmap.
     Parameters:
         confusion_matrices (list of nested list): for each model:
@@ -67,7 +91,7 @@ def plot_confusion_matrix(confusion_matrices, label_orders, names, save_file=Non
             list of tags or labels that should be used for the plot.
             Must be in the same order like the label order of the confusion matrix.
         names (list of strs): Names of the model for the plot
-        save_file (str): path where the plot should be saved. If None the plot is
+        file_name (str): path where the plot should be saved. If None the plot is
             shown and not stored.
     """
     fig, axs = plt.subplots(nrows=3, sharex=True, sharey=True)
@@ -112,14 +136,14 @@ def plot_confusion_matrix(confusion_matrices, label_orders, names, save_file=Non
         ax.set_xlabel("Predicted Label")
 
     plt.subplots_adjust(hspace=0.3)
-    if save_file is None:
+    if file_name is None:
         plt.show()
     else:
-        plt.savefig(save_file)
+        plt.savefig(file_name)
         plt.close()
 
 # for full model names include dictionary!
-def prepare_vis_data(eval_dir):
+def prepare_evaluation_data(eval_dir):
     """ Preparing the raw data from evaluation for visualization.
 
     Parameters:
@@ -144,28 +168,3 @@ def prepare_vis_data(eval_dir):
         names.append(model)
 
     return names, cf_matrices, label_orders
-
-def main():
-    # load dataframe with performance data
-    all_scores = pd.read_csv("data/scores/all_scores.csv")#("../data/all_scores02.csv")
-    label_acc = pd.read_csv("data/scores/acc_labels.csv")#("../data/all_acc_per_label02.csv")
-    label_prec = pd.read_csv("data/scores/prec_labels.csv")#("../data/all_prec_per_label02.csv")
-
-    # retrieve and summarize the data for the confusion matrices and the roc curves
-    names, cf_matrices, label_orders = prepare_vis_data("plots/evaluation")
-
-    plot_confusion_matrix(cf_matrices, label_orders, names)
-
-    exit(0)
-
-    # visualize the accuracies of the different models
-    plot_model_comparison(
-        label_acc, plot_rare=False, save_path="../plots/evaluation/model_comparison.png"
-    )
-
-    # plot confusion matrices
-
-    # plot roc curves
-
-if __name__ == "__main__":
-    main()
