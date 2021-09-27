@@ -113,9 +113,7 @@ python -m visualization.run_visualization --original_data --normalized_data --re
 │   └── smp_profiles_updated
 ├── data_handling
 ├── models
-├── plots
-│   ├── data_original
-│   ├── data_preprocessed
+├── output
 │   ├── evaluation
 │   │   ├── baseline
 │   │   ├── blstm
@@ -130,14 +128,15 @@ python -m visualization.run_visualization --original_data --normalized_data --re
 │   │   ├── rf
 │   │   ├── rf_bal
 │   │   ├── self_trainer
-│   │   ├── svm
-│   │   └── trues
-│   ├── label_frequency
-│   ├── other
-│   │   └── beautiful
+│   │   └── svm
+│   ├── plots_data
+│   │   ├── normalized
+│   │   └── original
+│   ├── plots_results
+│   ├── scores
 │   └── tables
-└── tuning
-    └── tuning_results
-        └── tables
-
+├── tuning
+│   └── tuning_results
+│       └── tables
+└── visualization
 ```
