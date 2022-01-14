@@ -21,7 +21,7 @@ T_LOC = Path(T_LOC)
 
 
 # exports pnt files (our smp profiles!) to csv files in a target directory
-def export_pnt (pnt_dir, target_dir, export_as="npz", overwrite=False, **params):
+def export_pnt(pnt_dir, target_dir, export_as="npz", overwrite=False, **params):
     """ Exports all pnt files from a dir and its subdirs as csv files into a new dir.
     Preproceses the profiles, according to kwargs arguments.
     Parameters:
