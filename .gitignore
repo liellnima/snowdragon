@@ -3,3 +3,5 @@ snowdragon.egg-info/
 .vscode
 .ipynb_checkpoints
 data_handling/poisson_features.py
+output/predictions/*
+models/stored_models/*

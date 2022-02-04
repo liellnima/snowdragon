@@ -7,7 +7,7 @@ from models.semisupervised_models import kmeans, gaussian_mix, bayesian_gaussian
 from models.baseline import majority_class_baseline
 from models.helper_funcs import normalize, save_results, load_results, reverse_normalize, int_to_idx
 from models.anns import ann, get_ann_model
-from models.evaluation import testing
+from models.evaluation import testing, train_single_model
 from visualization.plot_data import all_in_one_plot
 from visualization.plot_profile import smp_labelled
 from visualization.run_visualization import visualize_original_data, visualize_normalized_data # TODO or something like this
@@ -18,6 +18,8 @@ import random
 import argparse
 import numpy as np
 import pandas as pd
+import tensorflow.keras.models
+
 # surpress pandas warning SettingWithCopyWarning
 pd.options.mode.chained_assignment = None
 
@@ -46,6 +48,8 @@ parser.add_argument("--preprocess_file", default=PREPROCESS_FILE, type=str, help
 parser.add_argument("--preprocess", action="store_true", help="Data must be preprocessed and stored in 'preprocessing_file'.")
 parser.add_argument("--evaluate", action="store_true", help="Models are evaluated. Data from 'smp_npz' is used.")
 parser.add_argument("--validate", action="store_true", help="Models are validated. Data from 'smp_npz' is used.")
+parser.add_argument("--train_and_store", action="store_true", help="Models are trained and stored. Data from 'smp_npz' is used.")
+parser.add_argument("--models", default=["all"], nargs='+', help="List od models that should be trained and stored.")
 
 # TODO put most of those functions here in helper_funcs
 
@@ -455,6 +459,58 @@ def run_single_model(model_type, data, name=None, **params):
     # also job for others: naming the parameters employed and print scores
     return scores
 
+def train_and_store_models(data, models=["all"], **kwargs):
+    """ Trains and stores all the model in a given list with the params
+    stored in BEST_PARAMS (see and change in tuning_parameters.py). Models are
+    stored in the dir "/models/stored_models/".
+
+    Parameters:
+        data (dict): Created during data preprocessing and can be loaded e.g.
+            from "data/preprocessed_data_k5.txt" (happens in run_models main func).
+        models (list): list of models that should be trained and stored. Default
+            is ["all"], i.e. all models are trained and stored
+    """
+    if models == ["all"]:
+        all_models = ["baseline", "kmeans", "gmm", "bmm",
+                      "rf", "rf_bal", "svm", "knn", "easy_ensemble",
+                      "self_trainer", "label_spreading",
+                      "lstm", "blstm", "enc_dec"]
+    else:
+        all_models = models
+
+    type_implementation = {"rf": "scikit", "rf_bal": "scikit", "svm": "scikit", "knn": "scikit",
+                           "easy_ensemble": "scikit", "self_trainer": "scikit",
+                           "label_spreading": "scikit", "lstm": "keras",
+                           "blstm": "keras", "enc_dec": "keras",
+                           "baseline": "baseline", "kmeans": "semi_manual",
+                           "gmm": "semi_manual", "bmm": "semi_manual"}
+
+    for model_type in all_models:
+        print("Training and Storing {} Model ...\n".format(model_type))
+        model = get_single_model(model_type=model_type, data=data,
+                                 **BEST_PARAMS[model_type])
+
+        # fit the models
+        if (model_type != "label_spreading") and (model_type != "self_trainer"):
+            fitted_model = train_single_model(model, data["x_train"],
+                                              data["y_train"], data["smp_idx_train"],
+                                              impl_type=type_implementation[model_type],
+                                              **BEST_PARAMS[model_type])
+
+        else:
+            fitted_model = train_single_model(model, data["x_train_all"],
+                                              data["y_train_all"], data["smp_idx_train"],
+                                              impl_type=type_implementation[model_type],
+                                              **BEST_PARAMS[model_type])
+
+        if type_implementation[model_type] != "keras":
+            # store the models
+            with open("models/stored_models/" + model_type + ".model", "wb") as handle:
+                pickle.dump(fitted_model, handle)
+        else:
+            fitted_model.save("models/stored_models/" + model_type + ".hdf5")
+
+
 def evaluate_all_models(data, file_scores=None, file_scores_lables=None, **params):
     """ Evaluating each model. Parameters for models are given in params.
     Results can be saved intermediately in a file.
@@ -471,7 +527,7 @@ def evaluate_all_models(data, file_scores=None, file_scores_lables=None, **param
     plotting = {"annot": "eval", "roc_curve": True, "confusion_matrix": True,
                 "one_plot": True, "pair_plots": True, "only_preds": True, "only_trues": False,
                 "plot_list": None, "bog_plot_preds": "output/evaluation/", "bog_plot_trues": "output/evaluation/"}
-    plotting = {"annot": "eval", "roc_curve": True, "confusion_matrix": True,
+    plotting = {"annot": "eval", "roc_curve": False, "confusion_matrix": False,
                 "one_plot": True, "pair_plots": False, "only_preds": False, "only_trues": False,
                 "plot_list": None, "bog_plot_preds": None, "bog_plot_trues": None}
 
@@ -507,8 +563,8 @@ def evaluate_all_models(data, file_scores=None, file_scores_lables=None, **param
                  "Random Forest", "Balanced Random Forest", "Support Vector Machine", "K-nearest Neighbors", "Easy Ensemble",
                  "Self Trainer", "Label Propagation",
                  "LSTM", "BLSTM", "Encoder Decoder"]
-    all_models = ["baseline", "knn"]
-    all_names = ["Baseline", "K-nearest Neighbors"]
+    all_models = ["baseline", "rf"]
+    all_names = ["Baseline", "Random Forest"]
     # save bogplot for true predictions and all true smps in the folder above
     if (plotting["bog_plot_trues"] is not None) or (plotting["only_trues"]):
         # get important vars
@@ -525,6 +581,7 @@ def evaluate_all_models(data, file_scores=None, file_scores_lables=None, **param
             smp_wanted = smp[smp["smp_idx"] == smp_name]
             smp_trues.append(smp_wanted)
         all_smp_trues = pd.concat(smp_trues)
+        print(all_smp_trues)
 
         # create the only_trues
         if plotting["only_trues"]:
@@ -769,6 +826,11 @@ def main():
     # EVALUATION
     if args.evaluate: evaluate_all_models(data)
 
+    # TRAINING AND STORING MODEL
+    # models can be modified here (make a list of desired models, params
+    # from BEST_PARAMS are used!)
+    if args.train_and_store: train_and_store_models(data, models=args.models)
+
     # VALIDATION
     if args.validate:
         intermediate_results = "data/validation_results.txt"
@@ -787,13 +849,13 @@ def main():
                                                              "test_roc_auc": "test_roc",
                                                              "train_log_loss": "train_ll",
                                                              "test_log_loss": "test_ll"})
-        print(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
+        print(tabulate(pd.DataFrame(all_scores), headers="keys", tablefmt="psql"))
 
-        with open('output/tables/models_160smp_test01.txt', 'w') as f:
-            f.write(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='psql'))
+        with open("output/tables/models_160smp_test01.txt", 'w') as f:
+            f.write(tabulate(pd.DataFrame(all_scores), headers="keys", tablefmt="psql"))
 
-        with open('output/tables/models_160smp_test01_latex.txt', 'w') as f:
-            f.write(tabulate(pd.DataFrame(all_scores), headers='keys', tablefmt='latex_raw'))
+        with open("output/tables/models_160smp_test01_latex.txt", 'w') as f:
+            f.write(tabulate(pd.DataFrame(all_scores), headers="keys", tablefmt="latex_raw"))
 
 
 

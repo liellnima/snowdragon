@@ -94,8 +94,9 @@ def plot_confusion_matrix(confusion_matrices, label_orders, names, file_name=Non
         file_name (str): path where the plot should be saved. If None the plot is
             shown and not stored.
     """
-    fig, axs = plt.subplots(nrows=3, sharex=True, sharey=True)
-    cbar_ax = fig.add_axes([.91, .3, .03, .4])
+    plt.rcParams['figure.dpi'] = 500
+    fig, axs = plt.subplots(nrows=3, ncols=2, sharex=True, sharey=True, figsize=(15, 20), dpi=500)
+    cbar_ax = fig.add_axes([.93, .3, .05, .4])
 
     for i, ax in enumerate(axs.flat):
         if i >= len(names): break
@@ -113,7 +114,8 @@ def plot_confusion_matrix(confusion_matrices, label_orders, names, file_name=Non
         percentages = [" ({0:.2f})".format(value) for value in confusion_matrix.flatten()/np.sum(confusion_matrix)]
         percentages = [" ({0:.1%})".format(value) for value in confusion_matrix.flatten()/np.sum(confusion_matrix)]
         # annotations inside the boxes
-        box_annots = [f"{v3}\n\n{v1}{v2}".strip() for v1, v2, v3 in zip(counts, percentages, str_accs)]
+        #box_annots = [f"{v3}\n\n{v1}{v2}".strip() for v1, v2, v3 in zip(counts, percentages, str_accs)]
+        box_annots = [f"{v}".strip() for v in str_accs]
         box_annots = np.asarray(box_annots).reshape(confusion_matrix.shape[0], confusion_matrix.shape[1])
 
         # Total accuracy: summed up diagonal / tot obs
@@ -126,20 +128,25 @@ def plot_confusion_matrix(confusion_matrices, label_orders, names, file_name=Non
                         cbar=i == 0, vmin=0, vmax=1,
                         cbar_ax=None if i else cbar_ax,
                         cbar_kws={"label": "\nPrediction Frequency per Label"},
-                        annot_kws={"fontsize":6}, ax=ax)
-        # change font size of cbar axis
-        #g.figure.axes[-1].yaxis.label.set_size(14)
-        ax.set_title("Model {}, {}".format(name, stats_text))
-        # if i%2 ...
-        if i == 0:
-            ax.set_ylabel("True Label")
-        ax.set_xlabel("Predicted Label")
+                        annot_kws={"fontsize":10}, ax=ax)
+        # change font size of cbar axis and ticks
+        g.figure.axes[-1].yaxis.label.set_size(20)
+        if not i:
+            cbar = g.collections[0].colorbar
+            cbar.ax.tick_params(labelsize=15)
+        g.set_yticklabels(labels, size = 15, va="center")
+        g.set_xticklabels(labels, size = 15, ha="center")
+        ax.set_title("Model {}, {}".format(name, stats_text), fontsize=20)
 
-    plt.subplots_adjust(hspace=0.3)
+    #fig.supxlabel("Predicted Label")
+    #fig.supylabel("True Label")
+    fig.text(0.5, 0.07, "Predicted Label", ha="center", fontsize=25)
+    fig.text(0.07, 0.5, "True Label", va="center", rotation="vertical", fontsize=25)
+    plt.subplots_adjust(hspace=0.2)
     if file_name is None:
         plt.show()
     else:
-        plt.savefig(file_name)
+        plt.savefig(file_name, bbox_inches="tight", pad_inches=0.8)
         plt.close()
 
 # for full model names include dictionary!

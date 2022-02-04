@@ -105,22 +105,22 @@ def visualize_results(all_scores, label_acc, label_prec):
     label_prec = label_prec.reindex([0, 1, 2, 3, 9, 10, 4, 5, 6, 7, 8, 11, 12, 13])
 
     # visualize the accuracies and precisions of the different models
-    plot_model_comparison(
-        label_acc, plot_rare=False,
-        file_name="output/results/model_comparison_acc.png",
-        metric_name="accuracy"
-    )
-    plot_model_comparison(
-        label_prec, plot_rare=False,
-        file_name="output/results/model_comparison_prec.png",
-        metric_name="precision"
-    )
+    # plot_model_comparison(
+    #     label_acc, plot_rare=False,
+    #     file_name="output/results/model_comparison_acc.png",
+    #     metric_name="accuracy"
+    # )
+    # plot_model_comparison(
+    #     label_prec, plot_rare=False,
+    #     file_name="output/results/model_comparison_prec.png",
+    #     metric_name="precision"
+    # )
 
     # retrieve and summarize the data for the confusion matrices and the roc curves
     names, cf_matrices, label_orders = prepare_evaluation_data("output/evaluation")
 
     # plot confusion matrices
-    plot_confusion_matrix(cf_matrices, label_orders, names, file_name="output/results/confusion_matrixes.png")
+    plot_confusion_matrix(cf_matrices, label_orders, names, file_name="output/plots_results/confusion_matrixes.png")
 
     # plot roc curves
     # TODO
