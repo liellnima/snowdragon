@@ -1,5 +1,7 @@
 # get the necessary imports from folders above
 import os
+import git
+import joblib
 import pickle
 
 import numpy as np
@@ -12,12 +14,11 @@ from keras_self_attention import SeqSelfAttention
 from models.baseline import predict_baseline
 from models.cv_handler import assign_clusters_single_profile
 from models.anns import predict_single_profile_ann
-from models.run_models import remove_nans_mosaic
+from models.run_models import remove_nans_mosaic, normalize_mosaic
 from models.helper_funcs import int_to_idx
 from tuning.tuning_parameters import BEST_PARAMS
 from data_handling.data_parameters import ANTI_LABELS, PARAMS
 from data_handling.data_preprocessing import export_pnt, npz_to_pd, search_markers
-
 
 # make an argparser for knowing which model should be used
 # and which files should be processed
@@ -28,71 +29,44 @@ from data_handling.data_preprocessing import export_pnt, npz_to_pd, search_marke
 IN_DIR = "/home/julia/Documents/University/BA/Data/Arctic_updated/"
 
 # save both the pics and the results as .ini files
-def predict_profile(smp, model):
+def predict_profile(smp, model, data, model_type):
     """ Predict classification of single profile
     """
-    # we need some of the information from our training data
-    with open("data/preprocessed_data_k5.txt", "rb") as handle:
-        data = pickle.load(handle)
     train_data = data["x_train"]
     train_targets = data["y_train"]
 
     # prepare smp data for which want to create prediction
     x_unknown_profile = smp.drop(["label", "smp_idx"], axis=1)
 
-    # ATTENTION, ERROR (no pun intended)
-    # enc_dec --> has problems with SeqSelfAttention --> check if still supported
-    # maybe i need to downgrade tf in the worst case or find another package
-
-    # find out which model_type we have
-    if model == "baseline":
-        model_type = "baseline"
-    elif model == "bmm" or model == "gmm" or model == "kmeans":
-        model_type = "semi_manual"
-    elif model in ["easy_ensemble", "knn", "label_spreading", "self_trainer", "rf", "rf_bal", "svm"]:
-        model_type = "scikit"
-    elif model == "lstm" or model == "blstm" or model == "enc_dec":
-        model_type = "keras"
-    else:
-        raise ValueError("The model you have chosen does not exist in the list of stored models. Consider running and storing it.")
-
-    # get stored model (models/stored_models)
-    if model_type == "keras":
-        model_filename = "models/stored_models/" + model + ".hdf5"
-        loaded_model = keras.models.load_model(model_filename)
-    else:
-        model_filename = "models/stored_models/" + model + ".model"
-        with open(model_filename, "rb") as handle:
-            loaded_model = pickle.load(handle)
-
     # predict on that model
     if model_type == "scikit": # XXX WORKS
-        y_pred = loaded_model.predict(x_unknown_profile)
+        y_pred = model.predict(x_unknown_profile)
+        # TODO does not work for svm --> maybe we stored the wrong model? (always the same prediction)
 
     elif model_type == "keras": # XXX WORKS
         # TODO won't work right now
-        y_pred = predict_single_profile_ann(loaded_model, x_unknown_profile, train_targets)
+        y_pred = predict_single_profile_ann(model, x_unknown_profile, train_targets)
 
     elif model_type == "baseline": # XXX WORKS
-        majority_vote = loaded_model
+        majority_vote = model
         y_pred = predict_baseline(majority_vote, x_unknown_profile)
 
     elif model_type == "semi_manual": # XXX WORKS
         # determine the number of clusters/components
-        if hasattr(loaded_model, "cluster_centers_"):
-            num_components = loaded_model.cluster_centers_.shape[0]
-        elif hasattr(loaded_model, "weights_"):
-            num_components = loaded_model.weights_.shape[0]
+        if hasattr(model, "cluster_centers_"):
+            num_components = model.cluster_centers_.shape[0]
+        elif hasattr(model, "weights_"):
+            num_components = model.weights_.shape[0]
 
         # prediction -> data points are assigned to clusters from training!
-        pred_clusters = loaded_model.predict(x_unknown_profile)
-        train_clusters = loaded_model.predict(train_data)
+        pred_clusters = model.predict(x_unknown_profile)
+        train_clusters = model.predict(train_data)
         # find out which cluster is which label!
         y_pred = assign_clusters_single_profile(pred_clusters, train_targets, train_clusters, num_components)
 
     else:
         raise ValueError("""This Model implementation types does not exist.
-        Choose one of the following: \"scikit\" (for rf, svm, knn, easy_ensemble, self_trainer),
+        Choose one of the following: \"scikit\" (for rf, rf_bal, svm, knn, easy_ensemble, self_trainer),
         \"semi_manual\" (for kmean, gmm, bmm), \"keras\" (for lstm, blsm, enc_dec),
         or \"baseline\" (for the majority vote baseline)""")
 
@@ -126,19 +100,43 @@ def predict_all(unlabelled_dir=IN_DIR, marker_path="data/sfc_ground_markers.csv"
     # TODO make this a function parameter
     location = "output/predictions/"
 
-    models = ["lstm", "baseline", "rf"]
+    # we need some of the information from our training data
+    with open("data/preprocessed_data_k5.txt", "rb") as handle:
+        data = pickle.load(handle)
+
+    # get current git commit
+    repo = git.Repo(search_parent_directories=True)
+    git_id = repo.head.object.hexsha
+    # models:
+    # baseline ALL
+    # lstm ALL
+    # rf ALL
+    # rf_bal SOME
+    # svm SOME
+    # knn SOME
+    # easy_ensemble SOME
+    # self_trainer SOME
+    # kmean SOME
+    # gmm SOME
+    # bmm SOME
+    # blstm SOME
+    # enc_dec SOME
+    models = ["baseline", "rf", "rf_bal", "knn", "kmean", "gmm", "bmm", "lstm", "blstm", "enc_dec", "self_trainer", "easy_ensemble"]
 
     smp_profiles = load_profiles(unlabelled_dir)
 
     markers = load_markers(marker_path)
 
     # for all desired models create predictions
-    for model in models:
-        print("Starting to create predictions for model {}:".format(model))
-        sub_location = location + "/" + model + "/"
+    for model_name in models:
+        print("Starting to create predictions for model {}:".format(model_name))
+        sub_location = location + "/" + model_name + "/"
         # make dir if it doesnt exist yet
         if not os.path.exists(sub_location):
             os.makedirs(sub_location)
+
+        # load model
+        model, model_type = load_stored_model(model_name)
 
         # for all desired data create model predictions
         for unlabelled_smp in tqdm(smp_profiles):
@@ -147,23 +145,30 @@ def predict_all(unlabelled_dir=IN_DIR, marker_path="data/sfc_ground_markers.csv"
             # get smp idx
             smp_idx_str = int_to_idx(unlabelled_smp["smp_idx"][0])
             save_file = sub_location + "/" + smp_idx_str + ".ini"
+            print(smp_idx_str)
 
+            # predict profile
             if (not Path(save_file).is_file()) or overwrite:
-                # predict profile
-                labelled_smp = predict_profile(unlabelled_smp, model)
-                # get markers
-                try:
-                    sfc, ground = markers[smp_idx_str]
-                    # save ini
-                    save_as_ini(labelled_smp, sfc, ground, save_file, model)
-                except KeyError:
-                    print("Skipping Profile " + smp_idx_str + " since it is not contained in the marker file.")
+                # fill nans
+                unlabelled_smp.fillna(method="ffill", inplace=True)
+                # if only nans, ffill won't work, but in this case: skip profile
+                if sum(unlabelled_smp.isnull().any(axis=1)) == 0:
 
-                # save figs
-                #save_as_pic(labelled_smp)
+                    labelled_smp = predict_profile(unlabelled_smp, model, data, model_type)
+
+                    try: # get markers
+                        sfc, ground = markers[smp_idx_str]
+                        # save ini
+                        save_as_ini(labelled_smp, sfc, ground, save_file, model_name, git_id)
+                    except KeyError:
+                        print("Skipping Profile " + smp_idx_str + " since it is not contained in the marker file.")
+                    # save figs
+                    #save_as_pic(labelled_smp)
+                else:
+                    print("Skipping Profile "+ smp_idx_str + " since it contains to many NaNs.")
 
 
-def save_as_ini(labelled_smp, sfc, ground, location, model, mm_window=1):
+def save_as_ini(labelled_smp, sfc, ground, location, model, git_commit_id, mm_window=1):
     """ Save the predictions of an smp profile as ini file.
     Parameters:
         labelled_smp (list): predictions of a single unknown smp profile
@@ -175,8 +180,6 @@ def save_as_ini(labelled_smp, sfc, ground, location, model, mm_window=1):
         mm_window (int or float): default: one unit represents 1 mm. Choose the value
             you have used during data-preprocessing. Default value is 1mm there as well.
     """
-    # TODO
-    git_commit_id = None
     # find out how ini files look like
     # .ini files are simple text files
     # distance values of the labelled smp file
@@ -191,10 +194,10 @@ def save_as_ini(labelled_smp, sfc, ground, location, model, mm_window=1):
     for label_occ in labels_occs:
         str_label = ANTI_LABELS[label_occ[0]]
         if complete_dist == 0:
-            dist = (label_occ[1] - 1) * mm_window
+            dist = (label_occ[1] - 1 + sfc) * mm_window
         else:
             dist = (label_occ[1]) * mm_window
-        complete_dist = complete_dist + dist + sfc
+        complete_dist += dist
         str_label_dist_pairs.append((str_label, complete_dist))
 
     with open(location, 'w') as file:
@@ -212,6 +215,8 @@ def save_as_ini(labelled_smp, sfc, ground, location, model, mm_window=1):
 
 def load_profiles(data_dir, overwrite=False):
     """
+    Returns:
+        list <pd.Dataframe>: normalized smp data
     """
     export_dir = Path("data/smp_profiles_unlabelled/")
     #export_dir = Path("data/smp_profiles_updated/")
@@ -235,20 +240,50 @@ def load_profiles(data_dir, overwrite=False):
         # unlabelled data
         all_smp = all_smp[(all_smp["label"] == 0)]
 
-    # print how many profiles we have
+    # normalize the data to get correct predictions
+    all_smp = normalize_mosaic(all_smp)
+
+    # create list structure of smp profiles
     num_profiles = all_smp["smp_idx"].nunique()
     num_points = all_smp["smp_idx"].count()
     idx_list = all_smp["smp_idx"].unique()
     smp_list = [all_smp[all_smp["smp_idx"] == idx] for idx in idx_list]
+
     print("Finished Loading " + str(len(smp_list)) + " Profiles")
 
     return smp_list
 
-def load_models():
+def load_stored_model(model_name):
     """
     """
-    # TODO upload models somwhere on github
-    pass
+    # find out which model_type we have
+    if model_name == "baseline":
+        model_type = "baseline"
+    elif model_name == "bmm" or model_name == "gmm" or model_name == "kmeans":
+        model_type = "semi_manual"
+    elif model_name in ["easy_ensemble", "knn", "label_spreading", "self_trainer", "rf", "rf_bal", "svm"]:
+        model_type = "scikit"
+    elif model_name == "lstm" or model_name == "blstm" or model_name == "enc_dec":
+        model_type = "keras"
+    else:
+        raise ValueError("The model you have chosen does not exist in the list of stored models. Consider running and storing it.")
+
+    # get stored model (models/stored_models)
+    if model_type == "keras":
+        model_filename = "models/stored_models/" + model_name + ".hdf5"
+        if model_name != "enc_dec":
+            loaded_model = keras.models.load_model(model_filename)
+        else:
+            loaded_model = keras.models.load_model(model_filename, custom_objects={"SeqSelfAttention": SeqSelfAttention})
+    else:
+        model_filename = "models/stored_models/" + model_name + ".model"
+        with open(model_filename, "rb") as handle:
+                if model_name == "rf":
+                    loaded_model = joblib.load(handle)
+                else:
+                    loaded_model = pickle.load(handle)
+
+    return loaded_model, model_type
 
 def make_dirs():
     """
