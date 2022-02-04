@@ -134,11 +134,12 @@ def train_single_model(model, x_train, y_train, smp_idx_train, impl_type, **fit_
     if impl_type == "scikit":
         # fitting the model
         model.fit(x_train, y_train)
-        # predict proba - special case SVM: change model, fit newly and predict
-        if isinstance(model, SVC):
-            # change model
-            model.probability = True
-            model.fit(x_train, y_train)
+        # # predict proba - special case SVM: change model, fit newly and predict
+        # if isinstance(model, SVC):
+        #     # change model
+        #     print("SVM prob fitting")
+        #     model.probability = True
+        #     model.fit(x_train, y_train)
 
     elif impl_type == "keras":
         # fitting the model (is changed in place)
