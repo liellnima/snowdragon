@@ -26,6 +26,23 @@ The repository does not contain the MOSAiC data used in the related thesis. The 
 
 ## Usage
 
+### Prediction with Pretrained Models
+
+If you want to predict some SMP profiles with the models that were trained on the MOSAiC data, the following steps apply:
+
+1. Download the desired models from this [Google Drive Folder](https://drive.google.com/drive/folders/1Rfze6Q95O_zkBbwU67I8eQCl5KFnGayv?usp=sharing).
+(Later also from zenodo!)
+
+2. Put the downloaded models into the directory ``snowdragon/models/stored_models/``.
+
+3. Predict all the smp profiles in one directory:
+
+```
+python predict.py [arg1] [arg2] #TODO
+```
+
+The predicted .ini files can be found in ``snowdragon/output/predictions/MODEL/``.
+
 ### Data Preprocessing
 
 To preprocess all SMP profiles, run:
