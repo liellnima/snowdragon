@@ -13,6 +13,7 @@ from visualization.plot_profile import smp_labelled
 from visualization.run_visualization import visualize_original_data, visualize_normalized_data # TODO or something like this
 from tuning.tuning_parameters import BEST_PARAMS
 
+import joblib
 import pickle
 import random
 import argparse
@@ -145,7 +146,7 @@ def normalize_mosaic(smp):
     Returns:
         pd.DataFrame: the normalized version of the given dataframe
     """
-    # Unchanged features: distance, pos_rel, dist_ground, smp_idx, label
+    # Unchanged features: (distance), pos_rel, dist_ground, smp_idx, label
     # Physical normalization: all force features between 0 and 45
     physical_features = [feature for feature in smp.columns if ("force" in feature) and (not "var" in feature)]
     smp = normalize(smp, physical_features, min=0, max=45)
@@ -506,7 +507,10 @@ def train_and_store_models(data, models=["all"], **kwargs):
         if type_implementation[model_type] != "keras":
             # store the models
             with open("models/stored_models/" + model_type + ".model", "wb") as handle:
-                pickle.dump(fitted_model, handle)
+                if model_type == "rf":
+                    joblib.dump(fitted_model, handle, compress=9)
+                else:
+                    pickle.dump(fitted_model, handle)
         else:
             fitted_model.save("models/stored_models/" + model_type + ".hdf5")
 
