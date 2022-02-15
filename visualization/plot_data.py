@@ -5,11 +5,14 @@ from visualization.plot_profile import smp_unlabelled
 from data_handling.data_parameters import LABELS, ANTI_LABELS, COLORS, ANTI_LABELS_LONG
 
 import os
+import io
 import math
+import graphviz
 import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
 import matplotlib.colors as colors
 import matplotlib.ticker as ticker
 
@@ -409,42 +412,61 @@ def prune(decisiontree, min_samples_leaf = 1):
                 tree.children_left[i]=-1
                 tree.children_right[i]=-1
 
-def visualize_tree(rf, x_train, y_train, tree_idx=0, min_samples_leaf=1000, file_name="output/tree"):
+def visualize_tree(rf, x_train, y_train, feature_names=None, tree_idx=0, min_samples_leaf=1000, file_name="output/tree", format="png"):
     """ Visualizes a single tree from a decision tree. Works only explicitly for my current data.
     Parameters:
         rf (RandomForestClassifier): the scikit learn random forest classfier
-        x_train: Input data for training
-        y_train: Target data for training
-        tree_idx: Indicates which tree from the random forest should be visualized?
-        min_samples_leaf: Indicates how many samples should be sorted to a leaf minimally
-        file_name: The name under which the resulting png should be saved (without extension!)
+        x_train (pd.DataFrame): Input data for training. If None the rf is pretrained.
+        y_train (pd.Series): Target data for training. If None the rf is pretrained.
+        feature_names (list): Default None, since this is assigned from training data.
+            If the rf is pretrained, this must be assigned here. (e.g. smp.columns)
+        tree_idx (int): Indicates which tree from the random forest should be visualized?
+        min_samples_leaf (int): Indicates how many samples should be sorted to a leaf minimally
+        file_name (str): The name under which the resulting png should be saved (without extension!)
+        format (str): e.g. png or svg, indicates how the pic should be stored
     """
-    # deciding directly which label gets which decision tree label
-    y_train[y_train==6.0] = 0
-    y_train[y_train==3.0] = 1
-    y_train[y_train==5.0] = 2
-    y_train[y_train==12.0] = 3
-    y_train[y_train==4.0] = 4
-    y_train[y_train==17.0] = 5
-    y_train[y_train==16.0] = 6
-    anti_labels = {0:"rgwp", 1:"dh", 2: "mfdh", 3:"dhwp", 4:"dhid", 5:"rare", 6:"pp"}
 
-    # fit the model
-    rf.fit(x_train, y_train)
+    if (x_train is not None) and (y_train is not None):
+        # deciding directly which label gets which decision tree label
+        y_train[y_train==6.0] = 0
+        y_train[y_train==3.0] = 1
+        y_train[y_train==5.0] = 2
+        y_train[y_train==12.0] = 3
+        y_train[y_train==4.0] = 4
+        y_train[y_train==17.0] = 5
+        y_train[y_train==16.0] = 6
+        anti_labels = {0:"rgwp", 1:"dh", 2: "mfdh", 3:"dhwp", 4:"dhid", 5:"rare", 6:"pp"}
+        class_names = [anti_labels[label] for label in y_train.unique()]
+
+        feature_names = x_train.columns
+
+        # fit the model
+        rf.fit(x_train, y_train)
+
+    else:
+        feature_names = feature_names
+        class_names = [ANTI_LABELS[c] for c in rf.classes_]
+
     # extract one decision tree
     estimator = rf.estimators_[tree_idx]
     # we have to prune the tree otherwise the tree is way too big
     prune(estimator, min_samples_leaf=min_samples_leaf)
-    class_names = [anti_labels[label] for label in y_train.unique()]
+
     # export image as dot file
-    export_graphviz(estimator, out_file = file_name + ".dot",
-                feature_names = x_train.columns,
+    dot_data = export_graphviz(estimator, out_file = None, #file_name + ".dot",
+                feature_names = feature_names,
                 class_names = class_names,
-                rounded = True, proportion = False,
-                precision = 2, filled = True)
+                rounded = True, proportion = True,
+                precision = 2, filled = True, rotate=False)
+
+    new_dot_data = "\\n".join([line for line in dot_data.split("\\n") if not line.startswith("value")])
+    # save that as png
+    graphviz.Source(new_dot_data, format=format).render(filename = file_name)
+    os.system("rm " + file_name)
     # make a png file from the dot file and delete the dot file
-    os.system("dot -Tpng "+ file_name + ".dot -o " + file_name + ".png")
-    os.system("rm " + file_name + ".dot")
+    # os.system("dot -Tpng "+ file_name + ".dot -o " + file_name + ".png")
+    # os.system("rm " + file_name + ".dot")
+
 
 def plot_confusion_matrix(confusion_matrix, labels, name="", file_name="output/plots_data/confusion_matrix.png"):
     """ Plot confusion matrix with relative prediction frequencies per label as heatmap.
