@@ -1,11 +1,12 @@
 import os
+import math
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
 from data_handling.data_parameters import MODEL_COLORS, SNOW_TYPES_SELECTION
-from data_handling.data_parameters import ANTI_LABELS, ANTI_LABELS_LONG, LABELS
+from data_handling.data_parameters import ANTI_LABELS, ANTI_LABELS_LONG, LABELS, MODEL_LABELS
 from models.helper_funcs import load_results
 
 def plot_model_comparison(performances, plot_rare=False, file_name="", metric_name="accuracy"):
@@ -13,7 +14,7 @@ def plot_model_comparison(performances, plot_rare=False, file_name="", metric_na
 
     Parameters:
         performances (df.DataFrame): Accuracies of the different models
-        on individual classes
+            on individual classes
         plot_rate (bool): Default=False. If the class rare should be included or not.
         file_name (str): If empty, the plot is shown. Else the plot is saved at the given path.
         metric_name (str): Default is "accuracy". Name of the performance metric
@@ -95,7 +96,9 @@ def plot_confusion_matrix(confusion_matrices, label_orders, names, file_name=Non
             shown and not stored.
     """
     plt.rcParams['figure.dpi'] = 500
-    fig, axs = plt.subplots(nrows=3, ncols=2, sharex=True, sharey=True, figsize=(15, 20), dpi=500)
+    number_rows = int(math.ceil(len(confusion_matrices) / 2))
+    height = number_rows * (6 + 2/3) # 3 -> 20, 1 -> 6.66
+    fig, axs = plt.subplots(nrows=number_rows, ncols=2, sharex=True, sharey=True, figsize=(15, height), dpi=500)
     cbar_ax = fig.add_axes([.93, .3, .05, .4])
 
     for i, ax in enumerate(axs.flat):
@@ -136,11 +139,12 @@ def plot_confusion_matrix(confusion_matrices, label_orders, names, file_name=Non
             cbar.ax.tick_params(labelsize=15)
         g.set_yticklabels(labels, size = 15, va="center")
         g.set_xticklabels(labels, size = 15, ha="center")
-        ax.set_title("Model {}, {}".format(name, stats_text), fontsize=20)
+        ax.set_title("{}, {}".format(MODEL_LABELS[name], stats_text), fontsize=20)
 
     #fig.supxlabel("Predicted Label")
     #fig.supylabel("True Label")
-    fig.text(0.5, 0.07, "Predicted Label", ha="center", fontsize=25)
+    text_height = 0.07 if number_rows > 1 else 0.01
+    fig.text(0.5, text_height, "Predicted Label", ha="center", fontsize=25)
     fig.text(0.07, 0.5, "True Label", va="center", rotation="vertical", fontsize=25)
     plt.subplots_adjust(hspace=0.2)
     if file_name is None:
