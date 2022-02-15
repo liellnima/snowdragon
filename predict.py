@@ -99,6 +99,7 @@ def predict_all(unlabelled_dir=IN_DIR, marker_path="data/sfc_ground_markers.csv"
     """
     # TODO make this a function parameter
     location = "output/predictions/"
+    Path(location).mkdir(parents=True, exist_ok=True)
 
     # we need some of the information from our training data
     with open("data/preprocessed_data_k5.txt", "rb") as handle:
@@ -107,22 +108,23 @@ def predict_all(unlabelled_dir=IN_DIR, marker_path="data/sfc_ground_markers.csv"
     # get current git commit
     repo = git.Repo(search_parent_directories=True)
     git_id = repo.head.object.hexsha
-    # models:
     # baseline ALL
     # lstm ALL
     # rf ALL
-    # rf_bal SOME
+    # rf_bal ALL
     # svm SOME
-    # knn SOME
+    # knn ALL
     # easy_ensemble SOME
-    # self_trainer SOME
-    # kmean SOME
-    # gmm SOME
-    # bmm SOME
-    # blstm SOME
-    # enc_dec SOME
-    models = ["baseline", "rf", "rf_bal", "knn", "kmean", "gmm", "bmm", "lstm", "blstm", "enc_dec", "self_trainer", "easy_ensemble"]
-
+    # self_trainer ALL
+    # kmeans ALL
+    # gmm ALL
+    # bmm ALL
+    # blstm ALL
+    # enc_dec ALL
+    # "baseline", "rf", "rf_bal", "knn",
+    models = ["kmeans", "gmm", "bmm", "lstm", "blstm", "enc_dec", "self_trainer", "easy_ensemble"]
+    models = ["svm"]
+    # TODO svm
     smp_profiles = load_profiles(unlabelled_dir)
 
     markers = load_markers(marker_path)
@@ -145,7 +147,6 @@ def predict_all(unlabelled_dir=IN_DIR, marker_path="data/sfc_ground_markers.csv"
             # get smp idx
             smp_idx_str = int_to_idx(unlabelled_smp["smp_idx"][0])
             save_file = sub_location + "/" + smp_idx_str + ".ini"
-            print(smp_idx_str)
 
             # predict profile
             if (not Path(save_file).is_file()) or overwrite:
@@ -218,8 +219,8 @@ def load_profiles(data_dir, overwrite=False):
     Returns:
         list <pd.Dataframe>: normalized smp data
     """
-    export_dir = Path("data/smp_profiles_unlabelled/")
-    #export_dir = Path("data/smp_profiles_updated/")
+    #export_dir = Path("data/smp_profiles_unlabelled/")
+    export_dir = Path("data/smp_profiles_updated/")
     data_dir = Path(data_dir)
     marker_path = Path("data/sfc_ground_markers.csv")
     export = False
