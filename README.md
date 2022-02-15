@@ -7,7 +7,7 @@ The SMP is a fast, high-resolution, portable snow hardness measurement device. T
 * Related thesis: "Automatic Snow Classification − A Comparison of Machine Learning Algorithms for the Segmentation and Classification of Snow Micro Penetrometer Profiles" by Julia Kaltenborn
 * About the SMP: [SLF Website](https://www.slf.ch/en/ueber-das-slf/versuchsanlagen-und-labors/kaeltelabor/snowmicropenr.html)
 * About MOSAiC: [MOSAiC Website](https://mosaic-expedition.org/)
-* Contact: [jkaltenborn@uos.de](mailto:jkaltenborn@uos.de)
+* Contact: [julia.kaltenborn@mila.quebec](mailto:julia.kaltenborn@mila.quebec)
 
 
 ## Overview
