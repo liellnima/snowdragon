@@ -2,25 +2,33 @@ import pickle
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
+import matplotlib.lines as mlines
 
 from data_handling.data_preprocessing import idx_to_int
-from data_handling.data_parameters import COLORS, ANTI_LABELS
+from data_handling.data_parameters import COLORS, ANTI_LABELS, ANTI_LABELS_LONG
+
+
+# TODO
+# make function to compare predicted profiles where we dont have the ground truth!
+# adapt compare_plot accordingly --> essentially: do this with ini files only!
 
 def main():
     """ This function exists only for testing purposes.
     """
     # read in example data and extract prediction and true data
-    with open("visualization/storage/smp_Random Forest_S31H0488.pickle", "rb") as handle:
+    with open("visualization/storage/smp_Random Forest_S31H0234.pickle", "rb") as handle:
         rf_true, rf_pred = pickle.load(handle)
-    with open("visualization/storage/smp_Baseline_S31H0488.pickle", "rb") as handle:
+    with open("visualization/storage/smp_Baseline_S31H0234.pickle", "rb") as handle:
         base_true, base_pred = pickle.load(handle)
 
     smp_preds = [base_pred, rf_pred]
     smp_true = base_true
     smp_name = "S31H0488"
-    compare_plot(smp_true, smp_preds, smp_name, title=None, grid=True, file_name="output/evaluation/smp_compare_example.svg")
+    smp_name = "S31H0234"
+    model_names = ["Baseline", "Random Forest"]
+    compare_plot(smp_true, smp_preds, smp_name, model_names, title="", grid=True, file_name="output/evaluation/smp_compare_example.png")
 
-def compare_plot(smp_true, smp_preds, smp_name, title=None, grid=True, file_name="output/plots_data/smp_compare.png"):
+def compare_plot(smp_true, smp_preds, smp_name, model_names, title=None, grid=True, file_name="output/plots_data/smp_compare.png"):
     """
     """
     if isinstance(smp_name, str):
@@ -34,20 +42,37 @@ def compare_plot(smp_true, smp_preds, smp_name, title=None, grid=True, file_name
 
     fig, axs = plt.subplots(3, sharex=True, sharey=True)
     first_ax = True
+    line_handles = []
     for ax, smp in zip(axs, smps):
         # calculate differences between true and pred
         differences = smp_true["label"] != smp["label"]
+
         if first_ax:
             alpha = 0.5
             # plot the ground truth measurement
-            ax = sns.lineplot(smp["distance"], smp["mean_force"], ax=ax)
+            #["Force Signal", "Wrong Classification"]
+            signalplot = sns.lineplot(smp["distance"], smp["mean_force"], ax=ax)
+            line_handles.append(signalplot)
             first_ax = False
         else:
             alpha = 0.2
             # plot the differences
             diff = differences.astype(int) * (max(smp["mean_force"]) / 2) # plot line in the middle
             diff = diff.replace({0:np.inf}) # cheating a bit: seaborn wont plot inf values
-            ax = sns.lineplot(smp["distance"], diff, ax=ax, linewidth=4, color='r')
+            # - 0.5 is only because the plot lines have a small off-set (not numerically though)
+            lineplot = sns.lineplot(smp["distance"]-0.5, diff, ax=ax, linewidth=4, color='r')
+            if len(line_handles) < 2:
+                line_handles.append(lineplot)
+            # plot single differences
+            single_diffs = list(diff)
+            diff_points = []
+            for i, d in enumerate(single_diffs):
+                if i > 1 and i < len(single_diffs)-1:
+                    if (single_diffs[i-1] == np.inf) and (single_diffs[i+1] == np.inf) and (single_diffs[i] != np.inf):
+                        diff_points.append(i)
+            points_indices = smp["distance"].index[diff_points]
+            points_heights = [(max(smp["mean_force"]) / 2)] * len(points_indices)
+            scatterplot = plt.scatter(smp["distance"][points_indices] - 0.5, points_heights, marker='s', linewidth=0, color='r')
 
         last_label_num = 1
         last_distance = -1
@@ -65,15 +90,24 @@ def compare_plot(smp_true, smp_preds, smp_name, title=None, grid=True, file_name
         ax.set_ylim(0)
         ax.set(ylabel=None)
 
-    names = ["Ground Truth", "Baseline", "Random Forest"]
+    names = ["Ground Truth"] + model_names
     for name, ax in zip(names, axs):
-        fig.text(0.01, 0.9, name, fontweight="bold", fontsize=8.5, transform=ax.transAxes)
+        ax.text(0.0, 1.05, name, fontweight="bold", fontsize=8.5, transform=ax.transAxes)
 
+    # Snow Grain Lagend
     list_all_labels = [label for smp in smps for label in [*smp["label"].unique()]]
     all_labels = list(set(list_all_labels))
-    anti_colors = {ANTI_LABELS[key] : value for key, value in COLORS.items() if key in all_labels}
+    anti_colors = {ANTI_LABELS_LONG[key] : value for key, value in COLORS.items() if key in all_labels}
     markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='', alpha=0.5) for color in anti_colors.values()]
-    plt.legend(markers, anti_colors.keys(), numpoints=1, loc="lower right")
+    legend1 = plt.figlegend(markers, anti_colors.keys(), numpoints=1, loc=7, title="Snow Grain Types")# borderaxespad=0
+    fig.add_artist(legend1)
+
+    # Signal and Mislassification lines legend
+    blue_line = mlines.Line2D([], [], label="Force Signal")
+    red_line = mlines.Line2D([], [], color="red", linewidth=4, label="Misclassified")
+    legend2 = plt.legend(handles=[blue_line, red_line], bbox_to_anchor=(1.04, 0.5))
+    fig.add_artist(legend2)
+
     if title is None:
         plt.suptitle("Observed and Predicted SMP Profile {}".format(smp_name))
     else:
@@ -81,6 +115,7 @@ def compare_plot(smp_true, smp_preds, smp_name, title=None, grid=True, file_name
     fig.text(0.015,0.5, "Mean Force [N]", ha="center", va="center", rotation=90)
     plt.xlabel("Snow Depth [mm]")
     plt.tight_layout()
+    fig.subplots_adjust(right=0.72)
     if file_name is None:
         plt.show()
     else:
