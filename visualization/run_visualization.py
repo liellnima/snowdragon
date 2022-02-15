@@ -1,11 +1,11 @@
-# imports
 from data_handling.data_loader import load_data
 from visualization.plot_data import bog_plot, all_in_one_plot
 from visualization.plot_dim_reduction import pca, tsne, tsne_pca
 from visualization.plot_profile import smp_unlabelled, smp_labelled, smp_features
-from visualization.plot_data import plot_balancing, corr_heatmap, anova, forest_extractor, pairwise_features
+from visualization.plot_data import plot_balancing, corr_heatmap, anova, forest_extractor, pairwise_features, visualize_tree
 from visualization.plot_results import plot_confusion_matrix, plot_model_comparison, prepare_evaluation_data
 
+import joblib
 import argparse
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -23,6 +23,8 @@ parser = argparse.ArgumentParser(description="Visualization of original data and
 parser.add_argument("--original_data", action="store_true", help="Plot visualizations for original data.")
 parser.add_argument("--normalized_data", action="store_true", help="Plot visualizations for normalized data.")
 parser.add_argument("--results", action="store_true", help="Plot visualizations for results.")
+parser.add_argument("--tree", action="store_true", help="Plot decision tree.")
+parser.add_argument("--tsne", action="store_true", help="Plot T-SNE.")
 
 
 def visualize_normalized_data(smp):
@@ -116,11 +118,27 @@ def visualize_results(all_scores, label_acc, label_prec):
     #     metric_name="precision"
     # )
 
+    # plot confusion matrices
+
     # retrieve and summarize the data for the confusion matrices and the roc curves
     names, cf_matrices, label_orders = prepare_evaluation_data("output/evaluation")
+    group_1 = ["baseline", "gmm", "bmm", "kmeans", "easy_ensemble", "knn"]
+    group_2 = ["rf", "rf_bal", "svm", "lstm", "blstm", "enc_dec"]
+    group_3 = ["self_trainer", "label_spreading"]
 
-    # plot confusion matrices
-    plot_confusion_matrix(cf_matrices, label_orders, names, file_name="output/plots_results/confusion_matrixes.png")
+    for i, group in enumerate([group_1, group_2, group_3]):
+        # get indices of the group and relevant names, matrices, etc.
+        indices_group = [names.index(model) for model in group]
+        names_group = []
+        cf_matrices_group = []
+        label_orders_group = []
+
+        for idx in indices_group:
+            names_group.append(names[idx])
+            cf_matrices_group.append(cf_matrices[idx])
+            label_orders_group.append(label_orders[idx])
+
+        plot_confusion_matrix(cf_matrices_group, label_orders_group, names_group, file_name="output/plots_results/confusion_matrixes_" + str(i) + ".png")
 
     # plot roc curves
     # TODO
@@ -139,13 +157,30 @@ def main():
     # visualize the normalized data
     if args.normalized_data: visualize_normalized_data(smp_preprocessed)
 
-    ## VISUALIZE RESULTS ##
-    # load dataframe with performance data
-    all_scores = pd.read_csv("output/scores/all_scores.csv")
-    label_acc = pd.read_csv("output/scores/acc_labels.csv")
-    label_prec = pd.read_csv("output/scores/prec_labels.csv")
+    if args.tree:
+        # get random forest data
+        with open("models/stored_models/rf.model", "rb") as handle:
+            rf = joblib.load(handle)
+        feature_names = list(smp.columns)
+        feature_names.remove("label")
+        feature_names.remove("smp_idx")
+        tree_idx = 1
+        visualize_tree(rf, x_train=None, y_train=None, tree_idx=1,
+            feature_names=feature_names,
+            file_name="output/decision_tree" + "_" + str(tree_idx),
+            min_samples_leaf=2500, format="svg")
 
-    if args.results: visualize_results(all_scores, label_acc, label_prec)
+    if args.tsne:
+        tsne(smp_preprocessed, dim="2d", file_name="output/plots_data/normalized/tsne_01_")
+
+    ## VISUALIZE RESULTS ##
+    if args.results:
+        # load dataframe with performance data
+        all_scores = pd.read_csv("output/scores/all_scores.csv")
+        label_acc = pd.read_csv("output/scores/acc_labels.csv")
+        label_prec = pd.read_csv("output/scores/prec_labels.csv")
+
+        visualize_results(all_scores, label_acc, label_prec)
 
 if __name__ == "__main__":
     main()
