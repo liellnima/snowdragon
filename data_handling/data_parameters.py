@@ -123,6 +123,23 @@ MODEL_COLORS02 = {
     "Encoder Decoder": "lime",
 }
 
+MODEL_LABELS = {
+    "baseline": "Majority Vote",
+    "bmm": "Bayesian Gaussian Mixture Model",
+    "gmm": "Gaussian Mixture Model",
+    "kmeans": "K-means",
+    "self_trainer": "Self Trainer",
+    "label_spreading": "Label Propagation",
+    "easy_ensemble": "Easy Ensemble",
+    "knn": "K-nearest Neighbors",
+    "rf": "Random Forest",
+    "rf_bal": "Balanced Random Forest",
+    "svm": "Support Vector Machine",
+    "lstm": "LSTM",
+    "blstm": "BLSTM",
+    "enc_dec": "Encoder Decoder"
+}
+
 # experimenting with the colors
 # group 01: GRAY - baseline
 # group 02: ORANGE/RED semi-supervised
