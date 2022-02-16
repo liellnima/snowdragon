@@ -40,7 +40,7 @@ def compare_plot(smp_true, smp_preds, smp_name, model_names, title=None, grid=Tr
 
     smps = [smp_true, smp_preds[0], smp_preds[1]]
 
-    fig, axs = plt.subplots(3, sharex=True, sharey=True)
+    fig, axs = plt.subplots(3, sharex=True, sharey=True, dpi=300)
     first_ax = True
     line_handles = []
     for ax, smp in zip(axs, smps):
