@@ -3,7 +3,7 @@ from visualization.plot_data import bog_plot, all_in_one_plot
 from visualization.plot_dim_reduction import pca, tsne, tsne_pca
 from visualization.plot_profile import smp_unlabelled, smp_labelled, smp_features
 from visualization.plot_data import plot_balancing, corr_heatmap, anova, forest_extractor, pairwise_features, visualize_tree
-from visualization.plot_results import plot_confusion_matrix, plot_model_comparison, prepare_evaluation_data
+from visualization.plot_results import plot_confusion_matrix, plot_model_comparison, prepare_evaluation_data, plot_roc_auc
 
 import joblib
 import argparse
@@ -95,12 +95,14 @@ def visualize_original_data(smp):
     #all_in_one_plot(smp, file_name="output/plots_data/original/overview_data_updatedaxis.png", profile_name=smp_profile_name, title=None)
     #all_in_one_plot(smp, file_name="output/plots_data/original/overview_data_indices.png", show_indices=True)
 
-def visualize_results(all_scores, label_acc, label_prec):
+def visualize_results(all_scores, label_acc, label_prec, cf_matrix=True, roc_auc=True):
     """ Visualizing results such as confusion matrix, roc curves and accuracy plots
     Parameters:
         all_scores (pd.DataFrame): dataframe containing scores of all models. stored as csv in output/scores
         label_acc (pd.DataFrame): label accuracies of each model. stored as csv in output/scores
         label_prec (pd.DataFrame): label precisions of each model. stored as csv in output/scores
+        cf_matrix (bool): if confusion matrices should be created
+        roc_auc (bool): if roc auc curves should be created
     """
     # resort label_acc (so the models have the right grouping order)
     label_acc = label_acc.reindex([0, 1, 2, 3, 9, 10, 4, 5, 6, 7, 8, 11, 12, 13])
@@ -121,27 +123,50 @@ def visualize_results(all_scores, label_acc, label_prec):
     # plot confusion matrices
 
     # retrieve and summarize the data for the confusion matrices and the roc curves
-    names, cf_matrices, label_orders = prepare_evaluation_data("output/evaluation")
-    group_1 = ["baseline", "gmm", "bmm", "kmeans", "easy_ensemble", "knn"]
-    group_2 = ["rf", "rf_bal", "svm", "lstm", "blstm", "enc_dec"]
-    group_3 = ["self_trainer", "label_spreading"]
+    names, cf_matrices, label_orders, y_trues, y_pred_probs = prepare_evaluation_data("output/evaluation")
 
-    for i, group in enumerate([group_1, group_2, group_3]):
-        # get indices of the group and relevant names, matrices, etc.
-        indices_group = [names.index(model) for model in group]
-        names_group = []
-        cf_matrices_group = []
-        label_orders_group = []
+    # plot cf matrices
+    if cf_matrix:
+        group_1 = ["baseline", "gmm", "bmm", "kmeans", "easy_ensemble", "knn"]
+        group_2 = ["rf", "rf_bal", "svm", "lstm", "blstm", "enc_dec"]
+        group_3 = ["self_trainer", "label_spreading"]
 
-        for idx in indices_group:
-            names_group.append(names[idx])
-            cf_matrices_group.append(cf_matrices[idx])
-            label_orders_group.append(label_orders[idx])
+        for i, group in enumerate([group_1, group_2, group_3]):
+            # get indices of the group and relevant names, matrices, etc.
+            indices_group = [names.index(model) for model in group]
+            names_group = []
+            cf_matrices_group = []
+            label_orders_group = []
 
-        plot_confusion_matrix(cf_matrices_group, label_orders_group, names_group, file_name="output/plots_results/confusion_matrixes_" + str(i) + ".png")
+            for idx in indices_group:
+                names_group.append(names[idx])
+                cf_matrices_group.append(cf_matrices[idx])
+                label_orders_group.append(label_orders[idx])
+
+            plot_confusion_matrix(cf_matrices_group,
+                label_orders_group,
+                names_group,
+                file_name="output/plots_results/confusion_matrixes_" + str(i) + ".png")
 
     # plot roc curves
-    # TODO
+    if roc_auc:
+        group = ["lstm", "rf", "self_trainer"]
+        indices_group = [names.index(model) for model in group]
+        y_group = []
+        y_pred_group = []
+        names_group = []
+        labels_group = []
+
+        for idx in indices_group:
+            y_group.append(y_trues[idx])
+            y_pred_group.append(y_pred_probs[idx])
+            names_group.append(names[idx])
+            labels_group.append(label_orders[idx])
+
+        plot_roc_auc(y_group, y_pred_group,
+            labels_group, names_group, legend=True,
+            file_name="output/plots_results/roc_auc_curves.png")
+
 
 def main():
     args = parser.parse_args()
@@ -180,7 +205,7 @@ def main():
         label_acc = pd.read_csv("output/scores/acc_labels.csv")
         label_prec = pd.read_csv("output/scores/prec_labels.csv")
 
-        visualize_results(all_scores, label_acc, label_prec)
+        visualize_results(all_scores, label_acc, label_prec, cf_matrix=False)
 
 if __name__ == "__main__":
     main()
