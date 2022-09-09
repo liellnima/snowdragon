@@ -6,3 +6,4 @@ data_handling/poisson_features.py
 output/predictions/*
 models/stored_models/*
 visualization/storage/*
+!output/predictions/.gitkeep
