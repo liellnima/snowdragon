@@ -69,28 +69,27 @@ ANTI_LABELS_LONG = {
     15: "Melt-freeze\nCrust",
     16: "Precipitation\nParticles",
     17: "Rare",
-
 }
 
 COLORS = {
     0: "dimgray",
     1: "chocolate",
     2: "darkslategrey",
-    3: "lightseagreen",
-    4: "lightsteelblue",
-    5: "midnightblue",  # "mediumaquamarine"
-    6: "tomato",
+    3: "lightseagreen", #20b2aa
+    4: "lightsteelblue", #b0c4de
+    5: "midnightblue", #191970 # "mediumaquamarine"
+    6: "tomato", #ff6347
     7: "mediumvioletred",
     8: "firebrick",
     9: "lightgreen",
     10: "orange",
-    11: "paleturquoise",
-    12: "gold",
+    11: "paleturquoise", #afeeee
+    12: "gold", #ffd700
     13: "orchid",
     14: "fuchsia",
     15: "saddlebrown",
-    16: "green",
-    17: "blue",
+    16: "green", #2ca02c
+    17: "blue", #0000ff
 }
 
 # arguments for Preprocessing
@@ -121,6 +120,23 @@ MODEL_COLORS02 = {
     "LSTM": "green",
     "BLSTM": "springgreen",
     "Encoder Decoder": "lime",
+}
+
+MODEL_LABELS = {
+    "baseline": "Majority Vote",
+    "bmm": "Bayesian Gaussian Mixture Model",
+    "gmm": "Gaussian Mixture Model",
+    "kmeans": "K-means",
+    "self_trainer": "Self Trainer",
+    "label_spreading": "Label Propagation",
+    "easy_ensemble": "Easy Ensemble",
+    "knn": "K-nearest Neighbors",
+    "rf": "Random Forest",
+    "rf_bal": "Balanced Random Forest",
+    "svm": "Support Vector Machine",
+    "lstm": "LSTM",
+    "blstm": "BLSTM",
+    "enc_dec": "Encoder Decoder"
 }
 
 # experimenting with the colors

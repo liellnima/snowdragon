@@ -5,11 +5,14 @@ from visualization.plot_profile import smp_unlabelled
 from data_handling.data_parameters import LABELS, ANTI_LABELS, COLORS, ANTI_LABELS_LONG
 
 import os
+import io
 import math
+import graphviz
 import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
 import matplotlib.colors as colors
 import matplotlib.ticker as ticker
 
@@ -17,6 +20,7 @@ import matplotlib.ticker as ticker
 from tqdm import tqdm
 from scipy import stats
 from tabulate import tabulate
+from snowmicropyn import Profile
 from sklearn.tree import export_graphviz
 from sklearn.tree._tree import TREE_LEAF
 from sklearn.feature_selection import f_classif
@@ -118,10 +122,17 @@ def all_in_one_plot(smp, show_indices=False, sort=True, title="SMP Profiles with
         plt.bar(x_ticks, np.repeat(1 + cur_mm, len(smp_indices)), width=bar_width, color=label_colors)
 
     # producing the legend for the labels
-    anti_colors = {ANTI_LABELS_LONG[key] : value for key, value in COLORS.items() if key in labelled_smp["label"].unique()}
+    # remove /n from antilabels
+    anti_labels_stripped = {key: value.replace("\n", ' ') for key, value in ANTI_LABELS_LONG.items()}
+    anti_labels_stripped[7] = "Decomposed and Fragmented\nPrecipitation Particles"
+    anti_labels_stripped[13] = "Melted Form Clustered Rounded\nGrains"
+    anti_colors = {anti_labels_stripped[key] : value for key, value in COLORS.items() if key in labelled_smp["label"].unique()}
     markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='') for color in anti_colors.values()]
     plt.yticks(range(0, max_distance, 100))
-    plt.legend(markers, anti_colors.keys(), numpoints=1, title="Snow Grain Types", loc="center left", bbox_to_anchor=(1, 0.5), handletextpad=0.8, labelspacing=0.8)#, markerscale=3)
+    plt.legend(markers, anti_colors.keys(), numpoints=1,
+               title="Snow Grain Types", loc="center left",
+               bbox_to_anchor=(1, 0.5), handletextpad=0.8, labelspacing=0.8,
+               frameon=False, title_fontsize=14)#, markerscale=3)
     plt.ylabel("Distance from Ground [mm]", fontsize=14)
 
     if title is not None:
@@ -136,7 +147,7 @@ def all_in_one_plot(smp, show_indices=False, sort=True, title="SMP Profiles with
     else:
         plt.xticks([])
 
-    plt.xlabel("SMP Profile", fontsize=14)
+    plt.xlabel("Snow Micro Pen Profiles", fontsize=14)
     plt.xlim(0.0, 1.0)
     plt.ylim(0, int(math.ceil(max_distance / 100.0)) * 100) # rounds up to next hundred
 
@@ -144,17 +155,40 @@ def all_in_one_plot(smp, show_indices=False, sort=True, title="SMP Profiles with
     ax = plt.gca()
     fig = plt.gcf()
     ax_in_plot = ax.inset_axes([0.15,0.5,0.4,0.4])
+    if profile_name == "S31H0368":
+        # retrieve original smp signal
+        # load npz in smp_profiles_updated
+        raw_file = Profile.load("../Data/Arctic_updated/sn_smp_31/exdata/PS122-3_30-42/" + profile_name + ".pnt")
+        raw_profile = raw_file.samples_within_snowpack(relativize=True)
+        sns.lineplot(raw_profile["distance"], raw_profile["force"], ax=ax_in_plot, color="darkgrey")
+
     if isinstance(profile_name, str):
         smp_wanted = idx_to_int(profile_name)
     else:
         smp_wanted = profile_name
+
     smp_profile = smp[smp["smp_idx"] == smp_wanted]
-    sns.lineplot(smp_profile["distance"], smp_profile["mean_force"], ax=ax_in_plot)
-    ax_in_plot.set_xlabel("Snow Depth [mm]")
+
+    sns.lineplot(smp_profile["distance"], smp_profile["mean_force"], ax=ax_in_plot)# , color="darkslategrey"
+    ax_in_plot.set_xlabel("Distance from Surface [mm]")
     ax_in_plot.set_ylabel("Mean Force [N]")
     ax_in_plot.set_xlim(0, len(smp_profile)-1)
-    ax_in_plot.set_ylim(0)
-    ax_in_plot.set_title("SMP Signal of\nProfile {}".format(profile_name))
+    ax_in_plot.set_ylim(0, 10)
+    ax_in_plot.set_title("Snow Micro Pen Signal") #of\nProfile {}".format(profile_name)
+
+    # add background colors!
+    last_label_num = 1
+    last_distance = -1
+    for label_num, distance in zip(smp_profile["label"], smp_profile["distance"]):
+        if (label_num != last_label_num):
+            # assign new background for each label
+            background = ax_in_plot.axvspan(last_distance, distance-1, color=COLORS[last_label_num], alpha=0.5)
+            last_label_num = label_num
+            last_distance = distance-1
+
+        if distance == smp_profile.iloc[len(smp_profile)-1]["distance"]:
+            ax_in_plot.axvspan(last_distance, distance, color=COLORS[label_num], alpha=0.5)
+
 
     # find location of smp profile
     profile_loc = (labels.index(profile_name) / len(labels)) + (bar_width*1.5)
@@ -167,13 +201,14 @@ def all_in_one_plot(smp, show_indices=False, sort=True, title="SMP Profiles with
     plt.close()
 
 # Longterm TODO: more beautiful heatmaps: https://towardsdatascience.com/better-heatmaps-and-correlation-matrix-plots-in-python-41445d0f2bec
-def corr_heatmap(smp, labels=None, file_name="output/plots_data/corr_heatmap.png"):
+def corr_heatmap(smp, labels=None, file_name="output/plots_data/corr_heatmap.png", title=""):
     """ Plots a correlation heatmap of all features.
     Parameters:
         smp (df.Dataframe): SMP preprocessed data
         labels (list): Default None - usual complete correlation heatmap is calculated.
             Else put in the labels for which the correlation heatmap should be calculated
         file_name (str): where the resulting pic should be saved
+        title (str): title of the figure
     """
     if labels is None:
         smp_filtered = smp.drop("label", axis=1)
@@ -181,7 +216,9 @@ def corr_heatmap(smp, labels=None, file_name="output/plots_data/corr_heatmap.png
         mask = np.triu(np.ones_like(smp_corr, dtype=np.bool))
         mask = mask[1:, :-1]
         corr = smp_corr.iloc[1:, :-1].copy()
-        sns.heatmap(corr, mask=mask, annot=False, fmt=".2f", vmin=-1, vmax=1, center=0, annot_kws={"fontsize": 5})
+        sns.heatmap(corr, mask=mask, annot=False, fmt=".2f", vmin=-1, vmax=1,
+                    center=0, annot_kws={"fontsize": 5},
+                    cbar_kws={"label": "Pearson Correlation"})
         plt.xticks(range(0, 24),
                    ["dist", "mean", "var", "min", "max", "mean_4", "var_4",
                     "min_4", "max_4", "med_4", "lambda_4", "delta_4", "L_4",
@@ -195,7 +232,7 @@ def corr_heatmap(smp, labels=None, file_name="output/plots_data/corr_heatmap.png
                     "lambda_12", "delta_12", "L_12", "gradient", "smp_idx", "pos_rel", "dist_gro"],
                     fontsize=7)
         plt.tight_layout(rect=[-0.02, 0, 1.07, 0.95])
-        plt.title("Correlation Heatmap of SMP Features")
+        plt.title(title) #"Correlation Heatmap of SMP Features"
         if file_name is not None:
             plt.savefig(file_name, dpi=200)
             plt.close()
@@ -216,25 +253,27 @@ def corr_heatmap(smp, labels=None, file_name="output/plots_data/corr_heatmap.png
         # drop label columns
         smp_labelled = smp_labelled.drop("label", axis=1)
         # calculate the correlation heatmap
-        smp_corr = smp_labelled.corr()
+        smp_corr = smp_labelled.corr() # Pearson Correlation
         # consider only the correlations between labels and features
         corr = smp_corr.iloc[-len(labels):, :].copy()
         corr = corr.drop(col_names, axis=1)
         # plot the resulting heatmap
-        sns.heatmap(corr, annot=True, fmt=".2f", vmin=-1, vmax=1, center=0, annot_kws={"fontsize":6})
-        plt.tight_layout(rect=[0, -0.05, 1.07, 0.95])
+        sns.heatmap(corr, annot=True, fmt=".2f", vmin=-1, vmax=1, center=0,
+                    annot_kws={"fontsize":6}, cmap="RdBu_r", #RdBu_r #coolwarm
+                    cbar_kws={"label": "Pearson Correlation", "pad":0.02})
+        plt.tight_layout(rect=[0.01, -0.05, 1.07, 0.95]) #[0, -0.05, 1.07, 0.95]
         plt.xticks(range(0, 24),
-                   ["dist", "mean", "var", "min", "max", "mean_4", "var_4",
-                    "min_4", "max_4", "med_4", "lambda_4", "delta_4", "L_4",
-                    "mean_12", "var_12", "min_12", "max_12", "med_12",
-                    "lambda_12", "delta_12", "L_12", "gradient", "pos_rel", "dist_gro"],
+                   ["dist", "mean", "var", "min", "max", "mean 4", "var 4",
+                    "min 4", "max 4", "med 4", "lambda 4", "delta 4", "L 4",
+                    "mean 12", "var 12", "min 12", "max 12", "med 12",
+                    "lambda 12", "delta 12", "L 12", "gradient", "pos rel", "dist gro"],
                    rotation=90, fontsize=8)
         plt.yticks(fontsize=8)
-        plt.xlabel("Features of SMP Data")
+        plt.xlabel("Features of Snow Micro Pen Data")
         plt.ylabel("Snow Grain Types")
-        plt.title("Correlation Heat Map of SMP Features with Different Labels")
+        plt.title(title)#"Correlation Heat Map of SMP Features with Different Labels"
         if file_name is not None:
-            plt.savefig(file_name, dpi=200)
+            plt.savefig(file_name, dpi=300)
             plt.close()
         else:
             plt.show()
@@ -409,42 +448,61 @@ def prune(decisiontree, min_samples_leaf = 1):
                 tree.children_left[i]=-1
                 tree.children_right[i]=-1
 
-def visualize_tree(rf, x_train, y_train, tree_idx=0, min_samples_leaf=1000, file_name="output/tree"):
+def visualize_tree(rf, x_train, y_train, feature_names=None, tree_idx=0, min_samples_leaf=1000, file_name="output/tree", format="png"):
     """ Visualizes a single tree from a decision tree. Works only explicitly for my current data.
     Parameters:
         rf (RandomForestClassifier): the scikit learn random forest classfier
-        x_train: Input data for training
-        y_train: Target data for training
-        tree_idx: Indicates which tree from the random forest should be visualized?
-        min_samples_leaf: Indicates how many samples should be sorted to a leaf minimally
-        file_name: The name under which the resulting png should be saved (without extension!)
+        x_train (pd.DataFrame): Input data for training. If None the rf is pretrained.
+        y_train (pd.Series): Target data for training. If None the rf is pretrained.
+        feature_names (list): Default None, since this is assigned from training data.
+            If the rf is pretrained, this must be assigned here. (e.g. smp.columns)
+        tree_idx (int): Indicates which tree from the random forest should be visualized?
+        min_samples_leaf (int): Indicates how many samples should be sorted to a leaf minimally
+        file_name (str): The name under which the resulting png should be saved (without extension!)
+        format (str): e.g. png or svg, indicates how the pic should be stored
     """
-    # deciding directly which label gets which decision tree label
-    y_train[y_train==6.0] = 0
-    y_train[y_train==3.0] = 1
-    y_train[y_train==5.0] = 2
-    y_train[y_train==12.0] = 3
-    y_train[y_train==4.0] = 4
-    y_train[y_train==17.0] = 5
-    y_train[y_train==16.0] = 6
-    anti_labels = {0:"rgwp", 1:"dh", 2: "mfdh", 3:"dhwp", 4:"dhid", 5:"rare", 6:"pp"}
 
-    # fit the model
-    rf.fit(x_train, y_train)
+    if (x_train is not None) and (y_train is not None):
+        # deciding directly which label gets which decision tree label
+        y_train[y_train==6.0] = 0
+        y_train[y_train==3.0] = 1
+        y_train[y_train==5.0] = 2
+        y_train[y_train==12.0] = 3
+        y_train[y_train==4.0] = 4
+        y_train[y_train==17.0] = 5
+        y_train[y_train==16.0] = 6
+        anti_labels = {0:"rgwp", 1:"dh", 2: "mfdh", 3:"dhwp", 4:"dhid", 5:"rare", 6:"pp"}
+        class_names = [anti_labels[label] for label in y_train.unique()]
+
+        feature_names = x_train.columns
+
+        # fit the model
+        rf.fit(x_train, y_train)
+
+    else:
+        feature_names = feature_names
+        class_names = [ANTI_LABELS[c] for c in rf.classes_]
+
     # extract one decision tree
     estimator = rf.estimators_[tree_idx]
     # we have to prune the tree otherwise the tree is way too big
     prune(estimator, min_samples_leaf=min_samples_leaf)
-    class_names = [anti_labels[label] for label in y_train.unique()]
+
     # export image as dot file
-    export_graphviz(estimator, out_file = file_name + ".dot",
-                feature_names = x_train.columns,
+    dot_data = export_graphviz(estimator, out_file = None, #file_name + ".dot",
+                feature_names = feature_names,
                 class_names = class_names,
-                rounded = True, proportion = False,
-                precision = 2, filled = True)
+                rounded = True, proportion = True,
+                precision = 2, filled = True, rotate=False)
+
+    new_dot_data = "\\n".join([line for line in dot_data.split("\\n") if not line.startswith("value")])
+    # save that as png
+    graphviz.Source(new_dot_data, format=format).render(filename = file_name)
+    os.system("rm " + file_name)
     # make a png file from the dot file and delete the dot file
-    os.system("dot -Tpng "+ file_name + ".dot -o " + file_name + ".png")
-    os.system("rm " + file_name + ".dot")
+    # os.system("dot -Tpng "+ file_name + ".dot -o " + file_name + ".png")
+    # os.system("rm " + file_name + ".dot")
+
 
 def plot_confusion_matrix(confusion_matrix, labels, name="", file_name="output/plots_data/confusion_matrix.png"):
     """ Plot confusion matrix with relative prediction frequencies per label as heatmap.

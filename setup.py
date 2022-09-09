@@ -16,3 +16,7 @@ setup(
     install_requires=requirements,
     python_requires=">=3.6, <3.7",  # TODO: Check if higher version work as well
 )
+
+# add something to rewrite import in keras_self_attention:
+# from tensorflow import keras
+# instead of: import keras

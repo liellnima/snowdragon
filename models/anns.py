@@ -15,6 +15,7 @@ from tensorflow.keras import Sequential
 from tensorflow.keras import regularizers
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Dense, LSTM, Dropout, Masking, Bidirectional, Activation, Input, RepeatVector
+from tensorflow.keras.callbacks import EarlyStopping
 from keras_self_attention import SeqSelfAttention
 from sklearn.model_selection import train_test_split
 
@@ -211,6 +212,7 @@ def eval_ann(x_train, x_valid, y_train, y_valid, profile_len_train, profile_len_
         raise ValueError("Parameter \"ann_type\" in eval_ann() must be one of the following: \"lstm\", \"blstm\" or \"enc_dec\".")
 
     # fitting the model
+    # TODO callback early stopping
     start_time = time.time()
     history = model.fit(train_dataset, validation_data=valid_dataset, epochs=epochs, workers=-1, verbose=0)
     fit_time = time.time() - start_time
@@ -469,7 +471,7 @@ def get_ann_model(x_train, y_train, smp_idx_train, ann_type="lstm", **params):
 
     return model
 
-def fit_ann_model(model, x_train, y_train, smp_idx_train, batch_size=32, epochs=50, plot_loss=False, file_name=None, **kwargs):
+def fit_ann_model(model, x_train, y_train, smp_idx_train, batch_size=32, epochs=50, plot_loss=False, file_name=None, return_model=False, **kwargs):
     """ Fitting a given ANN model to the training data.
     Parameters:
         model (keras.model): keras model on which fit can be called
@@ -479,14 +481,17 @@ def fit_ann_model(model, x_train, y_train, smp_idx_train, batch_size=32, epochs=
         epochs (int): number of epochs run during ANN training
         plot_loss (bool): Indicates if plot should be plotted or not
         file_name (str): Name for the plot_loss plot ("_loss") will be added. Default = None means that the plot won't be saved.
+        return_model (bool): If the model should be returned
     """
     # make the training data to tensor data and batch it
     max_smp_len_train = find_max_len(smp_idx=smp_idx_train, x_data=x_train)
     x_train, y_train, profile_len_train = prepare_data(x_train, y_train, smp_idx_train, max_smp_len=max_smp_len_train, labels=list(y_train.unique()))
     train_dataset = tf.data.Dataset.from_tensor_slices((x_train, y_train)).batch(batch_size)
+    # good patience value: int(epochs/10)
+    callback = EarlyStopping(monitor="loss", patience=epochs, restore_best_weights=True)
 
     # fitting the model
-    history = model.fit(train_dataset, epochs=epochs, workers=-1, verbose=2)
+    history = model.fit(train_dataset, epochs=epochs, workers=-1, callbacks=[callback], verbose=2)
     # plot loss
     if plot_loss:
         plt.plot(history.history["loss"])
@@ -499,6 +504,31 @@ def fit_ann_model(model, x_train, y_train, smp_idx_train, batch_size=32, epochs=
             plt.close()
         else:
             plt.show()
+    if return_model:
+        return model
+
+# method could be extended to return also probabilities, see predict_ann_model for that
+def predict_single_profile_ann(model, x_data, targets):
+    """ Predicts one single profile and returns only the labels.
+
+    Parameters:
+        model (keras.model): Keras model which was already fit
+        x_data (pd.DataFrame): One single smp profile for which predictions should be created
+        targets (list): A simple list of all possible targets that could occur.
+            Target values may occur more than once, one can you use y_train or similar.
+    Returns
+        list: Labels predicted by given ANN model
+    """
+    org_labels = sorted(list(targets.unique()))
+    # note: if this doesnt work anymore one day (tf updates), check out this link:
+    # https://datascience.stackexchange.com/questions/13461/how-can-i-get-prediction-for-only-one-instance-in-keras
+    # and create a single_item_model is possible
+    predictions = model.predict(np.array([x_data,]))
+    # get labels (instead of probability predictions)
+    argmax_pred = np.argmax(predictions, axis=2)[0]
+    # transform back from one-hot-encoding to labels
+    y_pred_labels = [org_labels[pred] for pred in argmax_pred]
+    return y_pred_labels
 
 
 def predict_ann_model(model, x_valid, y_valid, smp_idx_valid, predict_proba=False, batch_size=32, **kwargs):

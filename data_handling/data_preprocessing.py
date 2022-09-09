@@ -2,14 +2,17 @@
 from data_handling.data_parameters import SMP_LOC, T_LOC, EXP_LOC, LABELS, PARAMS
 
 # external imports
-import numpy as np
-import warnings
-warnings.simplefilter(action='ignore', category=FutureWarning)
-import pandas as pd
+import re
 import os
+import csv
 import glob
 import time # only used in main
-import re
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+
+import numpy as np
+import pandas as pd
+
 from tqdm import tqdm
 from pathlib import Path # for os independent path handling
 from snowmicropyn import Profile, loewe2012, windowing
@@ -21,7 +24,7 @@ T_LOC = Path(T_LOC)
 
 
 # exports pnt files (our smp profiles!) to csv files in a target directory
-def export_pnt (pnt_dir, target_dir, export_as="npz", overwrite=False, **params):
+def export_pnt(pnt_dir, target_dir, export_as="npz", overwrite=False, **params):
     """ Exports all pnt files from a dir and its subdirs as csv files into a new dir.
     Preproceses the profiles, according to kwargs arguments.
     Parameters:
@@ -52,6 +55,40 @@ def export_pnt (pnt_dir, target_dir, export_as="npz", overwrite=False, **params)
             pbar.update(1)
 
     print("Finished exporting all pnt file as {} files in {}.".format(export_as, target_dir))
+
+def search_markers(pnt_dir, store_dir="data/sfc_ground_markers.csv"):
+    """ Detect and store all the surface and ground markers.
+    Parameters:
+        pnt_dir (Path): folder location of pnt files (in our case the smp profiles)
+        store_dir (Path): folder location where marker csv should be stored. if
+            the file already exists the data is simply appended
+    """
+    # match all files in the dir who end on .pnt recursively
+    match_pnt = pnt_dir.as_posix() + "/**/*.pnt"
+    # use generator to reduce memory usage
+    file_generator = glob.iglob(match_pnt, recursive=True)
+    # yields each matching file and stores the markers data
+    print("Progressbar is only correct when using the Mosaic SMP Data.")
+    with tqdm(total=3825) as pbar:
+        for file in file_generator:
+            profile = Profile.load(file)
+            labelled_data = len(profile.markers) != 0
+            # detect surface and ground if labels don't exist yet
+            if not labelled_data:
+                try:
+                    profile.detect_ground()
+                    profile.detect_surface()
+                    # get surface and ground
+                    with open(store_dir, "a+") as file:
+                        writer = csv.writer(file)
+                        writer.writerow([profile.name, profile.detect_surface(), profile.detect_ground()])
+                except ValueError:
+                    print("Profile {} is too short for data processing. Profile is skipped.".format(profile.name))
+
+            pbar.update(1)
+
+    print("Finished storing surface and ground markers in {}.".format(store_dir))
+
 
 def idx_to_int(string_idx):
     """ Converts a string that indexes the smp profile to an int.
@@ -359,8 +396,14 @@ def preprocess_profile(profile, target_dir, export_as="csv", sum_mm=1, gradient=
             # leave function
             return
 
+    # 0. Store ground and surface labels for the profile
+    # with open("data/sfc_ground_markers.csv", "a+") as file:
+    #     writer = csv.writer(file)
+    #     writer.writerow([profile.name, profile.detect_surface(), profile.detect_ground()])
+
     # 1. restrict dataframe between surface and ground (absolute distance values!)
     df = profile.samples_within_snowpack(relativize=False)
+
     # add label column
     df["label"] = 0
 

@@ -9,6 +9,7 @@ from visualization.plot_data import all_in_one_plot, plot_confusion_matrix, plot
 from visualization.plot_profile import smp_pair_both, smp_pair, smp_labelled
 
 import time
+import pickle
 import numpy as np
 import pandas as pd
 
@@ -110,6 +111,58 @@ def predicting(model, x_train, y_train, x_test, y_test, smp_idx_train, smp_idx_t
         or \"baseline\" (for the majority vote baseline)""")
 
     return y_pred, y_pred_prob, fit_time, score_time
+
+def train_single_model(model, x_train, y_train, smp_idx_train, impl_type, **fit_params):
+    """ Used from train_and_store_models to fit a single model.
+    Parameters:
+        model (model): Model on which .fit and .predict can be called. (or baseline )
+        x_train (pd.DataFrame): Training input data.
+        y_train (pd.Series): Training target data - the desired output.
+        smp_idx_train (pd.Series): SMP indices for the tranining data.
+        unlabelled_data (pd.DataFrame): Unlabelled Data used for semi-supervised
+            learning.
+        impl_type (str): Default \"scikit\". Indicates which type of model must be
+            used during prediction and fitting. The following types exists:
+            \"scikit\" (most models), \"baseline\", \"keras\" (for all ann models),
+            \"semi_manual\" (kmeans, gmm, bmm)
+        store_models (bool): If the models should be stored
+        **fit_params: These are additional parameters which are given to the
+            fit call. This is important e.g. for anns, since epochs and
+            batch size must be be specified during fitting.
+    """
+    # fitting and prediction based on the model implementation type
+    if impl_type == "scikit":
+        # fitting the model
+        model.fit(x_train, y_train)
+        # # predict proba - special case SVM: change model, fit newly and predict
+        # if isinstance(model, SVC):
+        #     # change model
+        #     print("SVM prob fitting")
+        #     model.probability = True
+        #     model.fit(x_train, y_train)
+
+    elif impl_type == "keras":
+        # fitting the model (is changed in place)
+        model = fit_ann_model(model, x_train, y_train, smp_idx_train, return_model=True, **fit_params)
+
+    elif impl_type == "baseline":
+        # fitting the model
+        majority_vote = fit_baseline(y_train)
+        model = majority_vote
+
+    elif impl_type == "semi_manual":
+        # concat unlabelled and labelled data and fit it
+        model = model.fit(x_train)
+
+    else:
+        raise ValueError("""This Model implementation types does not exist.
+        Choose one of the following: \"scikit\" (for rf, svm, knn, easy_ensemble, self_trainer),
+        \"semi_manual\" (for kmean, gmm, bmm), \"keras\" (for lstm, blsm, enc_dec),
+        or \"baseline\" (for the majority vote baseline)""")
+
+    # return the trained/fitted model
+    return model
+
 
 def metrics_testing(y_test, y_pred, y_pred_prob, fit_time, score_time, labels_order, annot="test", name="Model", save_dir=None, printing=False):
     """ Calculates and prints metrics.
@@ -270,6 +323,9 @@ def plot_testing(y_pred, y_pred_prob, metrics_per_label, x_test, y_test,
         for smp_name, smp_true, smp_pred in tqdm(zip(smp_names, smp_trues, smp_preds), total=len(smp_names)):
             smp_name_str = int_to_idx(smp_name)
             save_file = save_dir + "/onesies/smp_" + smp_name_str + ".png" if save_dir is not None else None
+            # store shortly for visualization purposes:
+            with open(("visualization/storage/smp_" + name + "_" + smp_name_str + ".pickle"), "wb") as handle:
+                pickle.dump((smp_true, smp_pred), handle)
             smp_pair(smp_true, smp_pred, smp_name, title="Observed and with {} Predicted\nSMP Profile {}".format(name, smp_name_str), file_name=save_file)
 
     # put all smps together in one plot

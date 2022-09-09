@@ -8,6 +8,28 @@ from tqdm import tqdm
 from types import GeneratorType
 from sklearn.model_selection import cross_validate
 
+def assign_clusters_single_profile(pred_clusters, train_targets, train_clusters, train_cluster_num):
+    """ Assigns snow labels to the clusters of a single profile.
+    Parameters:
+        pred_clusters: cluster assignment that one of the models predicted for the single profile
+        train_targets: target data (int labels of our smp data) from previous training
+        train_clusters: cluster assignment that the model predicted during training
+        train_ cluster_num: number of clusters that the model decided on during training
+    Returns:
+        list: with predicted snow labels for a single profile
+    """
+    pred_snow_labels = pred_clusters
+    for i in range(train_cluster_num):
+        # filter for data with current cluster assignment
+        mask = pred_clusters == i
+        # if there is something in this cluster
+        if any(mask):
+            # find out which snow grain label occurs most frequently during training for that cluster
+            snow_label = np.argmax(np.bincount(train_targets[train_clusters == i]))
+            # and assign it to all the data points belonging to this cluster in the unknown profile
+            pred_snow_labels[mask] = snow_label
+    # return the predicted snow labels
+    return pred_snow_labels
 
 def assign_clusters(targets, clusters, cluster_num):
     """ Assigns snow labels to previously calculated clusters. This is a helper function for semisupervised models
@@ -24,6 +46,7 @@ def assign_clusters(targets, clusters, cluster_num):
         mask = clusters == i
         # if there is something in this cluster
         if len(np.bincount(targets[mask])) > 0:
+
             # find out which snow grain label occurs most frequently
             snow_label = np.argmax(np.bincount(targets[mask]))
             # and assign it to all the data point belonging to the current cluster
