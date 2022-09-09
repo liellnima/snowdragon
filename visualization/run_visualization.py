@@ -3,8 +3,9 @@ from visualization.plot_data import bog_plot, all_in_one_plot
 from visualization.plot_dim_reduction import pca, tsne, tsne_pca
 from visualization.plot_profile import smp_unlabelled, smp_labelled, smp_features
 from visualization.plot_data import plot_balancing, corr_heatmap, anova, forest_extractor, pairwise_features, visualize_tree
-from visualization.plot_results import plot_confusion_matrix, plot_model_comparison, prepare_evaluation_data, plot_roc_auc
+from visualization.plot_results import plot_confusion_matrix, plot_model_comparison, prepare_evaluation_data, plot_roc_auc, plot_test_bogplots, plot_model_comparison_bars, prepare_score_data
 
+import pickle
 import joblib
 import argparse
 import pandas as pd
@@ -92,10 +93,10 @@ def visualize_original_data(smp):
     # PLOT BOGPLOT
     bog_plot(smp, file_name=path+"bog_plot.png")
     # PLOT ALL IN ONE PLOT
-    #all_in_one_plot(smp, file_name="output/plots_data/original/overview_data_updatedaxis.png", profile_name=smp_profile_name, title=None)
+    all_in_one_plot(smp, file_name="output/plots_data/original/overview_data_updatedaxis.png", profile_name=smp_profile_name, title=None)
     #all_in_one_plot(smp, file_name="output/plots_data/original/overview_data_indices.png", show_indices=True)
 
-def visualize_results(all_scores, label_acc, label_prec, cf_matrix=True, roc_auc=True):
+def visualize_results(all_scores, label_acc, label_prec, cf_matrix=True, roc_auc=True, bog_plot=True, comparison=True):
     """ Visualizing results such as confusion matrix, roc curves and accuracy plots
     Parameters:
         all_scores (pd.DataFrame): dataframe containing scores of all models. stored as csv in output/scores
@@ -105,25 +106,28 @@ def visualize_results(all_scores, label_acc, label_prec, cf_matrix=True, roc_auc
         roc_auc (bool): if roc auc curves should be created
     """
     # resort label_acc (so the models have the right grouping order)
-    label_acc = label_acc.reindex([0, 1, 2, 3, 9, 10, 4, 5, 6, 7, 8, 11, 12, 13])
-    label_prec = label_prec.reindex([0, 1, 2, 3, 9, 10, 4, 5, 6, 7, 8, 11, 12, 13])
+    label_acc = label_acc.reindex([7, 5, 2, 0, 4, 10, 6, 11, 8, 9, 12, 3, 1, 13])
+    label_prec = label_prec.reindex([7, 5, 2, 0, 4, 10, 6, 11, 8, 9, 12, 3, 1, 13])
+    #label_acc = label_acc.reindex([0, 1, 2, 3, 9, 10, 4, 5, 6, 7, 8, 11, 12, 13])
+    #label_prec = label_prec.reindex([0, 1, 2, 3, 9, 10, 4, 5, 6, 7, 8, 11, 12, 13])
 
     # visualize the accuracies and precisions of the different models
-    # plot_model_comparison(
-    #     label_acc, plot_rare=False,
-    #     file_name="output/results/model_comparison_acc.png",
-    #     metric_name="accuracy"
-    # )
-    # plot_model_comparison(
-    #     label_prec, plot_rare=False,
-    #     file_name="output/results/model_comparison_prec.png",
-    #     metric_name="precision"
-    # )
+    if comparison:
+        plot_model_comparison_bars(
+            label_acc, all_scores, plot_rare=False,
+            file_name="output/plots_results/model_comparison_bar_acc.pdf",
+            metric_name="accuracy"
+        )
+        plot_model_comparison_bars(
+            label_prec, all_scores, plot_rare=False,
+            file_name="output/plots_results/model_comparison_bar_prec.pdf",
+            metric_name="precision"
+        )
 
     # plot confusion matrices
 
     # retrieve and summarize the data for the confusion matrices and the roc curves
-    names, cf_matrices, label_orders, y_trues, y_pred_probs = prepare_evaluation_data("output/evaluation")
+    names, cf_matrices, label_orders, y_trues, y_pred_probs = prepare_evaluation_data("/home/julia/Documents/University/BA/Archive/evaluation_original_experiments/evaluation/")
 
     # plot cf matrices
     if cf_matrix:
@@ -142,14 +146,14 @@ def visualize_results(all_scores, label_acc, label_prec, cf_matrix=True, roc_auc
                 names_group.append(names[idx])
                 cf_matrices_group.append(cf_matrices[idx])
                 label_orders_group.append(label_orders[idx])
-
+            print(group)
             plot_confusion_matrix(cf_matrices_group,
                 label_orders_group,
                 names_group,
-                file_name="output/plots_results/confusion_matrixes_" + str(i) + ".png")
+                file_name="output/plots_results/confusion_matrixes_" + str(i) + ".pdf")
 
     # plot roc curves
-    if roc_auc:
+    if roc_auc or bog_plot:
         group = ["lstm", "rf", "self_trainer"]
         indices_group = [names.index(model) for model in group]
         y_group = []
@@ -163,12 +167,28 @@ def visualize_results(all_scores, label_acc, label_prec, cf_matrix=True, roc_auc
             names_group.append(names[idx])
             labels_group.append(label_orders[idx])
 
-        plot_roc_auc(y_group, y_pred_group,
-            labels_group, names_group, legend=True,
-            file_name="output/plots_results/roc_auc_curves.png")
+        if roc_auc:
+            plot_roc_auc(y_group, y_pred_group,
+                labels_group, names_group, legend=True,
+                file_name="output/plots_results/roc_auc_curves.pdf")
+        if bog_plot:
+
+            # get smp indices for that
+            # TODO move that to main function
+            with open("data/preprocessed_data_k5.txt", "rb") as myFile:
+                smp_idx = pickle.load(myFile)["smp_idx_test"]
+
+            # y_true chose anyone, all the same
+            plot_test_bogplots(y_pred_group, y_group[0], smp_idx,
+                labels_group, names_group,
+                file_name="output/plots_results/bogplots_testset.pdf")
+
+
 
 
 def main():
+    # set this one to true when doing it the first time
+    prepare_scores = False
     args = parser.parse_args()
 
     ## VISUALIZE DATA ##
@@ -196,16 +216,26 @@ def main():
             min_samples_leaf=2500, format="svg")
 
     if args.tsne:
-        tsne(smp_preprocessed, dim="2d", file_name="output/plots_data/normalized/tsne_01_")
+        tsne(smp_preprocessed, dim="2d", file_name="output/plots_data/normalized/tsne_2d_updated_")
 
     ## VISUALIZE RESULTS ##
     if args.results:
         # load dataframe with performance data
+        if prepare_scores:
+            prepare_score_data("output/evaluation/")
+            #prepare_score_data("/home/julia/Documents/University/BA/Archive/evaluation_original_experiments/evaluation/")
         all_scores = pd.read_csv("output/scores/all_scores.csv")
         label_acc = pd.read_csv("output/scores/acc_labels.csv")
         label_prec = pd.read_csv("output/scores/prec_labels.csv")
 
-        visualize_results(all_scores, label_acc, label_prec, cf_matrix=False)
+        visualize_results(all_scores, label_acc, label_prec,
+                          cf_matrix=True,
+                          roc_auc=False,
+                          bog_plot=False,
+                          comparison=False)
+    ## PREDICTIONS ##
+    # TODO run this here instead of in plot_profile
+
 
 if __name__ == "__main__":
     main()
