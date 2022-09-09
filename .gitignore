@@ -15,7 +15,7 @@ output/plots_results/*.pdf
 output/plots_results/*.svg
 output/plots_results/bogplot_comparison.png
 output/plots_results/comparison_3_profiles_ids.png
-output/decision_tree_1.*
+output/plots_results/decision_tree_1.*
 output/predictions.zip
 
 models/stored_models/*
