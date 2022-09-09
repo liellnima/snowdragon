@@ -20,6 +20,7 @@ import matplotlib.ticker as ticker
 from tqdm import tqdm
 from scipy import stats
 from tabulate import tabulate
+from snowmicropyn import Profile
 from sklearn.tree import export_graphviz
 from sklearn.tree._tree import TREE_LEAF
 from sklearn.feature_selection import f_classif
@@ -121,10 +122,17 @@ def all_in_one_plot(smp, show_indices=False, sort=True, title="SMP Profiles with
         plt.bar(x_ticks, np.repeat(1 + cur_mm, len(smp_indices)), width=bar_width, color=label_colors)
 
     # producing the legend for the labels
-    anti_colors = {ANTI_LABELS_LONG[key] : value for key, value in COLORS.items() if key in labelled_smp["label"].unique()}
+    # remove /n from antilabels
+    anti_labels_stripped = {key: value.replace("\n", ' ') for key, value in ANTI_LABELS_LONG.items()}
+    anti_labels_stripped[7] = "Decomposed and Fragmented\nPrecipitation Particles"
+    anti_labels_stripped[13] = "Melted Form Clustered Rounded\nGrains"
+    anti_colors = {anti_labels_stripped[key] : value for key, value in COLORS.items() if key in labelled_smp["label"].unique()}
     markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='') for color in anti_colors.values()]
     plt.yticks(range(0, max_distance, 100))
-    plt.legend(markers, anti_colors.keys(), numpoints=1, title="Snow Grain Types", loc="center left", bbox_to_anchor=(1, 0.5), handletextpad=0.8, labelspacing=0.8)#, markerscale=3)
+    plt.legend(markers, anti_colors.keys(), numpoints=1,
+               title="Snow Grain Types", loc="center left",
+               bbox_to_anchor=(1, 0.5), handletextpad=0.8, labelspacing=0.8,
+               frameon=False, title_fontsize=14)#, markerscale=3)
     plt.ylabel("Distance from Ground [mm]", fontsize=14)
 
     if title is not None:
@@ -139,7 +147,7 @@ def all_in_one_plot(smp, show_indices=False, sort=True, title="SMP Profiles with
     else:
         plt.xticks([])
 
-    plt.xlabel("SMP Profile", fontsize=14)
+    plt.xlabel("Snow Micro Pen Profiles", fontsize=14)
     plt.xlim(0.0, 1.0)
     plt.ylim(0, int(math.ceil(max_distance / 100.0)) * 100) # rounds up to next hundred
 
@@ -147,17 +155,40 @@ def all_in_one_plot(smp, show_indices=False, sort=True, title="SMP Profiles with
     ax = plt.gca()
     fig = plt.gcf()
     ax_in_plot = ax.inset_axes([0.15,0.5,0.4,0.4])
+    if profile_name == "S31H0368":
+        # retrieve original smp signal
+        # load npz in smp_profiles_updated
+        raw_file = Profile.load("../Data/Arctic_updated/sn_smp_31/exdata/PS122-3_30-42/" + profile_name + ".pnt")
+        raw_profile = raw_file.samples_within_snowpack(relativize=True)
+        sns.lineplot(raw_profile["distance"], raw_profile["force"], ax=ax_in_plot, color="darkgrey")
+
     if isinstance(profile_name, str):
         smp_wanted = idx_to_int(profile_name)
     else:
         smp_wanted = profile_name
+
     smp_profile = smp[smp["smp_idx"] == smp_wanted]
-    sns.lineplot(smp_profile["distance"], smp_profile["mean_force"], ax=ax_in_plot)
-    ax_in_plot.set_xlabel("Snow Depth [mm]")
+
+    sns.lineplot(smp_profile["distance"], smp_profile["mean_force"], ax=ax_in_plot)# , color="darkslategrey"
+    ax_in_plot.set_xlabel("Distance from Surface [mm]")
     ax_in_plot.set_ylabel("Mean Force [N]")
     ax_in_plot.set_xlim(0, len(smp_profile)-1)
-    ax_in_plot.set_ylim(0)
-    ax_in_plot.set_title("SMP Signal of\nProfile {}".format(profile_name))
+    ax_in_plot.set_ylim(0, 10)
+    ax_in_plot.set_title("Snow Micro Pen Signal") #of\nProfile {}".format(profile_name)
+
+    # add background colors!
+    last_label_num = 1
+    last_distance = -1
+    for label_num, distance in zip(smp_profile["label"], smp_profile["distance"]):
+        if (label_num != last_label_num):
+            # assign new background for each label
+            background = ax_in_plot.axvspan(last_distance, distance-1, color=COLORS[last_label_num], alpha=0.5)
+            last_label_num = label_num
+            last_distance = distance-1
+
+        if distance == smp_profile.iloc[len(smp_profile)-1]["distance"]:
+            ax_in_plot.axvspan(last_distance, distance, color=COLORS[label_num], alpha=0.5)
+
 
     # find location of smp profile
     profile_loc = (labels.index(profile_name) / len(labels)) + (bar_width*1.5)
@@ -170,13 +201,14 @@ def all_in_one_plot(smp, show_indices=False, sort=True, title="SMP Profiles with
     plt.close()
 
 # Longterm TODO: more beautiful heatmaps: https://towardsdatascience.com/better-heatmaps-and-correlation-matrix-plots-in-python-41445d0f2bec
-def corr_heatmap(smp, labels=None, file_name="output/plots_data/corr_heatmap.png"):
+def corr_heatmap(smp, labels=None, file_name="output/plots_data/corr_heatmap.png", title=""):
     """ Plots a correlation heatmap of all features.
     Parameters:
         smp (df.Dataframe): SMP preprocessed data
         labels (list): Default None - usual complete correlation heatmap is calculated.
             Else put in the labels for which the correlation heatmap should be calculated
         file_name (str): where the resulting pic should be saved
+        title (str): title of the figure
     """
     if labels is None:
         smp_filtered = smp.drop("label", axis=1)
@@ -184,7 +216,9 @@ def corr_heatmap(smp, labels=None, file_name="output/plots_data/corr_heatmap.png
         mask = np.triu(np.ones_like(smp_corr, dtype=np.bool))
         mask = mask[1:, :-1]
         corr = smp_corr.iloc[1:, :-1].copy()
-        sns.heatmap(corr, mask=mask, annot=False, fmt=".2f", vmin=-1, vmax=1, center=0, annot_kws={"fontsize": 5})
+        sns.heatmap(corr, mask=mask, annot=False, fmt=".2f", vmin=-1, vmax=1,
+                    center=0, annot_kws={"fontsize": 5},
+                    cbar_kws={"label": "Pearson Correlation"})
         plt.xticks(range(0, 24),
                    ["dist", "mean", "var", "min", "max", "mean_4", "var_4",
                     "min_4", "max_4", "med_4", "lambda_4", "delta_4", "L_4",
@@ -198,7 +232,7 @@ def corr_heatmap(smp, labels=None, file_name="output/plots_data/corr_heatmap.png
                     "lambda_12", "delta_12", "L_12", "gradient", "smp_idx", "pos_rel", "dist_gro"],
                     fontsize=7)
         plt.tight_layout(rect=[-0.02, 0, 1.07, 0.95])
-        plt.title("Correlation Heatmap of SMP Features")
+        plt.title(title) #"Correlation Heatmap of SMP Features"
         if file_name is not None:
             plt.savefig(file_name, dpi=200)
             plt.close()
@@ -219,25 +253,27 @@ def corr_heatmap(smp, labels=None, file_name="output/plots_data/corr_heatmap.png
         # drop label columns
         smp_labelled = smp_labelled.drop("label", axis=1)
         # calculate the correlation heatmap
-        smp_corr = smp_labelled.corr()
+        smp_corr = smp_labelled.corr() # Pearson Correlation
         # consider only the correlations between labels and features
         corr = smp_corr.iloc[-len(labels):, :].copy()
         corr = corr.drop(col_names, axis=1)
         # plot the resulting heatmap
-        sns.heatmap(corr, annot=True, fmt=".2f", vmin=-1, vmax=1, center=0, annot_kws={"fontsize":6})
-        plt.tight_layout(rect=[0, -0.05, 1.07, 0.95])
+        sns.heatmap(corr, annot=True, fmt=".2f", vmin=-1, vmax=1, center=0,
+                    annot_kws={"fontsize":6}, cmap="RdBu_r", #RdBu_r #coolwarm
+                    cbar_kws={"label": "Pearson Correlation", "pad":0.02})
+        plt.tight_layout(rect=[0.01, -0.05, 1.07, 0.95]) #[0, -0.05, 1.07, 0.95]
         plt.xticks(range(0, 24),
-                   ["dist", "mean", "var", "min", "max", "mean_4", "var_4",
-                    "min_4", "max_4", "med_4", "lambda_4", "delta_4", "L_4",
-                    "mean_12", "var_12", "min_12", "max_12", "med_12",
-                    "lambda_12", "delta_12", "L_12", "gradient", "pos_rel", "dist_gro"],
+                   ["dist", "mean", "var", "min", "max", "mean 4", "var 4",
+                    "min 4", "max 4", "med 4", "lambda 4", "delta 4", "L 4",
+                    "mean 12", "var 12", "min 12", "max 12", "med 12",
+                    "lambda 12", "delta 12", "L 12", "gradient", "pos rel", "dist gro"],
                    rotation=90, fontsize=8)
         plt.yticks(fontsize=8)
-        plt.xlabel("Features of SMP Data")
+        plt.xlabel("Features of Snow Micro Pen Data")
         plt.ylabel("Snow Grain Types")
-        plt.title("Correlation Heat Map of SMP Features with Different Labels")
+        plt.title(title)#"Correlation Heat Map of SMP Features with Different Labels"
         if file_name is not None:
-            plt.savefig(file_name, dpi=200)
+            plt.savefig(file_name, dpi=300)
             plt.close()
         else:
             plt.show()
