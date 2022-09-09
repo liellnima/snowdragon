@@ -15,15 +15,8 @@ output/plots_results/*.pdf
 output/plots_results/*.svg
 output/plots_results/bogplot_comparison.png
 output/plots_results/comparison_3_profiles_ids.png
-output/predictions/*
 output/decision_tree_1.*
 output/predictions.zip
 
 models/stored_models/*
-
-
 visualization/storage/*
-
-
-
-!output/predictions/.gitkeep
