@@ -2,21 +2,30 @@
 
 This repository can be used to run and compare different models for the classification and segmentation of Snow Micro Pen (SMP) profiles.  
 
-The SMP is a fast, high-resolution, portable snow hardness measurement device. The automatic classification and segmentation models can be used for the fast analysis of vast numbers of SMP profiles. For more information about the background of snow layer segmentation and grain type classification please refer to the related thesis. In the thesis the SMP dataset collected during the MOSAiC expedition was used. The plots and results of the different models can be reproduced with this repository.
+The SMP is a fast, high-resolution, portable snow hardness measurement device. The automatic classification and segmentation models can be used for the fast analysis of vast numbers of SMP profiles. For more information about the background of snow layer segmentation and grain type classification please refer to the related publicatoins. Throughout the project the SMP dataset collected during the MOSAiC expedition was used. The plots and results of the different models can be reproduced with this repository.
 
-* Related thesis: "Automatic Snow Classification − A Comparison of Machine Learning Algorithms for the Segmentation and Classification of Snow Micro Penetrometer Profiles" by Julia Kaltenborn
+* Access to raw data: [Available on PANGAEA]()
+* Download models: [Available on Zenodo]
 * About the SMP: [SLF Website](https://www.slf.ch/en/ueber-das-slf/versuchsanlagen-und-labors/kaeltelabor/snowmicropenr.html)
 * About MOSAiC: [MOSAiC Website](https://mosaic-expedition.org/)
 * Contact: [julia.kaltenborn@mila.quebec](mailto:julia.kaltenborn@mila.quebec)
+
+## Related publications
+* Bsc thesis: "Automatic Snow Classification − A Comparison of Machine Learning Algorithms for the Segmentation and Classification of Snow Micro Penetrometer Profiles" by Julia Kaltenborn
+* [“A Comparison of Machine Learning Algorithms for the Segmentation and Classification of Snow Micro Penetrometer Profiles on Arctic Sea Ice”](https://meetingorganizer.copernicus.org/EGU21/EGU21-15637.html), J. Kaltenborn, V. Clay, A. R. Macfarlane, J. M. King, M. Schneebeli, Data Science and Machine Learning for Cryosphere and Climate, EGU General Assembly, 2021. (Abstract)
+* [“ML for Snow Stratigraphy Classification”](https://www.climatechange.ai/papers/neurips2021/48), J. Kaltenborn, V. Clay, A. R. Macfarlane and M. Schneebeli, Tackling Climate Change with AI workshop, NeurIPS, 2021. (Presentation & Paper)
 
 
 ## Overview
 
 * ``data/``: Preprocessed SMP profiles as npz files
 * ``data_handling/``: Scripts to preprocess and clean the raw SMP profiles
-* ``models/``: Scripts to create and use models
-* ``plots/``: Plots and results with subfolder ``evaluation/`` containing evaluation results
+* ``models/``: Scripts to create, use and store models
+* ``output/``: Output and results are stored here. Subdir ``evaluation/`` contains plots for each model and profile. ``plots_data/`` contains plots giving an overview over the data. ``plots_results/`` contains plotted results. ``predictions/`` is where predictions are stored. ``scores/`` contains all the scores.
+
+Plots and results with subfolder ``evaluation/`` containing evaluation results
 * ``tuning/``: Scripts to tune models
+* ``visualization/``: Scripts to create plots
 
 ## Setup
 
