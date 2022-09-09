@@ -50,7 +50,7 @@ parser.add_argument("--preprocess", action="store_true", help="Data must be prep
 parser.add_argument("--evaluate", action="store_true", help="Models are evaluated. Data from 'smp_npz' is used.")
 parser.add_argument("--validate", action="store_true", help="Models are validated. Data from 'smp_npz' is used.")
 parser.add_argument("--train_and_store", action="store_true", help="Models are trained and stored. Data from 'smp_npz' is used.")
-parser.add_argument("--models", default=["all"], nargs='+', help="List od models that should be trained and stored.")
+parser.add_argument("--models", default=["all"], nargs='+', help="List of models that should be trained and stored.")
 
 # TODO put most of those functions here in helper_funcs
 
@@ -515,13 +515,14 @@ def train_and_store_models(data, models=["all"], **kwargs):
             fitted_model.save("models/stored_models/" + model_type + ".hdf5")
 
 
-def evaluate_all_models(data, file_scores=None, file_scores_lables=None, **params):
+def evaluate_all_models(data, file_scores=None, file_scores_lables=None, overwrite_tables=True, **params):
     """ Evaluating each model. Parameters for models are given in params.
     Results can be saved intermediately in a file.
     Parameters:
         data (dict): dictionary produced by preprocess_dataset containing all necessary information
         file_scores (path): where to save results intermediately
         file_scores_labels (path): where to save the labels of the results intermediately
+        overwrite_tables (bool): If false the tables are not produced newly
         **params: A list for all necessary parameters for the models.
     """
     # set plotting variables:
@@ -567,8 +568,8 @@ def evaluate_all_models(data, file_scores=None, file_scores_lables=None, **param
                  "Random Forest", "Balanced Random Forest", "Support Vector Machine", "K-nearest Neighbors", "Easy Ensemble",
                  "Self Trainer", "Label Propagation",
                  "LSTM", "BLSTM", "Encoder Decoder"]
-    all_models = ["baseline", "rf"]
-    all_names = ["Baseline", "Random Forest"]
+    all_models = ["rf_bal", "lstm", "enc_dec", "self_trainer"]
+    all_names = ["Balanced Random Forest", "LSTM", "Encoder Decoder", "Self Trainer"]
     # save bogplot for true predictions and all true smps in the folder above
     if (plotting["bog_plot_trues"] is not None) or (plotting["only_trues"]):
         # get important vars
@@ -641,6 +642,10 @@ def evaluate_all_models(data, file_scores=None, file_scores_lables=None, **param
         if file_scores is not None: save_results(file_scores, all_scores)
         if file_scores_lables is not None: save_results(file_scores_lables, all_scores_per_label)
         print("...finished {} Model.\n".format(name))
+
+    if not overwrite_tables:
+        print("Existing before overwriting tabular results")
+        exit(0)
 
     # print all general scores and save them in evaluation
     print(tabulate(pd.concat(all_scores, axis=0, ignore_index=True), headers="keys", tablefmt="psql"))
@@ -828,7 +833,7 @@ def main():
             data = pickle.load(myFile)
 
     # EVALUATION
-    if args.evaluate: evaluate_all_models(data)
+    if args.evaluate: evaluate_all_models(data, overwrite_tables=False)
 
     # TRAINING AND STORING MODEL
     # models can be modified here (make a list of desired models, params
