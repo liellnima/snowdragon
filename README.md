@@ -4,8 +4,8 @@ This repository can be used to run and compare different models for the classifi
 
 The SMP is a fast, high-resolution, portable snow hardness measurement device. The automatic classification and segmentation models can be used for the fast analysis of vast numbers of SMP profiles. For more information about the background of snow layer segmentation and grain type classification please refer to the related publicatoins. Throughout the project the SMP dataset collected during the MOSAiC expedition was used. The plots and results of the different models can be reproduced with this repository.
 
-* Access to raw data: [Available on PANGAEA]() TODO
-* Download models: [Available on Zenodo] TODO
+* SMP data: [Available on PANGAEA](https://doi.org/10.1594/PANGAEA.935934)
+* Trained models: [Available on Zenodo](https://doi.org/10.5281/zenodo.7063520)
 * About the SMP: [SLF Website](https://www.slf.ch/en/ueber-das-slf/versuchsanlagen-und-labors/kaeltelabor/snowmicropenr.html)
 * About MOSAiC: [MOSAiC Website](https://mosaic-expedition.org/)
 * Contact: [julia.kaltenborn@mila.quebec](mailto:julia.kaltenborn@mila.quebec)
@@ -29,13 +29,13 @@ The SMP is a fast, high-resolution, portable snow hardness measurement device. T
 
 This repository runs on Python 3.6. For a quick setup run ``pip install -e .`` The required packages can also be installed with ``pip install -r requirements.txt``. If wished, create an environment beforehand (eg: ``conda create --name=snowdragon python=3.6``).  
 
-The repository does not contain the MOSAiC data used here. The data is publicly available here: [TODO]
-Any other SMP dataset can be used as well with this repository.
+The repository does not contain the MOSAiC data used here. The data is publicly available here: [https://doi.org/10.1594/PANGAEA.935934](https://doi.org/10.1594/PANGAEA.935934). Any other SMP dataset can be used as well with this repository to train models for automatic SMP classification and segmentation.
 
-If you would like to use our pre-trained models instead of training the models yourself, you can download them here: [TODO]
+If you would like to use our pre-trained models instead of training the models yourself, you can download them here: [https://doi.org/10.5281/zenodo.7063520](https://doi.org/10.5281/zenodo.7063520).
 
 ## Usage
 
+<!--- TODO
 ### Prediction with Pretrained Models
 
 If you want to predict some SMP profiles with the models that were trained on the MOSAiC data, the following steps apply:
@@ -52,6 +52,7 @@ python predict.py [arg1] [arg2] #TODO
 ```
 
 The predicted .ini files can be found in ``snowdragon/output/predictions/MODEL/``.
+--->
 
 ### Data Preprocessing
 
