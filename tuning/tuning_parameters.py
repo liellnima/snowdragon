@@ -59,9 +59,7 @@ BLSTM_PARAMS={"batch_size": 8, "epochs": 100, "learning_rate": 0.001,
 # rnn size=[150]
 # batch_size=[32, 8], epochs=[100], learning_rate=[0.001, 0.0001], dropout=[0, 0.5], dense_units=[0, 100],
 # attention=[False, True], bidirectional=[True, False]
-ENC_DEC_PARAMS_02={"batch_size": 8, "epochs": 100, "learning_rate": 0.001,
-                "rnn_size": 150, "dense_units": 100, "dropout": 0,
-                "attention": True, "bidirectional": True, "regularize": False}
+# Previously the best params hold: {..., "dense_units": 100, "dropout": 0.5, ...}
 ENC_DEC_PARAMS={"batch_size": 8, "epochs": 100, "learning_rate": 0.001,
                 "rnn_size": 150, "dense_units": 0, "dropout": 0.5,
                 "attention": True, "bidirectional": True, "regularize": False}
