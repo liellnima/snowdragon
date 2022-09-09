@@ -117,11 +117,13 @@ def tsne(smp, dim="both", title="", file_name="outputs/plots_data/tsne"):
     if dim == "2d" or dim == "both":
         tsne = TSNE(n_components=2, verbose=1, perplexity=40, n_iter=300, random_state=42)
         tsne_results = tsne.fit_transform(x)
-        smp_with_tsne = pd.DataFrame({"tsne-one": tsne_results[:, 0], "tsne-two": tsne_results[:, 1], "label": y})
+        smp_with_tsne = pd.DataFrame({"t-SNE 1": tsne_results[:, 0], "t-SNE 2": tsne_results[:, 1], "label": y})
 
-        sns.scatterplot(x="tsne-one", y="tsne-two", hue="label", palette=COLORS, data=smp_with_tsne, alpha=0.3)
+        sns.scatterplot(x="t-SNE 1", y="t-SNE 2", hue="label", palette=COLORS, data=smp_with_tsne, alpha=0.3)
         markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='') for color in anti_colors.values()]
-        plt.legend(markers, anti_colors.keys(), title="Snow Grain Types", numpoints=1, loc="center left", bbox_to_anchor=(1.04, 0.5)) #loc="upper right"#,
+        plt.legend(markers, anti_colors.keys(), title="Snow Grain Types",
+                   numpoints=1, loc="center left", bbox_to_anchor=(1.0, 0.5),
+                   frameon=False, title_fontsize=12) #loc="upper right"#,
         # get rid off ticks and set a marker for zero
         plt.xticks([])
         plt.yticks([])
@@ -132,7 +134,7 @@ def tsne(smp, dim="both", title="", file_name="outputs/plots_data/tsne"):
         if file_name is None:
             plt.show()
         else:
-            plt.savefig(file_name + "2d.png")
+            plt.savefig(file_name + "2d.png") # 2d_new02.svg
             plt.close()
 
     if dim == "3d" or dim == "both":
