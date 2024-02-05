@@ -33,7 +33,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from imblearn.ensemble import BalancedRandomForestClassifier
 
 # filenames where data and preprocessed data is stored
-SMP_NPZ = "data/all_smp_profiles_updated.npz"
+SMP_NPZ = "data/all_smp_profiles.npz" # note for myself: use data/all_smp_profiles_updated.npz for yourself
 PREPROCESS_FILE = "data/preprocessed_data_k5.txt"
 
 # Explanation
@@ -187,6 +187,7 @@ def preprocess_dataset(smp_file_name, output_file=None, visualize=False, sample_
     """
     # 1. Load dataframe with smp data
     smp_org = load_data(smp_file_name)
+
     # remove nans
     smp_org = remove_nans_mosaic(smp_org)
 
