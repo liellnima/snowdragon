@@ -41,10 +41,12 @@ def export_pnt(pnt_dir, target_dir, export_as="npz", overwrite=False, **params):
     # match all files in the dir who end on .pnt recursively
     match_pnt = pnt_dir.as_posix() + "/**/*.pnt"
     # use generator to reduce memory usage
+    file_generator_size = len(list(glob.iglob(match_pnt, recursive=True)))
     file_generator = glob.iglob(match_pnt, recursive=True)
+
     # yields each matching file and exports it
-    print("Progressbar is only correct when using the Mosaic SMP Data.")
-    with tqdm(total=3825) as pbar:
+    #print("Progressbar is only correct when using the Mosaic SMP Data.")
+    with tqdm(total=file_generator_size) as pbar: #3825
         for file in file_generator:
             file_name = Path(target_dir, file.split("/")[-1].split(".")[0] + "." + export_as)
             # exports file only if we want to overwrite it or it doesnt exist yet
@@ -66,10 +68,12 @@ def search_markers(pnt_dir, store_dir="data/sfc_ground_markers.csv"):
     # match all files in the dir who end on .pnt recursively
     match_pnt = pnt_dir.as_posix() + "/**/*.pnt"
     # use generator to reduce memory usage
+    file_generator_size = len(list(glob.iglob(match_pnt, recursive=True)))
     file_generator = glob.iglob(match_pnt, recursive=True)
+
     # yields each matching file and stores the markers data
-    print("Progressbar is only correct when using the Mosaic SMP Data.")
-    with tqdm(total=3825) as pbar:
+    #print("Progressbar is only correct when using the Mosaic SMP Data.")
+    with tqdm(total=file_generator_size) as pbar: # 3825
         for file in file_generator:
             profile = Profile.load(file)
             labelled_data = len(profile.markers) != 0
@@ -111,8 +115,10 @@ def idx_to_int(string_idx):
         return int("3" + string_idx[-4:].zfill(6))
     elif "S49M" in string_idx:
         return int("4" + string_idx[-4:].zfill(6))
+    elif "S36M" in string_idx:
+        return int("5" + string_idx[-4:].zfill(6))
     else:
-        return 0
+        raise ValueError("SMP naming convention is unknown. Please add another elif line in idx_to_int to handle your SMP naming convention.")
 
 # function to get temperature data
 def get_temperature(temp):
