@@ -160,7 +160,7 @@ def all_in_one_plot(smp, show_indices=False, sort=True, title="SMP Profiles with
         # load npz in smp_profiles_updated
         raw_file = Profile.load("../Data/Arctic_updated/sn_smp_31/exdata/PS122-3_30-42/" + profile_name + ".pnt")
         raw_profile = raw_file.samples_within_snowpack(relativize=True)
-        sns.lineplot(raw_profile["distance"], raw_profile["force"], ax=ax_in_plot, color="darkgrey")
+        sns.lineplot(data=(raw_profile["distance"], raw_profile["force"]), ax=ax_in_plot, color="darkgrey")
 
     if isinstance(profile_name, str):
         smp_wanted = idx_to_int(profile_name)
@@ -169,7 +169,7 @@ def all_in_one_plot(smp, show_indices=False, sort=True, title="SMP Profiles with
 
     smp_profile = smp[smp["smp_idx"] == smp_wanted]
 
-    sns.lineplot(smp_profile["distance"], smp_profile["mean_force"], ax=ax_in_plot)# , color="darkslategrey"
+    sns.lineplot(data=(smp_profile["distance"], smp_profile["mean_force"]), ax=ax_in_plot)# , color="darkslategrey"
     ax_in_plot.set_xlabel("Distance from Surface [mm]")
     ax_in_plot.set_ylabel("Mean Force [N]")
     ax_in_plot.set_xlim(0, len(smp_profile)-1)
