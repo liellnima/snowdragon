@@ -1,4 +1,5 @@
 from data_handling.data_loader import load_data
+from data_handling.data_parameters import LABELS
 from visualization.plot_data import bog_plot, all_in_one_plot
 from visualization.plot_dim_reduction import pca, tsne, tsne_pca
 from visualization.plot_profile import smp_unlabelled, smp_labelled, smp_features
@@ -78,7 +79,11 @@ def visualize_original_data(smp):
     # SHOW THE DATADISTRIBUTION OF ALL FEATURES
     pairwise_features(smp, features=["label", "distance", "var_force", "mean_force", "delta_4", "lambda_4", "gradient"], samples=2000, file_name=path+"pairwise_features.png")
     # SHOW HEATMAP OF ALL FEATURES (with what are the labels correlated the most?)
-    corr_heatmap(smp, labels=[3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17], file_name=path+"corr_heatmap_all.png")
+    cleaned_labels = list(LABELS.values())
+    cleaned_labels.remove(0) # remove not labelled
+    cleaned_labels.remove(1) # remove surface
+    cleaned_labels.remove(2) # remove ground
+    corr_heatmap(smp, labels=cleaned_labels, file_name=path+"corr_heatmap_all.png")
     # Correlation does not help for categorical + continuous data - use ANOVA instead
     # FEATURE "EXTRACTION"
     anova(smp, path+"anova.txt", tablefmt="psql") # latex_raw also possible
