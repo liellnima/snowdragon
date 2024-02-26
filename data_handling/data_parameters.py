@@ -8,9 +8,9 @@ T_LOC = "/home/julia/Documents/University/BA/Data/Arctic/MOSAiC_ICE_Temperature.
 EXP_LOC = "data/smp_profiles"
 # labels for the different grain type markers
 LABELS = {
-    "not_labelled": 0,
-    "surface": 1,
-    "ground": 2,
+    "not_labelled": 0, # DO NOT CHANGE THAT ONE
+    "surface": 1, # DO NOT CHANGE THAT ONE
+    "ground": 2, # DO NOT CHANGE THAT ONE
     "dh": 3,
     "dhid": 4,
     "mfdh": 5,
@@ -30,9 +30,9 @@ LABELS = {
 
 # ATTENTION: rare is also added to the dict during preprocessing (sum_up_labels)!
 ANTI_LABELS = {
-    0: "not_labelled",
-    1: "surface",
-    2: "ground",
+    0: "not_labelled", # DO NOT CHANGE THAT ONE
+    1: "surface", # DO NOT CHANGE THAT ONE
+    2: "ground", # DO NOT CHANGE THAT ONE
     3: "dh",
     4: "dhid",
     5: "mfdh",
@@ -51,9 +51,9 @@ ANTI_LABELS = {
 }
 
 ANTI_LABELS_LONG = {
-    0: "Not labelled",
-    1: "Surface",
-    2: "Ground",
+    0: "Not labelled", # DO NOT CHANGE THAT ONE
+    1: "Surface", # DO NOT CHANGE THAT ONE
+    2: "Ground", # DO NOT CHANGE THAT ONE
     3: "Depth Hoar",
     4: "Depth Hoar\nIndurated",
     5: "Melted Form\nDepth Hoar",
