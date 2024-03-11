@@ -1,5 +1,5 @@
 from data_handling.data_loader import load_data
-from data_handling.data_parameters import LABELS
+from data_handling.data_parameters import LABELS, EXAMPLE_SMP_NAME, SMP_ORIGINAL, SMP_PREPROCESSED, SMP_PREPROCESSED_TXT
 from visualization.plot_data import bog_plot, all_in_one_plot
 from visualization.plot_dim_reduction import pca, tsne, tsne_pca
 from visualization.plot_profile import smp_unlabelled, smp_labelled, smp_features
@@ -37,7 +37,7 @@ def visualize_normalized_data(smp):
     path = "output/plots_data/normalized/"
     # ATTENTION: don't use bogplots or single profiles after normalization!
     #plt.rcParams.update({"figure.dpi": 180})
-    smp_profile_name = "S31H0368"
+    smp_profile_name = EXAMPLE_SMP_NAME
     # HOW BALANCED IS THE LABELLED DATASET?
     plot_balancing(smp, file_name=path+"class_balance_normalized.svg", title=None)
     # SHOW THE DATADISTRIBUTION OF ALL FEATURES
@@ -73,7 +73,7 @@ def visualize_original_data(smp):
     # clean smp data from nan values (not preprocessed yet)
     smp = smp.fillna(0)
     path = "output/plots_data/original/"
-    smp_profile_name = "S31H0368" #"S31H0607"
+    smp_profile_name = EXAMPLE_SMP_NAME #"S31H0607"
     # HOW BALANCED IS THE LABELLED DATASET?
     #plot_balancing(smp, file_name="output/plots_data/original/class_balance.svg", title=None)
     # SHOW THE DATADISTRIBUTION OF ALL FEATURES
@@ -180,7 +180,7 @@ def visualize_results(all_scores, label_acc, label_prec, cf_matrix=True, roc_auc
 
             # get smp indices for that
             # TODO move that to main function
-            with open("data/preprocessed_data_k5.txt", "rb") as myFile:
+            with open(SMP_PREPROCESSED_TXT, "rb") as myFile:
                 smp_idx = pickle.load(myFile)["smp_idx_test"]
 
             # y_true chose anyone, all the same
@@ -198,8 +198,8 @@ def main():
 
     ## VISUALIZE DATA ##
     # load dataframe with smp data
-    smp = load_data("data/all_smp_profiles_updated.npz")
-    smp_preprocessed = load_data("data/all_smp_profiles_updated_normalized.npz")
+    smp = load_data(SMP_ORIGINAL)
+    smp_preprocessed = load_data(SMP_PREPROCESSED)
 
     # visualize the original data
     if args.original_data: visualize_original_data(smp)
