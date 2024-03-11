@@ -3,6 +3,7 @@ from data_handling.data_preprocessing import idx_to_int
 from models.helper_funcs import int_to_idx
 from visualization.plot_profile import smp_unlabelled
 from data_handling.data_parameters import LABELS, ANTI_LABELS, COLORS, ANTI_LABELS_LONG
+from data_handling.data_parameters import EXAMPLE_SMP_NAME, EXAMPLE_SMP_PATH
 
 import os
 import io
@@ -155,10 +156,10 @@ def all_in_one_plot(smp, show_indices=False, sort=True, title="SMP Profiles with
     ax = plt.gca()
     fig = plt.gcf()
     ax_in_plot = ax.inset_axes([0.15,0.5,0.4,0.4])
-    if profile_name == "S31H0368":
+    if profile_name == EXAMPLE_SMP_NAME:
         # retrieve original smp signal
         # load npz in smp_profiles_updated
-        raw_file = Profile.load("../Data/Arctic_updated/sn_smp_31/exdata/PS122-3_30-42/" + profile_name + ".pnt")
+        raw_file = Profile.load(EXAMPLE_SMP_PATH + profile_name + ".pnt")
         raw_profile = raw_file.samples_within_snowpack(relativize=True)
         sns.lineplot(data=(raw_profile["distance"], raw_profile["force"]), ax=ax_in_plot, color="darkgrey")
 
@@ -213,7 +214,7 @@ def corr_heatmap(smp, labels=None, file_name="output/plots_data/corr_heatmap.png
     if labels is None:
         smp_filtered = smp.drop("label", axis=1)
         smp_corr = smp_filtered.corr()
-        mask = np.triu(np.ones_like(smp_corr, dtype=np.bool))
+        mask = np.triu(np.ones_like(smp_corr, dtype=np.bool_))
         mask = mask[1:, :-1]
         corr = smp_corr.iloc[1:, :-1].copy()
         sns.heatmap(corr, mask=mask, annot=False, fmt=".2f", vmin=-1, vmax=1,
@@ -464,15 +465,7 @@ def visualize_tree(rf, x_train, y_train, feature_names=None, tree_idx=0, min_sam
 
     if (x_train is not None) and (y_train is not None):
         # deciding directly which label gets which decision tree label
-        y_train[y_train==6.0] = 0
-        y_train[y_train==3.0] = 1
-        y_train[y_train==5.0] = 2
-        y_train[y_train==12.0] = 3
-        y_train[y_train==4.0] = 4
-        y_train[y_train==17.0] = 5
-        y_train[y_train==16.0] = 6
-        anti_labels = {0:"rgwp", 1:"dh", 2: "mfdh", 3:"dhwp", 4:"dhid", 5:"rare", 6:"pp"}
-        class_names = [anti_labels[label] for label in y_train.unique()]
+        class_names = [ANTI_LABELS[int(label)] for label in y_train.unique()]
 
         feature_names = x_train.columns
 
