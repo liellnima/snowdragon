@@ -78,7 +78,8 @@ def pca(smp, n=3, dim="both", biplot=True, title="", file_name="output/plots_dat
 
     # 3d plot
     if dim == "3d" or dim == "both":
-        ax = plt.figure(figsize=(16,10)).gca(projection="3d")
+        fig = plt.figure(figsize(16,10))
+        ax = fig.add_subplot(projection="3d")
         color_labels = [COLORS[label] for label in smp_with_pca["label"]]
         g = ax.scatter(xs=smp_with_pca["pca-one"], ys=smp_with_pca["pca-two"], zs=smp_with_pca["pca-three"], c=color_labels, alpha=0.3)
         ax.set_xlabel("pca-one")
@@ -142,7 +143,8 @@ def tsne(smp, dim="both", title="", file_name="outputs/plots_data/tsne"):
         tsne_results = tsne.fit_transform(x)
         smp_with_tsne = pd.DataFrame({"tsne-one": tsne_results[:, 0], "tsne-two": tsne_results[:, 1], "tsne-three": tsne_results[:, 2], "label": y})
 
-        ax = plt.figure(figsize=(16,10)).gca(projection="3d")
+        fig = plt.figure(figsize(16,10))
+        ax = fig.add_subplot(projection="3d")
         color_labels = [COLORS[label] for label in smp_with_tsne["label"]]
         ax.scatter(xs=smp_with_tsne["tsne-one"], ys=smp_with_tsne["tsne-two"], zs=smp_with_tsne["tsne-three"], c=color_labels, alpha=0.3)
         ax.set_xlabel("tsne-one")
@@ -207,7 +209,8 @@ def tsne_pca(smp, n=3, dim="both", title="", file_name="output/plots_data/pca_ts
         tsne_pca_results = tsne.fit_transform(pca_result)
         smp_pca_tsne = pd.DataFrame({"tsne-one": tsne_pca_results[:, 0], "tsne-two": tsne_pca_results[:, 1], "tsne-three": tsne_pca_results[:, 2], "label": y})
 
-        ax = plt.figure(figsize=(16,10)).gca(projection="3d")
+        fig = plt.figure(figsize(16,10))
+        ax = fig.add_subplot(projection="3d")
         color_labels = [COLORS[label] for label in smp_pca_tsne["label"]]
         ax.scatter(xs=smp_pca_tsne["tsne-one"], ys=smp_pca_tsne["tsne-two"], zs=smp_pca_tsne["tsne-three"], c=color_labels, alpha=0.3)
         ax.set_xlabel("tsne-one")
