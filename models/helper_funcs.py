@@ -28,6 +28,8 @@ def int_to_idx(int_idx):
         return "S43M" + int_idx[3:7]
     elif smp_device == 4:
         return "S49M" + int_idx[3:7]
+    elif smp_device == 5:
+        return "S36M" + int_idx[3:7]
     else:
         return str(int_idx)
 
