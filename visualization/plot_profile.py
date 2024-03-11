@@ -12,7 +12,7 @@ import matplotlib.colors as mcolors
 
 from tqdm import tqdm
 from data_handling.data_preprocessing import idx_to_int
-from data_handling.data_parameters import COLORS, ANTI_LABELS, ANTI_LABELS_LONG, LABELS
+from data_handling.data_parameters import COLORS, ANTI_LABELS, ANTI_LABELS_LONG, LABELS, USED_LABELS, RARE_LABELS
 
 # TODO
 # make function to compare predicted profiles where we dont have the ground truth!
@@ -99,8 +99,8 @@ def ini_bogplots(preds, chosen_profiles, model_name, file_name):
     # producing the legend for the labels
     # remove /n from antilabels
     # Snow Grain Legend
-    all_labels = [6.0, 3.0, 4.0, 12.0, 5.0, 16.0] # no rare
-    anti_colors = {ANTI_LABELS_LONG[key] : value for key, value in COLORS.items() if key in all_labels}
+    #USED_LABELS = [6.0, 3.0, 4.0, 12.0, 5.0, 16.0] # no rare
+    anti_colors = {ANTI_LABELS_LONG[key] : value for key, value in COLORS.items() if key in USED_LABELS}
     markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='') for color in anti_colors.values()]
 
     #plt.yticks(range(0, max_distance, 100))
@@ -287,8 +287,8 @@ def compare_bogplots(all_smps, model_names, file_name="output/results/compare_bo
     # producing the legend for the labels
     # remove /n from antilabels
     # Snow Grain Legend
-    all_labels = [6.0, 3.0, 4.0, 12.0, 5.0, 16.0, 17.0]
-    anti_colors = {ANTI_LABELS_LONG[key] : value for key, value in COLORS.items() if key in all_labels}
+    # labels used: [6.0, 3.0, 4.0, 12.0, 5.0, 16.0, 17.0]
+    anti_colors = {ANTI_LABELS_LONG[key] : value for key, value in COLORS.items() if key in USED_LABELS + RARE_LABELS}
     # two markers: correct and wrongly predicted
     markers = [(plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle=''), plt.Line2D([0,0],[0,0], color=color, marker='o', linestyle='', alpha=0.25)) for color in anti_colors.values()]
     plt.yticks(range(0, max_distance, 100))
@@ -397,8 +397,8 @@ def compare_model_and_profiles(smp_trues, smp_preds, smp_names, model_names, tit
 
     # Snow Grain Legend
     # grain types
-    all_labels = [6.0, 3.0, 4.0, 12.0, 5.0, 16.0, 17.0]
-    anti_colors = {ANTI_LABELS_LONG[key] : value for key, value in COLORS.items() if key in all_labels}
+    # used labels: [6.0, 3.0, 4.0, 12.0, 5.0, 16.0, 17.0]
+    anti_colors = {ANTI_LABELS_LONG[key] : value for key, value in COLORS.items() if key in USED_LABELS + RARE_LABELS}
     markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='', alpha=0.5) for color in anti_colors.values()]
     # line markers
     markers.append(mlines.Line2D([], [], color="C0", label="Force Signal"))
