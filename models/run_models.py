@@ -32,9 +32,7 @@ from sklearn.model_selection import train_test_split, StratifiedKFold #, cross_v
 from sklearn.neighbors import KNeighborsClassifier
 from imblearn.ensemble import BalancedRandomForestClassifier
 
-# filenames where data and preprocessed data is stored
-SMP_NPZ = "data/all_smp_profiles.npz" # note for myself: use data/all_smp_profiles_updated.npz for yourself
-PREPROCESS_FILE = "data/preprocessed_data_k5.txt"
+from data_handling.data_parameters import SMP_ORIGINAL_NPZ, SMP_NORMALIZED_NPZ, SMP_PREPROCESSED_TXT
 
 # Explanation
 # python -m models.run_models --preprocess
@@ -43,8 +41,8 @@ PREPROCESS_FILE = "data/preprocessed_data_k5.txt"
 parser = argparse.ArgumentParser(description="Evaluate or validate the models performances. If not already done, preprocess the data beforehand.")
 
 # File arguments
-parser.add_argument("--smp_npz", default=SMP_NPZ, type=str, help="Name of the united npz file")
-parser.add_argument("--preprocess_file", default=PREPROCESS_FILE, type=str, help="Name of the txt file where the preprocessed data is stored.")
+parser.add_argument("--smp_npz", default=SMP_ORIGINAL_NPZ, type=str, help="Name of the united npz file")
+parser.add_argument("--preprocess_file", default=SMP_PREPROCESSED_TXT, type=str, help="Name of the txt file where the preprocessed data is stored.")
 # what-is-done-arguments
 parser.add_argument("--preprocess", action="store_true", help="Data must be preprocessed and stored in 'preprocessing_file'.")
 parser.add_argument("--evaluate", action="store_true", help="Models are evaluated. Data from 'smp_npz' is used.")
@@ -216,7 +214,7 @@ def preprocess_dataset(smp_file_name, output_file=None, visualize=False, sample_
 
     # save normalized data
     dict = smp.to_dict(orient="list")
-    np.savez_compressed("data/all_smp_profiles_updated_normalized.npz", **dict)
+    np.savez_compressed(SMP_NORMALIZED_NPZ, **dict)
 
     # 5. Visualize the data after normalization
     if visualize: visualize_normalized_data(smp)
@@ -825,7 +823,7 @@ def validate_all_models(data, intermediate_file=None):
 
 def main():
     args = parser.parse_args()
-    test = "data/preprocessed_data_test.txt"
+    #test = "data/preprocessed_data_test.txt"
 
     if args.preprocess:
         data = preprocess_dataset(smp_file_name=args.smp_npz, output_file=args.preprocess_file, visualize=False) #

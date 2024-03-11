@@ -3,7 +3,7 @@ from models.helper_funcs import load_results
 from tuning.tuning_parameters import KMEANS_PARAMS, GMM_PARAMS, BMM_PARAMS, LABEL_SPREADING_PARAMS
 from tuning.tuning_parameters import SELF_TRAINER_PARAMS, RF_PARAMS, SVM_PARAMS, KNN_PARAMS, EASY_ENSEMBLE_PARAMS
 from tuning.tuning_parameters import LSTM_PARAMS, BLSTM_PARAMS, ENC_DEC_PARAMS, FIELD_NAMES
-
+from data_handling.data_parameters import SMP_PREPROCESSED_TXT
 
 import argparse
 import pandas as pd
@@ -18,7 +18,8 @@ parser = argparse.ArgumentParser(description="Can be used for tuning, runs a sin
 parser.add_argument("output", type=str, help="Name of the csv output file where the results are saved. Must have a .csv ending.")
 
 # model and data arguments
-parser.add_argument("--data_file", default="data/preprocessed_data_k5_updated02.txt", type=str,
+# default was: "data/preprocessed_data_k5_updated02.txt"
+parser.add_argument("--data_file", default=SMP_PREPROCESSED_TXT, type=str,
                     help="Name of the file where the preprocessed data is stored.")
 parser.add_argument("--model_type", default="baseline", type=str,
                     help="""Must be one of the following models: \"baseline\",
