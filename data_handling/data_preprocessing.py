@@ -1,5 +1,6 @@
 # Data Preprocessing is done here
 from data_handling.data_parameters import SMP_LOC, T_LOC, EXP_LOC, LABELS, PARAMS
+from data_handling.data_parameters import SMP_ORIGINAL_NPZ
 
 # external imports
 import re
@@ -525,11 +526,11 @@ def main():
     smp_first = npz_to_pd(EXP_LOC, is_dir=True)
     # than: export smp as united npz
     dict = smp_first.to_dict(orient="list")
-    np.savez_compressed("data/all_smp_profiles.npz", **dict)
+    np.savez_compressed(SMP_ORIGINAL_NPZ, **dict)
 
     # AFTER FIRST time and during first time:
     # load pd directly from this npz
-    smp = npz_to_pd("data/all_smp_profiles.npz", is_dir=False)
+    smp = npz_to_pd(SMP_ORIGINAL_NPZ, is_dir=False)
 
     end = time.time()
     print("Elapsed time for export and dataframe creation: ", end-start)
