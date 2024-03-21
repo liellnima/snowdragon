@@ -259,7 +259,7 @@ def cv_manual(data, target, k, random_state=42):
     # assign each profile a number between 1 and 10
     cv = []
     profiles = list(data["smp_idx"].unique()) # list of all smp profiles of data
-    k_idx = np.resize(np.arange(1, k+1), 69) # k indices for the smp profiles
+    k_idx = np.resize(np.arange(1, k+1), len(profiles)) # len(profiles) was 69 before # k indices for the smp profiles
     np.random.seed(random_state)
     np.random.shuffle(k_idx)
     all_labels = target.unique()
