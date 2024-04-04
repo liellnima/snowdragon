@@ -19,4 +19,5 @@ output/plots_results/decision_tree_1.*
 output/predictions.zip
 
 models/stored_models/*
+!models/stored_models/.gitkeep
 visualization/storage/*
