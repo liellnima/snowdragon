@@ -1,5 +1,5 @@
 from data_handling.data_loader import load_data
-from data_handling.data_parameters import LABELS, EXAMPLE_SMP_NAME, SMP_ORIGINAL, SMP_PREPROCESSED, SMP_PREPROCESSED_TXT
+from data_handling.data_parameters import LABELS, EXAMPLE_SMP_NAME, SMP_ORIGINAL_NPZ, SMP_NORMALIZED_NPZ, SMP_PREPROCESSED_TXT, EVAL_LOC
 from visualization.plot_data import bog_plot, all_in_one_plot
 from visualization.plot_dim_reduction import pca, tsne, tsne_pca
 from visualization.plot_profile import smp_unlabelled, smp_labelled, smp_features
@@ -132,7 +132,7 @@ def visualize_results(all_scores, label_acc, label_prec, cf_matrix=True, roc_auc
     # plot confusion matrices
 
     # retrieve and summarize the data for the confusion matrices and the roc curves
-    names, cf_matrices, label_orders, y_trues, y_pred_probs = prepare_evaluation_data("/home/julia/Documents/University/BA/Archive/evaluation_original_experiments/evaluation/")
+    names, cf_matrices, label_orders, y_trues, y_pred_probs = prepare_evaluation_data(EVAL_LOC)
 
     # plot cf matrices
     if cf_matrix:
@@ -198,8 +198,8 @@ def main():
 
     ## VISUALIZE DATA ##
     # load dataframe with smp data
-    smp = load_data(SMP_ORIGINAL)
-    smp_preprocessed = load_data(SMP_PREPROCESSED)
+    smp = load_data(SMP_ORIGINAL_NPZ)
+    smp_preprocessed = load_data(SMP_NORMALIZED_NPZ)
 
     # visualize the original data
     if args.original_data: visualize_original_data(smp)

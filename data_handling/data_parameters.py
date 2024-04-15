@@ -6,15 +6,17 @@ SMP_LOC = "/home/julia/Documents/University/BA/Data/Arctic_updated/"
 T_LOC = "/home/julia/Documents/University/BA/Data/Arctic/MOSAiC_ICE_Temperature.csv"
 # Set folder name were export files get saved
 EXP_LOC = "data/smp_profiles"
+# Set folder name for evaluation data
+EVAL_LOC = "/home/julia/Documents/University/BA/Archive/evaluation_original_experiments/evaluation/"
 
 # Example profiles - one for plotting and the folder where they live
 EXAMPLE_SMP_NAME = "S31H0368"
 EXAMPLE_SMP_PATH = "../Data/Arctic_updated/sn_smp_31/exdata/PS122-3_30-42/"
 
 # filenames where data, normalized data and preprocessed data is stored
-SMP_ORIGINAL_NPZ = "data/all_smp_profiles_updated.npz"
+SMP_ORIGINAL_NPZ = "data/all_smp_profiles_updated.npz" # data/all_smp_profiles.npz
 SMP_NORMALIZED_NPZ = "data/all_smp_profiles_updated_normalized.npz"
-SMP_PREPROCESSED_TXT = "data/preprocessed_data_k5.txt"
+SMP_PREPROCESSED_TXT = "data/preprocessed_data_k5.txt" # data/preprocessed_data.txt
 
 # labels used for machine learning / classification
 # excludes ground, surface, unlabelled, rare ones you are not including etc
