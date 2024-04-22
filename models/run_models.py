@@ -516,8 +516,7 @@ def train_and_store_models(data, models=["all"], **kwargs):
                 else:
                     pickle.dump(fitted_model, handle)
         else:
-            # TODO store as .keras (instead of .hdf5)
-            fitted_model.save("models/stored_models/" + model_type + ".hdf5")
+            fitted_model.save("models/stored_models/" + model_type + ".keras")
 
 
 def evaluate_all_models(data, models=["all"], model_names=None, file_scores=None, file_scores_lables=None, overwrite_tables=True, **params):
