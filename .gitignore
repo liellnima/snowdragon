@@ -18,6 +18,18 @@ output/plots_results/comparison_3_profiles_ids.png
 output/plots_results/decision_tree_1.*
 output/predictions.zip
 
+output/evaluation/*
+!output/evaluation/.gitkeep
+output/plots_data/*
+!output/plots_data/.gitkeep
+output/plots_results/*
+!output/plots_results/.gitkeep
+output/predictions/*
+!output/predictions/.gitkeep
+output/scores/*
+!output/scores/.gitkeep
+
 models/stored_models/*
 !models/stored_models/.gitkeep
 visualization/storage/*
+!visualization/stored_models/.gitkeep
