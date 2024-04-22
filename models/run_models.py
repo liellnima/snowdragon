@@ -510,13 +510,13 @@ def train_and_store_models(data, models=["all"], **kwargs):
                                               **BEST_PARAMS[model_type])
 
         if type_implementation[model_type] != "keras":
-            # store the models
             with open("models/stored_models/" + model_type + ".model", "wb") as handle:
                 if model_type == "rf":
                     joblib.dump(fitted_model, handle, compress=9)
                 else:
                     pickle.dump(fitted_model, handle)
         else:
+            # TODO store as .keras (instead of .hdf5)
             fitted_model.save("models/stored_models/" + model_type + ".hdf5")
 
 
@@ -537,9 +537,6 @@ def evaluate_all_models(data, file_scores=None, file_scores_lables=None, overwri
     plotting = {"annot": "eval", "roc_curve": True, "confusion_matrix": True,
                 "one_plot": True, "pair_plots": True, "only_preds": True, "only_trues": False,
                 "plot_list": None, "bog_plot_preds": "output/evaluation/", "bog_plot_trues": "output/evaluation/"}
-    plotting = {"annot": "eval", "roc_curve": False, "confusion_matrix": False,
-                "one_plot": True, "pair_plots": False, "only_preds": False, "only_trues": False,
-                "plot_list": None, "bog_plot_preds": None, "bog_plot_trues": None}
 
     folders = {"rf": "output/evaluation/rf",
                "rf_bal": "output/evaluation/rf_bal",
@@ -573,8 +570,6 @@ def evaluate_all_models(data, file_scores=None, file_scores_lables=None, overwri
                  "Random Forest", "Balanced Random Forest", "Support Vector Machine", "K-nearest Neighbors", "Easy Ensemble",
                  "Self Trainer", "Label Propagation",
                  "LSTM", "BLSTM", "Encoder Decoder"]
-    all_models = ["rf_bal", "lstm", "enc_dec", "self_trainer"]
-    all_names = ["Balanced Random Forest", "LSTM", "Encoder Decoder", "Self Trainer"]
     # save bogplot for true predictions and all true smps in the folder above
     if (plotting["bog_plot_trues"] is not None) or (plotting["only_trues"]):
         # get important vars
