@@ -9,12 +9,12 @@ with open(path.join(ROOT, "requirements.txt")) as f:
 
 setup(
     name="snowdragon",
-    version="1.0",
+    version="2.0",
     description="Automatic snow layer classification from SMP measurements.",
     author="Julia Kaltenborn",
-    author_email="julia@kaltenborn.info",
+    author_email="julia.kaltenborn@mail.mcgill.ca",
     install_requires=requirements,
-    python_requires=">=3.6, <3.7",  # TODO: Check if higher version work as well
+    python_requires=">=3.10", 
 )
 
 # add something to rewrite import in keras_self_attention:
