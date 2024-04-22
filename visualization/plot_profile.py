@@ -348,7 +348,7 @@ def compare_model_and_profiles(smp_trues, smp_preds, smp_names, model_names, tit
                 alpha = 0.4
                 # plot the ground truth measurement
                 #["Force Signal", "Wrong Classification"]
-                signalplot = sns.lineplot(data=(smp_true["distance"], smp_true["mean_force"]), ax=axs[model_i, smp_i])
+                signalplot = sns.lineplot(data=smp_true, x="distance", y="mean_force", ax=axs[model_i, smp_i])
                 signalplot.set(ylim=height, title=title_names[smp_i])
                 signalplot.set_title(title_names[smp_i], fontsize=10)
                 line_handles.append(signalplot)
@@ -465,7 +465,7 @@ def compare_plot(smp_true, smp_preds, smp_name, model_names, title=None, grid=Tr
             alpha = 0.5
             # plot the ground truth measurement
             #["Force Signal", "Wrong Classification"]
-            signalplot = sns.lineplot(data=(smp["distance"], smp["mean_force"]), ax=ax)
+            signalplot = sns.lineplot(data=smp, x="distance", y="mean_force", ax=ax)
             line_handles.append(signalplot)
             first_ax = False
         else:
@@ -551,7 +551,8 @@ def smp_unlabelled(smp, smp_name, file_name="output/plots_data/smp_unlabelled.pn
     else:
         smp_wanted = smp_name
     smp_profile = smp[smp["smp_idx"] == smp_wanted]
-    ax = sns.lineplot(data=(smp_profile["distance"], smp_profile["mean_force"]))
+    # adapt for new seaborn version
+    ax = sns.lineplot(data=smp_profile, x="distance", y="mean_force")
     plt.title("Unlabelled SMP Profile {}".format(smp_name))
     ax.set_xlabel("Snow Depth [mm]")
     ax.set_ylabel("Mean Force [N]")
@@ -582,7 +583,7 @@ def smp_labelled(smp, smp_name, title=None, file_name="output/plots_data/smp_lab
         smp_wanted = smp_name
 
     smp_profile = smp[smp["smp_idx"] == smp_wanted]
-    ax = sns.lineplot(data=(smp_profile["distance"], smp_profile["mean_force"]))
+    ax = sns.lineplot(data=smp_profile, x="distance", y="mean_force")
     if title is None:
         plt.title("{} SMP Profile Distance (1mm layers) and Force\n".format(smp_name))
     else:
@@ -651,7 +652,7 @@ def smp_pair(smp_true, smp_pred, smp_name, title=None, grid=True, file_name="out
     plt.text(0.01, 0.5, "Ground Truth", fontweight="bold", fontsize=8.5, transform=axs[0].transAxes)
 
     # plot the predicted smp profile - with line and background colors
-    axs[1] = sns.lineplot(data=(smp_pred["distance"], smp_pred["mean_force"]), ax=axs[1])
+    axs[1] = sns.lineplot(data=smp_pred, x="distance", y="mean_force", ax=axs[1])
     last_label_num = 1
     last_distance = -1
     for label_num, distance in zip(smp_pred["label"], smp_pred["distance"]):
@@ -720,7 +721,7 @@ def smp_pair_both(smp_true, smp_pred, smp_name, title=None, file_name="output/pl
     fig, axs = plt.subplots(2, sharex=True, sharey=True)
 
     for ax, smp in zip(axs, smps):
-        ax = sns.lineplot(data=(smp["distance"], smp["mean_force"]), ax=ax)
+        ax = sns.lineplot(data=smp, x="distance", y="mean_force", ax=ax)
         last_label_num = 1
         last_distance = -1
         # going through labels and distance
