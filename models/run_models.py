@@ -1,6 +1,6 @@
 # import from other snowdragon modules
 from data_handling.data_loader import load_data
-from data_handling.data_parameters import LABELS, ANTI_LABELS, COLORS
+from data_handling.data_parameters import LABELS, ANTI_LABELS, COLORS, EXAMPLE_SMP_NAME
 from models.cv_handler import cv_manual, mean_kfolds
 from models.supervised_models import svm, random_forest, ada_boost, knn
 from models.semisupervised_models import kmeans, gaussian_mix, bayesian_gaussian_mix, label_spreading, self_training
@@ -520,16 +520,36 @@ def train_and_store_models(data, models=["all"], **kwargs):
             fitted_model.save("models/stored_models/" + model_type + ".hdf5")
 
 
-def evaluate_all_models(data, file_scores=None, file_scores_lables=None, overwrite_tables=True, **params):
+def evaluate_all_models(data, models=["all"], model_names=None, file_scores=None, file_scores_lables=None, overwrite_tables=True, **params):
     """ Evaluating each model. Parameters for models are given in params.
     Results can be saved intermediately in a file.
     Parameters:
         data (dict): dictionary produced by preprocess_dataset containing all necessary information
+        models (list): list of models that should be evaluated. Default is ["all"]
+        model_names (list): list of names of the models. If None, equivalent to models param
         file_scores (path): where to save results intermediately
         file_scores_labels (path): where to save the labels of the results intermediately
         overwrite_tables (bool): If false the tables are not produced newly
         **params: A list for all necessary parameters for the models.
     """
+    # define which models to evaluate 
+    if models == ["all"]:
+        all_models = ["baseline", "kmeans", "gmm", "bmm",
+                "rf", "rf_bal", "svm", "knn", "easy_ensemble",
+                "self_trainer", "label_spreading",
+                "lstm", "blstm", "enc_dec"]
+        all_names = ["Majority Vote", "K-means", "Gaussian Mixture Model", "Bayesian Gaussian Mixture Model",
+                     "Random Forest", "Balanced Random Forest", "Support Vector Machine", "K-nearest Neighbors", "Easy Ensemble",
+                     "Self Trainer", "Label Propagation",
+                     "LSTM", "BLSTM", "Encoder Decoder"]
+    else:
+        all_models = models
+    
+    if model_names is None:
+        all_names = models 
+    else:
+        if len(all_models) != len(models):
+            raise ValueError("List with name of models must have the same length as the model list")
     # set plotting variables:
     # no special labels order (default ascending) and name must be set individually
     save_overall_metrics = True
@@ -606,7 +626,7 @@ def evaluate_all_models(data, file_scores=None, file_scores_lables=None, overwri
         if plotting["bog_plot_trues"] is not None:
             print("Plotting the Bogplot of all observed SMP Profiles:")
             save_file = plotting["bog_plot_trues"] + "/bogplot_trues.png"
-            all_in_one_plot(all_smp_trues, show_indices=False, sort=True,
+            all_in_one_plot(all_smp_trues, show_indices=False, sort=True, profile_name=EXAMPLE_SMP_NAME,
                             title="All Observed SMP Profiles of the Testing Data", file_name=save_file)
             plotting["bog_plot_trues"] = None
 
@@ -837,7 +857,7 @@ def main():
             data = pickle.load(myFile)
 
     # EVALUATION
-    if args.evaluate: evaluate_all_models(data, overwrite_tables=False)
+    if args.evaluate: evaluate_all_models(data, models=args.models, overwrite_tables=False)
 
     # TRAINING AND STORING MODEL
     # models can be modified here (make a list of desired models, params
