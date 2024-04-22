@@ -170,12 +170,13 @@ def all_in_one_plot(smp, show_indices=False, sort=True, title="SMP Profiles with
 
     smp_profile = smp[smp["smp_idx"] == smp_wanted]
 
-    sns.lineplot(data=smp_profile, x="distance", y="mean_force", ax=ax_in_plot)# , color="darkslategrey"
-    ax_in_plot.set_xlabel("Distance from Surface [mm]")
-    ax_in_plot.set_ylabel("Mean Force [N]")
-    ax_in_plot.set_xlim(0, len(smp_profile)-1)
-    ax_in_plot.set_ylim(0, 10)
-    ax_in_plot.set_title("Snow Micro Pen Signal") #of\nProfile {}".format(profile_name)
+    if profile_name:
+        sns.lineplot(data=smp_profile, x="distance", y="mean_force", ax=ax_in_plot)# , color="darkslategrey"
+        ax_in_plot.set_xlabel("Distance from Surface [mm]")
+        ax_in_plot.set_ylabel("Mean Force [N]")
+        ax_in_plot.set_xlim(0, len(smp_profile)-1)
+        ax_in_plot.set_ylim(0, 10)
+        ax_in_plot.set_title("Snow Micro Pen Signal") #of\nProfile {}".format(profile_name)
 
     # add background colors!
     last_label_num = 1
