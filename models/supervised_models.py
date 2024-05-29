@@ -108,14 +108,14 @@ def knn(x_train, y_train, cv, n_neighbors=20, weights="distance", name="KNearest
 
 # specifically for imbalanced data
 # https://imbalanced-learn.org/stable/generated/imblearn.ensemble.EasyEnsembleClassifier.html
-def ada_boost(x_train, y_train, cv, n_estimators=100, sampling_strategy="not_majority", name="AdaBoost", only_model=False, **kwargs):
+def ada_boost(x_train, y_train, cv, n_estimators=100, sampling_strategy="not majority", name="AdaBoost", only_model=False, **kwargs):
     """Bags AdaBoost learners which are trained on balanced bootstrap samples.
     Parameters:
         x_train: Input data for training
         y_train: Target data for training
         cv (list of tuples): cross validation indices
         n_estimators (int): number of boosted trees to consider
-        sampling_strategy (str): "all", "not_majority", "minority" and more. See docu of classifer for more details.
+        sampling_strategy (str): "all", "not majority", "minority" and more. See docu of classifer for more details.
         name (str): Name/Description for the model
         only_model (bool): if True returns only the model
     Returns:
