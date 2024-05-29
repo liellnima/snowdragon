@@ -1,6 +1,6 @@
 from models.metrics import METRICS, METRICS_PROB
 from models.helper_funcs import reverse_normalize, int_to_idx, save_results
-from data_handling.data_parameters import ANTI_LABELS
+from data_handling.data_parameters import ANTI_LABELS, EXAMPLE_SMP_NAME
 from models.semisupervised_models import assign_clusters
 from models.anns import fit_ann_model, predict_ann_model
 from models.baseline import fit_baseline, predict_baseline
@@ -134,12 +134,12 @@ def train_single_model(model, x_train, y_train, smp_idx_train, impl_type, **fit_
     if impl_type == "scikit":
         # fitting the model
         model.fit(x_train, y_train)
-        # # predict proba - special case SVM: change model, fit newly and predict
-        # if isinstance(model, SVC):
-        #     # change model
-        #     print("SVM prob fitting")
-        #     model.probability = True
-        #     model.fit(x_train, y_train)
+        # predict proba - special case SVM: change model, fit newly and predict
+        if isinstance(model, SVC):
+            # change model
+            print("SVM prob fitting")
+            model.probability = True
+            model.fit(x_train, y_train)
 
     elif impl_type == "keras":
         # fitting the model (is changed in place)
@@ -333,14 +333,14 @@ def plot_testing(y_pred, y_pred_prob, metrics_per_label, x_test, y_test,
         print("\tPlotting true bogplots:")
         all_smp_trues = pd.concat(smp_trues)
         save_file = save_dir + "/bogplot_trues.png" if save_dir is not None else None
-        all_in_one_plot(all_smp_trues, show_indices=False, sort=True,
+        all_in_one_plot(all_smp_trues, show_indices=False, sort=True, profile_name=EXAMPLE_SMP_NAME,
                         title="All Observed SMP Profiles of the Testing Data", file_name=save_file)
 
     if bog_plot_preds is not None:
         print("\tPlotting predicted bogplots:")
         all_smp_preds = pd.concat(smp_preds)
         save_file = save_dir + "/bogplot_preds.png" if save_dir is not None else None
-        all_in_one_plot(all_smp_preds, show_indices=False, sort=True,
+        all_in_one_plot(all_smp_preds, show_indices=False, sort=True, profile_name=EXAMPLE_SMP_NAME,
                         title="All SMP Profiles Predicted with {}".format(name), file_name=save_file)
 
 # TODO during testing: write out results for all models into csv to make united
