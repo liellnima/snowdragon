@@ -20,3 +20,6 @@ setup(
 # add something to rewrite import in keras_self_attention:
 # from tensorflow import keras
 # instead of: import keras
+
+# TODO add: keras_requires=">=2, <3",
+# TODO add: imbalanced_learn >= 0.12.0
