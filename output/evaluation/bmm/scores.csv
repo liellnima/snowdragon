@@ -1,8 +1,0 @@
-,Metrics,Values,Model
-0,eval_balanced_accuracy,0.38165354210630437,Bayesian Gaussian Mixture Model
-1,eval_absolute_accuracy,0.6463380281690141,Bayesian Gaussian Mixture Model
-2,eval_recall,0.6463380281690141,Bayesian Gaussian Mixture Model
-3,eval_precision,0.6255929385115108,Bayesian Gaussian Mixture Model
-4,eval_f1,0.6251765715090252,Bayesian Gaussian Mixture Model
-5,eval_fit_time,224.81846952438354,Bayesian Gaussian Mixture Model
-6,eval_score_time,0.009208440780639648,Bayesian Gaussian Mixture Model
