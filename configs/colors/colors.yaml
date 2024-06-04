@@ -1,0 +1,50 @@
+grains:
+  0: dimgray
+  1: chocolate
+  2: darkslategrey
+  3: lightseagreen #20b2aa
+  4: lightsteelblue #b0c4de
+  5: midnightblue #191970 # "mediumaquamarine"
+  6: tomato #ff6347
+  7: mediumvioletred
+  8: firebrick
+  9: lightgreen
+  10: orange
+  11: paleturquoise #afeeee
+  12: gold #ffd700
+  13: orchid
+  14: fuchsia
+  15: saddlebrown
+  16: green #2ca02c
+  17: blue #0000ff
+models:
+  Majority Vote: grey
+  K-means: fuchsia
+  Gaussian Mixture Model: orchid
+  Bayesian Gaussian Mixture Model: palevioletred
+  Self Trainer: plum
+  Label Propagation: blueviolet
+  Random Forest: indigo
+  Balanced Random Forest: darkblue
+  Support Vector Machine: blue
+  K-nearest Neighbors: royalblue
+  Easy Ensemble: dodgerblue
+  LSTM: green
+  BLSTM: springgreen
+  Encoder Decoder: lime
+# TODO delete the xkcd color palette
+models-xkcd:
+  Majority Vote: grey
+  K-means: xkcd:dandelion
+  Gaussian Mixture Model: xkcd:golden rod
+  Bayesian Gaussian Mixture Model: xkcd:orange
+  Self Trainer: xkcd:red
+  Label Propagation: xkcd:crimson
+  Random Forest: indigo
+  Balanced Random Forest: navy
+  Support Vector Machine: blue
+  K-nearest Neighbors: xkcd:sky blue
+  Easy Ensemble: xkcd:light teal
+  LSTM: xkcd:green apple 
+  BLSTM: xkcd:emerald
+  Encoder Decoder: xkcd:forest green

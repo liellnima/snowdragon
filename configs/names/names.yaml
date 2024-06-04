@@ -1,0 +1,15 @@
+models: # the models you would like to run
+  baseline: Majority Vote
+  kmeans: K-means
+  gmm: Gaussian Mixture Model
+  bmm: Bayesian Gaussian Mixture Model
+  label_spreading: Label Propagation
+  self_trainer: Self Trainer
+  rf: Random Forest
+  rf_bal: Balanced Random Forest
+  svm: Support Vector Machine
+  knn: K-nearest Neighbours
+  easy_ensemble: Easy Ensemble
+  lstm: LSTM
+  blstm: BLSTM
+  enc_dec: Encoder Decoder

@@ -1,0 +1,67 @@
+used_labels:
+  - 6.0
+  - 3.0
+  - 4.0
+  - 12.0
+  - 5.0
+  - 16.0
+rare_labels: 
+  - 17.0
+labels:
+  not_labelled: 0 # DO NOT CHANGE THAT ONE
+  surface: 1 # DO NOT CHANGE THAT ONE
+  ground: 2 # DO NOT CHANGE THAT ONE
+  dh: 3
+  dhid: 4
+  mfdh: 5
+  rgwp: 6
+  df: 7
+  if: 8
+  ifwp: 9
+  sh: 10
+  snow-ice: 11
+  dhwp: 12
+  mfcl: 13
+  mfsl: 14
+  mfcr: 15
+  pp: 16
+  rare: 17
+anti-labels:
+  0: not_labelled # DO NOT CHANGE THAT ONE
+  1: surface # DO NOT CHANGE THAT ONE
+  2: ground # DO NOT CHANGE THAT ONE
+  3: dh
+  4: dhid
+  5: mfdh
+  6: rgwp
+  7: df
+  8: if
+  9: ifwp
+  10: sh
+  11: snow-ice
+  12: dhwp
+  13: mfcl
+  14: mfsl
+  15: mfcr
+  16: pp
+  17: rare
+
+anti-labels-long:
+  0: Not labelled # DO NOT CHANGE THAT ONE
+  1: Surface # DO NOT CHANGE THAT ONE
+  2: Ground # DO NOT CHANGE THAT ONE
+  3: Depth Hoar
+  4: Depth Hoar\nIndurated
+  5: Melted Form\nDepth Hoar
+  6: Rounded Grains\nWind Packed
+  7: Decomposed\nand Fragmented\nPrecipitation Particles
+  8: Ice Formation
+  9: Ice Formation\nWind Packed
+  10: Surface Hoar
+  11: Snow Ice
+  12: Depth Hoar\nWind Packed
+  13: Melted Form\nClustered Rounded Grains
+  14: Melted Form\nSlush
+  15: Melt-freeze\nCrust
+  16: Precipitation\nParticles
+  17: Rare

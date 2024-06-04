@@ -1,12 +1,44 @@
-# TODO include all the other configs here
+run: # best is to just set one to true
+  preprocess: True
+  evaluate: False
+  train_and_store: False
+  validate: False
+  predict: False
+raw_data:
+  smp: /home/julia/Documents/University/BA/Data/Arctic_updated/
+  temperature: /home/julia/Documents/University/BA/Data/Arctic/MOSAiC_ICE_Temperature.csv
+  example_smp:
+    name: S31H0368
+    path: /home/julia/Documents/University/BA/Data/Arctic_updated/sn_smp_31/exdata/PS122-3_30-42/
+processed_data:
+   preprocessed_data: /data/tsne_project/tsne_preprocess_k5.txt
+   exported_smp_files:  /data/smp_profiles
+   normalized_npz_file: /data/tsne_project/tsne_smp_profiles_normalized.npz
+   npz_file: /data/tsne_project/tsne_smp_profiles.npz
+   evaluation: /output/evaluation/
+models: # the models you would like to run
+  - baseline
+  - kmeans
+  - gmm
+  - bmm
+  - label_spreading
+  - self_trainer
+  - rf
+  - svm
+  - knn
+  - easy_ensemble
+  - lstm
+  - blstm
+  - enc_dec
+configs:
+  colors: colors.yaml
+  graintypes: graintypes.yaml
+  model_params: model_params.yaml
+  names: names.yaml
+  plots: plots.yaml
+  preprocessing: preprocessing.yaml
+  smp_devices: smp_devices.yaml
+  
+#TODO add seed and name of this run
 
-# TODO include the data paths here
 
-# TODO include what you are running here
-
-# models that you want to run
-
-# preprocess 
-# evaluate
-# train and store 
-# validate
