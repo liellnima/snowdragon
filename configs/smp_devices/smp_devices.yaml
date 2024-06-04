@@ -1,0 +1,5 @@
+smp_devices:
+  S31H: 2
+  S43M: 3
+  S49M: 4
+  S36M: 5
