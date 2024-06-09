@@ -5,7 +5,7 @@ used_labels:
   - 12.0
   - 5.0
   - 16.0
-rare_labels: 
+rare_labels: # [!] if you have no rare labels, please put here: rare_labels: []
   - 17.0
 labels:
   not_labelled: 0 # DO NOT CHANGE THAT ONE

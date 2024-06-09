@@ -1,0 +1,31 @@
+example_smp_name: S31H0368
+#path: /home/julia/Documents/University/BA/Data/Arctic_updated/sn_smp_31/exdata/PS122-3_30-42/
+normalize:
+  plot_balanced_dataset: True
+  plot_pairwise_features: True
+  plot_correlation_heatmap_all_features: True
+  plot_correlation_heatmap_between_features: True
+  plot_anova: True
+  plot_random_forest_feature_extraction: True
+  plot_smp_features: True
+  plot_bog_plot: True
+  plot_all_in_one_plot: True
+  plot_pca: True
+  plot_tsne: True
+  plot_tsne_pca: True
+original:
+  plot_balanced_dataset: False
+  plot_pairwise_features: True
+  plot_correlation_heatmap: True
+  plot_anova: True
+  plot_one_unlabelled_smp: True
+  plot_one_labelled_smp: True
+  plot_smp_features: True
+  plot_bog_plot: True
+  plot_all_in_one_plot: True
+results:
+  plot_roc_auc: True
+  plot_bog_plot: True
+  plot_cf_matrix: True
+  plot_comparison: True
+  
