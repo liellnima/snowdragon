@@ -1,1 +1,1 @@
-python -m src.run -c configs/main_config.yaml
+python scripts/run.py -c configs/main_config.yaml
