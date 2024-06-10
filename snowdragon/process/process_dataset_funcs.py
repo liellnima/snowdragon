@@ -1,6 +1,6 @@
 import pandas as pd 
 
-from snowdragon.utils.helper_funcs import normalize, load_configs
+from snowdragon.utils.helper_funcs import normalize
 
 # works only for the original mosaic dataset 
 # adapt this function for your own needs

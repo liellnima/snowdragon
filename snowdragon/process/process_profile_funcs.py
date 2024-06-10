@@ -2,14 +2,12 @@
 #from data_handling.data_parameters import SMP_LOC, T_LOC, EXP_LOC, LABELS, PARAMS
 #from data_handling.data_parameters import SMP_ORIGINAL_NPZ
 from snowdragon import DATA_DIR
-from snowdragon.utils.helper_funcs import idx_to_int, npz_to_pd
-from snowdragon.process.process import export_pnt
+from snowdragon.utils.helper_funcs import idx_to_int
 
 # external imports
 import os
 import csv
 import glob
-import time # only used in main
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
@@ -20,10 +18,6 @@ from tqdm import tqdm
 from pathlib import Path # for os independent path handling
 from snowmicropyn import Profile, loewe2012, windowing
 
-# make paths from imported data locations (str)
-#SMP_LOC = Path(SMP_LOC)
-#EXP_LOC = Path(EXP_LOC)
-#T_LOC = Path(T_LOC)
 
 def search_markers(
         pnt_dir: Path, 
@@ -332,52 +326,3 @@ def remove_negatives(
         df_removed.loc[index, col] = (next_pos_value + last_pos_value) / 2
 
     return df_removed
-
-
-def main():
-    """ This main exists only for testing purposes. The files specified in EXP_LOC
-    in the data_parameters.py file are preprocessed and exported to an npz file.
-    The data is than read in as pandas frame again and info of the data is printed.
-    The smp files can be also exported as csv files. Only a subset of the SMP profiles
-    can be exported by naming a sub directory in EXP_LOC.
-    """
-
-    print("Starting to export and/or convert data")
-
-    # get temp data
-    # tmp = get_temperature(temp=T_LOC)
-
-    # export, unite and label smp data
-    start = time.time()
-    # export data from pnt to csv or npz
-    # pnt_dir can be also a small sub directory if you want to update only a few files
-    export_pnt(pnt_dir=SMP_LOC, target_dir=EXP_LOC, export_as="npz", overwrite=True, **PARAMS)
-
-    # OTHER OPTIONS
-    # unite csv data in one csv file, index it, convert it to pandas (and save it as npz)
-    #smp = get_smp_data(csv_dir=EXP_LOC, csv_filename="test04.csv", npz_filename="smp_test04.npz", skip_unify=False, skip_npz=False)
-
-    # FIRST time to use npz_to_pd:
-    smp_first = npz_to_pd(EXP_LOC, is_dir=True)
-    # than: export smp as united npz
-    dict = smp_first.to_dict(orient="list")
-    np.savez_compressed(SMP_ORIGINAL_NPZ, **dict)
-
-    # AFTER FIRST time and during first time:
-    # load pd directly from this npz
-    smp = npz_to_pd(SMP_ORIGINAL_NPZ, is_dir=False)
-
-    end = time.time()
-    print("Elapsed time for export and dataframe creation: ", end-start)
-
-    print(smp.head())
-    smp.info()
-
-    print("Number of files in export folder: ", len(os.listdir(EXP_LOC)))
-    #print("All pnt files from source dir were also found in the given dataframe: ", check_export(SMP_LOC, smp))
-
-    #print_test_df(smp) # this function has migrated to data_loader
-    print("Finished export, transformation and printing example features of data.")
-
-if __name__ == "__main__":
-    main()
