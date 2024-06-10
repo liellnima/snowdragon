@@ -210,27 +210,29 @@ def preprocess_profile(
 def preprocess_dataset(
         smp_file_name, 
         smp_normalized_file_name, 
+        label_configs: dict,
+        color_configs: dict,
+        visualize_configs: dict,
         output_file = None, 
         random_seed: int = 42, 
-        visualize: bool = False, 
-        sample_size_unlabelled: int =1000, 
+        visualize_original: bool = False, 
+        visualize_normalized: bool = False, 
+        sample_size_unlabelled: int = 1000, 
         tsne: int = 0, 
         ignore_unlabelled: bool = False, 
         k_fold: int = 5,
         test_size: float = 0.2, 
         train_size: float = 0.8, 
         original_mosaic_dataset: bool = True,
-        label_configs_name: str = "graintypes.yaml",
-        visualize_configs_name: str = "visualize.yaml",
-        **kwargs
+        **kwargs,
     ):
     """ Preprocesses the complete smp data and returns what is needed for the models.
     Parameters:
         smp_file_name (str): where the complete smp data is saved
         output_file (str): where the resulting dict should be saved. If None it
             is not saved.
-        visualize (bool): if the data should be visualized before and after
-            normalization
+        visualize_original (bool): if the data should be visualized before normalization
+        visualize_normalized (bool): if the data should be visualized after normalization
         sample_size_unlabelled (int): how many unlabelled samples should be
             included in x_train_all and y_train_all
         tsne (int): None means no dim reduction. int indicated that the data's
@@ -244,49 +246,59 @@ def preprocess_dataset(
                 "cv", "cv_semisupervised" and "cv_timeseries" are cv splits for the supervised, semisupervised and ann models.
                 "smp_idx_train" and "smp_idx_test" are the smp indiced corresponding to training and test data (correct order)
     """
-    # 0. Load the relevant configs 
-    visualize_configs = load_configs("visualize", visualize_configs_name)
-    label_configs = load_configs("graintypes", label_configs_name)
-
     # 1. Load dataframe with smp data
+    print("\t Load data ...")
     smp_org = load_smp_data(smp_file_name)
 
     # remove nans
     #TODO ADAPT THIS FUNCTION FOR YOUR OWN DATASET IF NEEDED
     if original_mosaic_dataset:
+        print("\t Remove nans...")
         smp_org = remove_nans_mosaic(smp_org)
 
     # 2. Visualize before normalization
-    if visualize: visualize_original_data(
-        smp=smp_org, 
-        example_smp_name=visualize_configs["example_smp_name"], 
-        labels=label_configs["label"]
-        **visualize_configs["original"],
+    if visualize_original: 
+        visualize_original_data(
+            smp = smp_org, 
+            example_smp_name = visualize_configs["example_smp"]["name"], 
+            example_smp_path = Path(visualize_configs["example_smp"]["path"]),
+            labels = label_configs["labels"],
+            anti_labels = label_configs["anti-labels"], 
+            anti_labels_long = label_configs["anti-labels-long"],
+            colors = color_configs["grains"],
+            **visualize_configs["original"],
         )
 
     # 3. Normalize
+    print("\t Normalize dataset ...")
     smp = normalize_dataset(smp_org)
 
     # CHANGE HERE - YOUR FAVORITE LABELS IN THE DATA!
 
     # 4. Sum up certain classes if necessary (alternative: do something to balance the dataset)
     if original_mosaic_dataset:
+        print("\n MOSAiC specifc preprocessing ...")
         smp = mosaic_specific_processing(smp, label_configs["labels"])
 
     # save normalized and pre-processed data
+    print("\tSave normalized data ...")
     dict = smp.to_dict(orient="list")
     np.savez_compressed(smp_normalized_file_name, **dict)
 
     # 5. Visualize the data after normalization
-    if visualize: visualize_normalized_data(
-        smp=smp,
-        example_smp_name=visualize_configs["example_smp_name"],
-        used_labels=label_configs["used_labels"] + label_configs["rare_labels"],
-          **visualize_configs, **visualize_configs["normalize"] **label_configs
+    if visualize_normalized: 
+        visualize_normalized_data(
+            smp=smp,
+            example_smp_name=visualize_configs["example_smp_name"],
+            used_labels=label_configs["used_labels"] + label_configs["rare_labels"],
+            **visualize_configs, 
+            **visualize_configs["normalize"],
+            **label_configs,
         )
 
     # if wished, make dimension reduction here!
     if tsne != 0:
+        print("\tApply dimension reduction to whole dataset ...")
         labels = smp["label"]
         indices = smp["smp_idx"]
         smp_x = smp.drop(["label", "smp_idx"], axis=1)
@@ -306,6 +318,7 @@ def preprocess_dataset(
         unlabelled_x = None
         unlabelled_y = None
     else:
+        print("\tPrepare unlabelled dataset for semi-supervised learning ...")
         # prepare dataset of unlabelled data
         unlabelled_smp = smp.loc[(smp["label"] == 0)].copy()
         # set unlabelled_smp label to -1
@@ -318,6 +331,7 @@ def preprocess_dataset(
         unlabelled_y = unlabelled_smp_y.sample(sample_size_unlabelled) # we can do this, because labels are only -1 anyway
 
     # 7. Split up the labelled data into training and test data
+    print("\tSplit data into training and testing data ...")
     x_train, x_test, y_train, y_test, smp_idx_train, smp_idx_test = my_train_test_split(smp, test_size=test_size, train_size=train_size)
 
     # For two of the semisupervised models: include unlabelled data points in x_train and y_train (test data stays the same!)
@@ -325,6 +339,7 @@ def preprocess_dataset(
     y_train_all = None if ignore_unlabelled else pd.concat([y_train, unlabelled_y])
 
     # 8. Make crossvalidation split
+    print("\t Create cross-validation data from training data ...")
     # Note: if we want to use StratifiedKFold, we can just hand over an integer to the functions
     cv_stratified = list(StratifiedKFold(n_splits=k_fold, shuffle=True, random_state=random_seed).split(x_train, y_train))
     # Attention the cv fold for these two semi-supervised models is different from the other cv folds!
@@ -348,6 +363,7 @@ def preprocess_dataset(
                      "smp_idx_train": smp_idx_train, "smp_idx_test": smp_idx_test}
 
     if output_file is not None:
+        print("\tStore fully preprocessed data in npz file...")
         with open(output_file, "wb") as myFile:
             pickle.dump(prepared_data, myFile)
 
