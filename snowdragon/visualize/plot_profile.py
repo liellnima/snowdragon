@@ -11,8 +11,8 @@ import matplotlib.lines as mlines
 import matplotlib.colors as mcolors
 
 from tqdm import tqdm
-from data_handling.data_preprocessing import idx_to_int
-from data_handling.data_parameters import COLORS, ANTI_LABELS, ANTI_LABELS_LONG, LABELS, USED_LABELS, RARE_LABELS
+from snowdragon.utils.helper_funcs import idx_to_int
+#from data_handling.data_parameters import COLORS, ANTI_LABELS, ANTI_LABELS_LONG, LABELS, USED_LABELS, RARE_LABELS
 
 # TODO
 # make function to compare predicted profiles where we dont have the ground truth!

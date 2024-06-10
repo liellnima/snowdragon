@@ -1,5 +1,5 @@
 # TODO check imports
-from data_handling.data_parameters import ANTI_LABELS, ANTI_LABELS_LONG, COLORS
+#from data_handling.data_parameters import ANTI_LABELS, ANTI_LABELS_LONG, COLORS
 
 import numpy as np
 import pandas as pd

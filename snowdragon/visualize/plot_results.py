@@ -7,8 +7,8 @@ import matplotlib.pyplot as plt
 
 from sklearn.metrics import roc_curve, auc
 
-from data_handling.data_parameters import MODEL_COLORS, SNOW_TYPES_SELECTION, COLORS
-from data_handling.data_parameters import ANTI_LABELS, ANTI_LABELS_LONG, LABELS, MODEL_LABELS
+#from data_handling.data_parameters import MODEL_COLORS, SNOW_TYPES_SELECTION, COLORS
+#from data_handling.data_parameters import ANTI_LABELS, ANTI_LABELS_LONG, LABELS, MODEL_LABELS
 from snowdragon.utils.helper_funcs import load_results
 
 def plot_test_bogplots(y_prob_preds, y_true, smp_idx, labels, names, sort=True, file_name=None):

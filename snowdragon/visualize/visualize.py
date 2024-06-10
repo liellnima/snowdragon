@@ -1,5 +1,5 @@
 from snowdragon import OUTPUT_DIR
-from data_handling.data_loader import load_data
+from snowdragon.utils.helper_funcs import load_smp_data
 #from data_handling.data_parameters import LABELS, EXAMPLE_SMP_NAME, SMP_ORIGINAL_NPZ, SMP_NORMALIZED_NPZ, SMP_PREPROCESSED_TXT, EVAL_LOC
 from snowdragon.visualize.plot_data import bog_plot, all_in_one_plot
 from snowdragon.visualize.plot_dim_reduction import pca, tsne, tsne_pca
@@ -160,7 +160,7 @@ def visualize_normalized_data(
         )
 
 def visualize_original_data(
-        smp: pd.DateFrame, 
+        smp: pd.DataFrame, 
         example_smp_name: str,
         labels: dict,
         plot_balanced_dataset: bool = True,
@@ -357,8 +357,8 @@ def main():
 
     ## VISUALIZE DATA ##
     # load dataframe with smp data
-    smp = load_data(SMP_ORIGINAL_NPZ)
-    smp_preprocessed = load_data(SMP_NORMALIZED_NPZ)
+    smp = load_smp_data(SMP_ORIGINAL_NPZ)
+    smp_preprocessed = load_smp_data(SMP_NORMALIZED_NPZ)
 
     # visualize the original data
     if args.original_data: visualize_original_data(smp)

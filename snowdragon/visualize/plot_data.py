@@ -1,9 +1,8 @@
 # import from other snowdragon modules
-from data_handling.data_preprocessing import idx_to_int
-from snowdragon.utils.helper_funcs import int_to_idx
-from visualization.plot_profile import smp_unlabelled
-from data_handling.data_parameters import LABELS, ANTI_LABELS, COLORS, ANTI_LABELS_LONG
-from data_handling.data_parameters import EXAMPLE_SMP_PATH
+from snowdragon.utils.helper_funcs import int_to_idx, idx_to_int
+from snowdragon.visualize.plot_profile import smp_unlabelled
+#from data_handling.data_parameters import LABELS, ANTI_LABELS, COLORS, ANTI_LABELS_LONG
+#from data_handling.data_parameters import EXAMPLE_SMP_PATH
 
 import os
 import io
@@ -23,7 +22,6 @@ from scipy import stats
 from tabulate import tabulate
 from snowmicropyn import Profile
 from sklearn.tree import export_graphviz
-from sklearn.tree._tree import TREE_LEAF
 from sklearn.feature_selection import f_classif
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_selection import SelectKBest
