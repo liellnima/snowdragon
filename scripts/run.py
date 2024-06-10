@@ -38,7 +38,7 @@ if __name__ == "__main__":
         smp_normalized_npz = normalized_npz_file,
         preprocess_file = preprocessed_data,
         random_seed = random_seed,
-        label_configs = configs["configs"]["graintypes"],
+        config_files = configs["configs"],
     )
 
     if configs["run"]["preprocess"]:

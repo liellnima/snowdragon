@@ -15,7 +15,7 @@ class Snowdragon():
             smp_normalized_npz: Path, 
             preprocess_file: Path,
             random_seed: int,
-            label_configs: str,
+            config_files: dict,
         ):
         """ Initialize snowdragon class object
         """
@@ -28,14 +28,23 @@ class Snowdragon():
 
         self.label_configs = load_configs(
             config_subdir="graintypes",
-            config_name=label_configs,
+            config_name=config_files["graintypes"],
         )
 
+        self.color_configs = load_configs(
+            config_subdir="colors",
+            config_name=config_files["colors"],
+        )
+
+        self.visualize_configs = load_configs(
+            config_subdir="visualize",
+            config_name=config_files["visualize"],
+        )
     
     # 01
     def process(self, process_config: str):
         # load preprocessing configs 
-        configs = load_configs(
+        preprocessing_configs = load_configs(
             config_subdir="preprocessing",
             config_name=process_config,
         )
@@ -49,6 +58,7 @@ class Snowdragon():
         # The results are stored in an npz file. If that file
         # already exists, this step is skipped.
         if not npz_exists:
+            print("Preprocess all Profiles: \n")
             preprocess_all_profiles(
                 data_dir = self.raw_data_dir,
                 export_dir = self.exported_smps_dir,
@@ -56,19 +66,24 @@ class Snowdragon():
                 npz_name = self.smp_npz,
                 export_as = "npz",
                 overwrite = False,
-                **configs["profile"],
+                **preprocessing_configs["profile"],
             )
 
         # second step: processing the whole dataset: 
         # normalize the data, remove nans, sum grains together, etc.
         # if this is done, you can load the data via the output txt file from then on
+        print("Preprocess the Dataset: \n")
         preprocess_dataset(
             smp_file_name = self.smp_npz, 
             smp_normalized_file_name = self.smp_normalized_npz,
             output_file = self.preprocess_file,
             random_seed = self.random_seed,
-            **configs["dataset"],
+            label_configs = self.label_configs,
+            color_configs = self.color_configs,
+            visualize_configs = self.visualize_configs,
+            **preprocessing_configs["dataset"],
         )
+        print("Done.")
 
     # 02 
     def train(self, train_config: str):

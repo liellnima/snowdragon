@@ -8,8 +8,8 @@ from snowdragon.ml.models.baseline import majority_class_baseline
 from snowdragon.utils.helper_funcs import normalize, save_results, load_results, reverse_normalize, int_to_idx
 from snowdragon.ml.models.anns import ann, get_ann_model
 from snowdragon.ml.evaluation import testing, train_single_model
-from snowdragon.visualize.plot_data import all_in_one_plot
-from snowdragon.visualize.plot_profile import smp_labelled
+from snowdragon.visualize.data.dataset import all_in_one_plot
+from snowdragon.visualize.compare_profiles.plot_comparisons import smp_labelled
 from snowdragon.visualize.visualize import visualize_original_data, visualize_normalized_data
 from tuning.tuning_parameters import BEST_PARAMS
 
