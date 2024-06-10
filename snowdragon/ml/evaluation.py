@@ -5,8 +5,10 @@ from snowdragon.ml.models.semisupervised_models import assign_clusters
 from snowdragon.ml.models.anns import fit_ann_model, predict_ann_model
 from snowdragon.ml.models.baseline import fit_baseline, predict_baseline
 from snowdragon.ml.evaluation.metrics import calculate_metrics_raw, calculate_metrics_per_label
-from visualization.plot_data import all_in_one_plot, plot_confusion_matrix, plot_roc_curve
 from visualization.plot_profile import smp_pair_both, smp_pair, smp_labelled
+
+from snowdragon.visualize.data.all_profiles import all_in_one_plot
+from snowdragon.visualize.results.plot_test_results import plot_test_confusion_matrix, plot_test_roc_curve
 
 import time
 import pickle
@@ -262,13 +264,13 @@ def plot_testing(y_pred, y_pred_prob, metrics_per_label, x_test, y_test,
     if confusion_matrix:
         print("\tPlotting Confusion Matrix...")
         tags = [ANTI_LABELS[label] for label in labels_order]
-        plot_confusion_matrix(metrics_per_label[annot + "_" + "confusion_matrix"], labels=tags, name=name, file_name=save_dir + "/confusion_matrix.png")
+        plot_test_confusion_matrix(metrics_per_label[annot + "_" + "confusion_matrix"], labels=tags, name=name, file_name=save_dir + "/confusion_matrix.png")
         print("\t...done.\n")
 
     # print roc auc curve
     if roc_curve and (y_pred_prob is not None):
         print("\tPlotting ROC Curve...")
-        plot_roc_curve(y_test, y_pred_prob, labels_order, name=name, file_name=save_dir + "/roc_curve.png")
+        plot_test_roc_curve(y_test, y_pred_prob, labels_order, name=name, file_name=save_dir + "/roc_curve.png")
         print("\t...done.\n")
 
     smp_trues = []

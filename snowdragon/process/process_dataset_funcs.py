@@ -44,12 +44,22 @@ def mosaic_specific_processing(smp: pd.DataFrame, labels: dict):
     # rename all df points to pp
     smp.loc[smp["label"] == labels["df"], "label"] = labels["pp"]
     # keep: 6, 3, 4, 12, 5, 16, 8, 10: rgwp, dh, dhid, dhwp, mfdh, pp(, if, sh)
-    smp = sum_up_labels(smp, ["if", "sh"], label_idx=labels["rare"], all_labels_dict=labels)
+    smp = sum_up_labels(
+        smp, 
+        labels_to_be_unified = ["if", "sh"], 
+        unified_label_idx=labels["rare"], 
+        all_labels_dict=labels,
+        )
 
     #print(smp["label"].value_counts())
     return smp
 
-def sum_up_labels(smp: pd.DataFrame, labels_to_be_unified: list, unified_label_idx: int, all_labels_dict: dict):
+def sum_up_labels(
+        smp: pd.DataFrame, 
+        labels_to_be_unified: list, 
+        unified_label_idx: int, 
+        all_labels_dict: dict,
+    ):
     """ Sums up the datapoints belonging to one of the classes in labels to one class.
     ATTENTION: The new label must be manually added to the graintypes.yaml and the desired
     color to colors.yaml.
@@ -69,7 +79,7 @@ def sum_up_labels(smp: pd.DataFrame, labels_to_be_unified: list, unified_label_i
 
 
 # should work for all datasets
-def normalize_dataset(smp):
+def normalize_dataset(smp: pd.DataFrame):
     """ Normalizes all the features that should be normalized in the data.
     Parameters:
         smp (pd.DataFrame): Mosaic SMP dataframe
