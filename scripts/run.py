@@ -21,10 +21,10 @@ if __name__ == "__main__":
         except yaml.YAMLError as err:
             print(err)
 
-    raw_data = Path(configs["raw_data"]["smp"])
+    raw_data_dir = Path(configs["raw_data"]["smp"])
 
     preprocessed_data = ROOT_DIR / configs["processed_data"]["preprocessed_data"]
-    exported_smps_dir = ROOT_DIR / configs["processed_data"]["exported_smp_files"]
+    exported_smps_dir = ROOT_DIR / Path(configs["processed_data"]["exported_smp_files"])
     normalized_npz_file = ROOT_DIR / configs["processed_data"]["normalized_npz_file"]
     npz_file = ROOT_DIR / configs["processed_data"]["npz_file"]
     evaluation_dir = ROOT_DIR / configs["processed_data"]["evaluation"]
@@ -32,7 +32,7 @@ if __name__ == "__main__":
     random_seed = configs["random_seed"]
 
     snowdragon = Snowdragon(
-        raw_data = raw_data,
+        raw_data_dir = raw_data_dir,
         exported_smps_dir = exported_smps_dir,
         smp_npz = npz_file,
         smp_normalized_npz = normalized_npz_file,
@@ -43,12 +43,8 @@ if __name__ == "__main__":
 
     if configs["run"]["preprocess"]:
         snowdragon.process(
-            smp_npz = npz_file,
-            smp_normalized_npz = normalized_npz_file,
-            preprocess_file = preprocessed_data,
-            random_seed = random_seed,
             process_config = configs["configs"]["preprocessing"]
-            )
+        )
 
     if configs["run"]["train"]:
         snowdragon.train() 

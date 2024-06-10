@@ -1,11 +1,11 @@
 import os
 import glob
 import time
-import tqdm
 import pickle 
 import numpy as np
 import pandas as pd
 
+from tqdm import tqdm
 from pathlib import Path
 from snowmicropyn import Profile
 from sklearn.manifold import TSNE
@@ -56,8 +56,11 @@ def preprocess_all_profiles(
 
     ### EXPORT DATA TO PNT ###########
     # create dir for csv exports
-    if not os.path.exists(export_dir):
-        os.mkdir(export_dir)
+    if not export_dir.is_dir():
+        export_dir.mkdir(parents=True, exist_ok=True)
+
+    if not data_dir.is_dir():
+        raise ValueError("The following directory does not exist: {}. \nPlease use a directory in the main configs for raw_data, smp that contains pnt files.".format(data_dir))
 
     # match all files in the dir who end on .pnt recursively
     match_pnt = data_dir.as_posix() + "/**/*.pnt"

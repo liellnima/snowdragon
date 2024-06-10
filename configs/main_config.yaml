@@ -7,14 +7,14 @@ run: # best is to just set one to true
   predict: False
   tune: False
 raw_data: # this can come from anywhere in your system
-  smp: /home/julia/Documents/University/BA/Data/Arctic_updated/
-  temperature: /home/julia/Documents/University/BA/Data/Arctic/MOSAiC_ICE_Temperature.csv
+  smp: /home/julia/Documents/BSc/BA/Data/Arctic_updated/
+  temperature: /home/julia/Documents/BSc/BA/Data/Arctic/MOSAiC_ICE_Temperature.csv
 processed_data: # this is all expected to live in the snowdragon root dir
-   preprocessed_data: /data/tsne_project/tsne_preprocess_k5.txt
-   exported_smp_files:  /data/smp_profiles
-   normalized_npz_file: /data/tsne_project/tsne_smp_profiles_normalized.npz
-   npz_file: /data/tsne_project/tsne_smp_profiles.npz
-   evaluation: /output/evaluation/
+   preprocessed_data: data/tsne_project/tsne_preprocess_k5.txt
+   exported_smp_files:  data/tsne_project/smp_profiles
+   normalized_npz_file: data/tsne_project/tsne_smp_profiles_normalized.npz
+   npz_file: data/tsne_project/tsne_smp_profiles.npz
+   evaluation: output/evaluation/
 models: # the models you would like to run
   - baseline
   - kmeans

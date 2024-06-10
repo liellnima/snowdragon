@@ -19,16 +19,16 @@ class Snowdragon():
         ):
         """ Initialize snowdragon class object
         """
-        self.raw_data_dir = raw_data_dir,
-        self.exported_smps_dir = exported_smps_dir,
+        self.raw_data_dir = raw_data_dir
+        self.exported_smps_dir = exported_smps_dir
         self.smp_npz = smp_npz 
         self.smp_normalized_npz = smp_normalized_npz
         self.preprocess_file = preprocess_file
         self.random_seed = random_seed
 
         self.label_configs = load_configs(
-            config_subdir="graintype",
-            config_name=label_configs
+            config_subdir="graintypes",
+            config_name=label_configs,
         )
 
     
@@ -52,7 +52,7 @@ class Snowdragon():
             preprocess_all_profiles(
                 data_dir = self.raw_data_dir,
                 export_dir = self.exported_smps_dir,
-                labels = self.label_configs["label"],
+                labels = self.label_configs["labels"],
                 npz_name = self.smp_npz,
                 export_as = "npz",
                 overwrite = False,

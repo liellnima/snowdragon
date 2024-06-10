@@ -11,6 +11,8 @@ The SMP is a fast, high-resolution, portable snow hardness measurement device. T
 * Contact: [julia.kaltenborn@mila.quebec](mailto:julia.kaltenborn@mila.quebec)
 
 ## Related publications
+Please cite the first one:
+* ["Automatic snow type classification of snow micropenetrometer profiles with machine learning algorithms"](https://doi.org/10.5194/gmd-16-4521-2023), J. Kaltenborn, A. R. Macfarlane, V. Clay, and M. Schneebeli, Geoscientific Model Development, 16(15), 4521-4550, 2023.
 * Bsc thesis: "Automatic Snow Classification − A Comparison of Machine Learning Algorithms for the Segmentation and Classification of Snow Micro Penetrometer Profiles" by Julia Kaltenborn
 * [“A Comparison of Machine Learning Algorithms for the Segmentation and Classification of Snow Micro Penetrometer Profiles on Arctic Sea Ice”](https://meetingorganizer.copernicus.org/EGU21/EGU21-15637.html), J. Kaltenborn, V. Clay, A. R. Macfarlane, J. M. King, M. Schneebeli, Data Science and Machine Learning for Cryosphere and Climate, EGU General Assembly, 2021. (Abstract)
 * [“ML for Snow Stratigraphy Classification”](https://www.climatechange.ai/papers/neurips2021/48), J. Kaltenborn, V. Clay, A. R. Macfarlane and M. Schneebeli, Tackling Climate Change with AI workshop, NeurIPS, 2021. (Presentation & Paper)
