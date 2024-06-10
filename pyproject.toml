@@ -1,0 +1,45 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "snowdragon"
+version = "2.0.0"
+dependencies = [
+  "graphviz",
+  "h5py",
+  "imbalanced-learn",
+  "keras",
+  "keras-self-attention",
+  "matplotlib",
+  "numpy",
+  "pandas",
+  "pingouin",
+  "PyYaml",
+  "scikit-learn",
+  "scipy",
+  "seaborn",
+  "snowmicropyn",
+  "tabulate",
+  "tqdm",
+]
+requires-python = ">=3.10"
+authors = [
+  {name = "Julia Kaltenborn", email = "julia.kaltenborn@mail.mcgill.ca"},
+]
+maintainers = [
+  {name = "Julia Kaltenborn", email = "julia.kaltenborn@mail.mcgill.ca"}
+]
+description = "Automatic Layer-Segmentation and Graintype-Classification of SnowMicroPen Profiles"
+readme = "README.md"
+license = {file = "LICENSE.md"}
+keywords = ["ml", "snow", "smp", "graintype"]
+
+[project.urls]
+Paper = "https://doi.org/10.5194/gmd-16-4521-2023"
+Data = "https://doi.org/10.1594/PANGAEA.935934"
+Repository = "https://github.com/liellnima/snowdragon.git"
+"Bug Tracker" = "https://github.com/liellnima/snowdragon/issues"
+
+[tool.scikit-build]
+wheel.expand-macos-universal-tags = true
