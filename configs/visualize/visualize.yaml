@@ -1,5 +1,6 @@
-example_smp_name: S31H0368
-#path: /home/julia/Documents/University/BA/Data/Arctic_updated/sn_smp_31/exdata/PS122-3_30-42/
+example_smp:
+  name: S31H0368
+  path: /home/julia/Documents/BSc/BA/Data/Arctic_updated/sn_smp_31/exdata/PS122-3_30-42/
 normalize:
   plot_balanced_dataset: True
   plot_pairwise_features: True
@@ -28,4 +29,3 @@ results:
   plot_bog_plot: True
   plot_cf_matrix: True
   plot_comparison: True
-  

@@ -34,7 +34,7 @@ configs:
   graintypes: graintypes.yaml
   model_params: model_params.yaml
   names: names.yaml
-  plots: plots.yaml
+  visualize: visualize.yaml
   preprocessing: preprocessing.yaml
   smp_devices: smp_devices.yaml
   
