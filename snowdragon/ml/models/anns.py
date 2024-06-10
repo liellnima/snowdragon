@@ -393,21 +393,22 @@ def print_tuning(file_name):
         print(results.groupby(param)["BalAccValid"].max())
         print(results.groupby(param)["BalAccTrain"].max())
 
-def calculate_metrics_ann(results, name=None):
+def calculate_metrics_ann(results: dict, cv: bool, name=None):
     """ Calculates all the Metrics from METRICS and METRICS_PROB for a given dictionary.
     Parameters:
         results (dict): Dictionary with the following keys:
             fit_time, score_time, y_true_train, y_true_valid, y_pred_train, y_pred_valid, y_pred_prob_train, y_pred_prob_valid
+        cv (bool): Indicates whether metrics are coming from a cross validation approach
         name (str): Default=None means no column for names is added, otherwise set the model name with this.
     Returns:
         dict: with all scores from METRICS and METRICS_PROB for training and validation/testing data
     """
     all_scores = {"fit_time": np.array(results["fit_time"]), "score_time": np.array(results["score_time"])}
-    all_scores.update(calculate_metrics_raw(y_trues=results["y_true_train"], y_preds=results["y_pred_train"], metrics=METRICS, cv=False, annot="train"))
-    all_scores.update(calculate_metrics_raw(y_trues=results["y_true_valid"], y_preds=results["y_pred_valid"], metrics=METRICS, cv=False, annot="test"))
+    all_scores.update(calculate_metrics_raw(y_trues=results["y_true_train"], y_preds=results["y_pred_train"], metrics=METRICS, cv=cv, annot="train"))
+    all_scores.update(calculate_metrics_raw(y_trues=results["y_true_valid"], y_preds=results["y_pred_valid"], metrics=METRICS, cv=cv, annot="test"))
     try:
-        all_scores.update(calculate_metrics_raw(y_trues=results["y_true_train"], y_preds=results["y_pred_prob_train"], metrics=METRICS_PROB, cv=False, annot="train"))
-        all_scores.update(calculate_metrics_raw(y_trues=results["y_true_valid"], y_preds=results["y_pred_prob_valid"], metrics=METRICS_PROB, cv=False, annot="test"))
+        all_scores.update(calculate_metrics_raw(y_trues=results["y_true_train"], y_preds=results["y_pred_prob_train"], metrics=METRICS_PROB, cv=cv, annot="train"))
+        all_scores.update(calculate_metrics_raw(y_trues=results["y_true_valid"], y_preds=results["y_pred_prob_valid"], metrics=METRICS_PROB, cv=cv, annot="test"))
     except ValueError as e:
         # print the non-probability based scores that were possible to calculate
         print(all_scores)
@@ -615,12 +616,21 @@ def ann(x_train, y_train, smp_idx_train, ann_type="lstm", name="LSTM", cv_timese
                            ann_type=ann_type, plot_loss=plot_loss, file_name=plot_loss_name, **params)
 
         # call metrics on model_results
-        return calculate_metrics_ann(results, name=name)
+        return calculate_metrics_ann(results, cv=False, name=name)
 
     else:
         # all results
-        all_results = {} # the rest is added on its own
-        keys_assigned = False
+        all_results = {
+            "score_time": [], 
+            "fit_time": [],
+            "y_true_train": [],
+            "y_true_valid": [],
+            "y_pred_train": [],
+            "y_pred_valid": [], 
+            "y_pred_prob_train": [], 
+            "y_pred_prob_valid": [],
+        }
+
         labels = list(y_train.unique())
         # for each fold in the crossvalidation
         for k in tqdm(cv_timeseries):
@@ -638,19 +648,10 @@ def ann(x_train, y_train, smp_idx_train, ann_type="lstm", name="LSTM", cv_timese
             k_results = eval_ann(x_train=x_k_train, x_valid=x_k_valid, y_train=y_k_train, y_valid=y_k_valid,
                                  profile_len_train=profile_len_k_train, profile_len_valid=profile_len_k_valid,
                                  plot_loss=plot_loss, ann_type=ann_type, file_name=plot_loss_name, **params)
-            if not keys_assigned:
-                all_results = {k: [] for k in k_results.keys()}
-                keys_assigned = True
-
-            # append the results to the dict
+            
             for key in k_results.keys():
-                if "time" not in key:
-                    all_results[key] = all_results[key] + k_results[key]
-                elif "score_time" in key:
-                    all_results["score_time"].append(k_results[key])
-                elif "fit_time" in key:
-                    all_results["fit_time"].append(k_results[key])
+                all_results[key].append(k_results[key])
 
-        return calculate_metrics_ann(all_results, name=name)
+        return calculate_metrics_ann(all_results, cv=True, name=name)
 
     # TODO make a testing method possible
