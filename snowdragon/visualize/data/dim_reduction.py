@@ -1,31 +1,42 @@
-# TODO check imports
-#from data_handling.data_parameters import ANTI_LABELS, ANTI_LABELS_LONG, COLORS
-
 import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
+from pathlib import Path
 from sklearn.manifold import TSNE
 from sklearn.decomposition import PCA
 
+from snowdragon import OUTPUT_DIR
 
 # TODO separate between plotting and calculating
-def pca(smp, n=3, dim="both", biplot=True, title="", file_name="output/plots_data/pca"):
+def pca(
+        smp: pd.DataFrame, 
+        colors: dict,
+        anti_labels_long: dict,
+        n: int = 3, 
+        dim: str = "both", 
+        biplot: bool = True, 
+        title: str = "", 
+        file_name: Path = OUTPUT_DIR / "plots_data" / "pca",
+    ):
     """ Visualizing 2d and 2d plot with the 2 or 3 principal components that explain the most variance.
     Parameters:
-        smp (df.DataFrame): SMP preprocessed data
+        smp (pd.DataFrame): SMP preprocessed data
+        colors (dict): Color dictionary from configs. Matches a grain number (int) to a color: < grain(int): color(str)>
+        anti_labels_long (dict): Label dictionary from configs, inversed, with  the grain types fully written out. Matches the int identifier to a string describing the grain: <int: str>
         n (int): how many principal components should be extracted
         dim (str): 2d, 3d or both - for visualization
         biplot (bool): indicating if the features most used for the principal components should be plotted as biplot
-        file_name (str): path where the pic should be saved. if 'None' the plot is shown.
+        title (str): Title. No title if empty.
+        file_name (Path): path where the pic should be saved. if 'None' the plot is shown.
             Give it only a directory name "dir/subdir/subsubdir/"! the filenames are determiend by the function
     """
     plt.rcParams.update({"figure.dpi": 120})
     smp_labelled = smp[(smp["label"] != 0) & (smp["label"] != 2)]
     x = smp_labelled.drop(["label", "smp_idx"], axis=1)
     y = smp_labelled["label"]
-    anti_colors = {ANTI_LABELS_LONG[key] : value for key, value in COLORS.items() if key in smp_labelled["label"].unique()}
+    anti_colors = {anti_labels_long[key] : value for key, value in colors.items() if key in smp_labelled["label"].unique()}
     # first two components explain the most anyway!
     pca = PCA(n_components=n, random_state=42)
     pca_result = pca.fit_transform(x)
@@ -44,11 +55,11 @@ def pca(smp, n=3, dim="both", biplot=True, title="", file_name="output/plots_dat
     if file_name is None:
         plt.show()
     else:
-        plt.savefig(file_name + "pca_explained_var.png")
+        plt.savefig(str(file_name) + "pca_explained_var.png")
         plt.close()
     # 2d plot
     if dim == "2d" or dim == "both":
-        g = sns.scatterplot(x="pca-one", y="pca-two", hue="label", palette=COLORS, data=smp_with_pca, alpha=0.3)
+        g = sns.scatterplot(x="pca-one", y="pca-two", hue="label", palette=colors, data=smp_with_pca, alpha=0.3)
         # plot the variables that explain the highest variance
         if biplot:
             coeff = pca.components_
@@ -73,14 +84,14 @@ def pca(smp, n=3, dim="both", biplot=True, title="", file_name="output/plots_dat
         if file_name is None:
             plt.show()
         else:
-            plt.savefig(file_name + "2d.png")
+            plt.savefig(str(file_name) + "2d.png")
             plt.close()
 
     # 3d plot
     if dim == "3d" or dim == "both":
         fig = plt.figure(figsize(16,10))
         ax = fig.add_subplot(projection="3d")
-        color_labels = [COLORS[label] for label in smp_with_pca["label"]]
+        color_labels = [colors[label] for label in smp_with_pca["label"]]
         g = ax.scatter(xs=smp_with_pca["pca-one"], ys=smp_with_pca["pca-two"], zs=smp_with_pca["pca-three"], c=color_labels, alpha=0.3)
         ax.set_xlabel("pca-one")
         ax.set_ylabel("pca-two")
@@ -98,29 +109,39 @@ def pca(smp, n=3, dim="both", biplot=True, title="", file_name="output/plots_dat
         if file_name is None:
             plt.show()
         else:
-            plt.savefig(file_name + "3d.png")
+            plt.savefig(str(file_name) + "3d.png")
             plt.close()
 
-def tsne(smp, dim="both", title="", file_name="outputs/plots_data/tsne"):
+def tsne(
+        smp: pd.DataFrame, 
+        colors: dict, 
+        anti_labels_long: dict,
+        dim: str = "both", 
+        title: str = "", 
+        file_name: Path = "outputs/plots_data/tsne",
+    ):
     """ Visualizing 2d and 2d plot with the 2 or 3 TSNE components.
     Parameters:
-        smp (df.DataFrame): SMP preprocessed data
+        smp (pd.DataFrame): SMP preprocessed data
+        colors (dict): Color dictionary from configs. Matches a grain number (int) to a color: < grain(int): color(str)>
+        anti_labels_long (dict): Label dictionary from configs, inversed, with  the grain types fully written out. Matches the int identifier to a string describing the grain: <int: str>
         dim (str): 2d, 3d or both - for visualization
-        file_name (str): path where the pic should be saved. if 'None' the plot is shown.
+        title (str): Title. No title if empty.
+        file_name (Path): path where the pic should be saved. if 'None' the plot is shown.
             Give it only a directory name "dir/subdir/subsubdir/"! the filenames are determiend by the function
     """
     plt.rcParams.update({"figure.dpi": 120})
     smp_labelled = smp[(smp["label"] != 0) & (smp["label"] != 2)]
     x = smp_labelled.drop(["label", "smp_idx"], axis=1)
     y = smp_labelled["label"]
-    anti_colors = {ANTI_LABELS_LONG[key] : value for key, value in COLORS.items() if key in smp_labelled["label"].unique()}
+    anti_colors = {anti_labels_long[key] : value for key, value in colors.items() if key in smp_labelled["label"].unique()}
 
     if dim == "2d" or dim == "both":
         tsne = TSNE(n_components=2, verbose=1, perplexity=40, n_iter=300, random_state=42)
         tsne_results = tsne.fit_transform(x)
         smp_with_tsne = pd.DataFrame({"t-SNE 1": tsne_results[:, 0], "t-SNE 2": tsne_results[:, 1], "label": y})
 
-        sns.scatterplot(x="t-SNE 1", y="t-SNE 2", hue="label", palette=COLORS, data=smp_with_tsne, alpha=0.3)
+        sns.scatterplot(x="t-SNE 1", y="t-SNE 2", hue="label", palette=colors, data=smp_with_tsne, alpha=0.3)
         markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='') for color in anti_colors.values()]
         plt.legend(markers, anti_colors.keys(), title="Snow Grain Types",
                    numpoints=1, loc="center left", bbox_to_anchor=(1.0, 0.5),
@@ -135,7 +156,7 @@ def tsne(smp, dim="both", title="", file_name="outputs/plots_data/tsne"):
         if file_name is None:
             plt.show()
         else:
-            plt.savefig(file_name + "2d.png") # 2d_new02.svg
+            plt.savefig(str(file_name) + "2d.png") # 2d_new02.svg
             plt.close()
 
     if dim == "3d" or dim == "both":
@@ -145,7 +166,7 @@ def tsne(smp, dim="both", title="", file_name="outputs/plots_data/tsne"):
 
         fig = plt.figure(figsize(16,10))
         ax = fig.add_subplot(projection="3d")
-        color_labels = [COLORS[label] for label in smp_with_tsne["label"]]
+        color_labels = [colors[label] for label in smp_with_tsne["label"]]
         ax.scatter(xs=smp_with_tsne["tsne-one"], ys=smp_with_tsne["tsne-two"], zs=smp_with_tsne["tsne-three"], c=color_labels, alpha=0.3)
         ax.set_xlabel("tsne-one")
         ax.set_ylabel("tsne-two")
@@ -162,23 +183,34 @@ def tsne(smp, dim="both", title="", file_name="outputs/plots_data/tsne"):
         if file_name is None:
             plt.show()
         else:
-            plt.savefig(file_name + "3d.png")
+            plt.savefig(str(file_name) + "3d.png")
             plt.close()
 
 
-def tsne_pca(smp, n=3, dim="both", title="", file_name="output/plots_data/pca_tsne"):
+def tsne_pca(
+        smp: pd.DataFrame, 
+        colors: dict,
+        anti_labels_long: dict,
+        n: int = 3, 
+        dim: str = "both", 
+        title: str = "", 
+        file_name: Path = OUTPUT_DIR / "plots_data" / "pca_tsne",
+    ):
     """ Visualizing 2d and 3d plot with the 2 or 3 TSNE components being feed with n principal components of a previous PCA.
     Parameters:
-        smp (df.DataFrame): SMP preprocessed data
+        smp (pd.DataFrame): SMP preprocessed data
+        colors (dict): Color dictionary from configs. Matches a grain number (int) to a color: < grain(int): color(str)>
+        anti_labels_long (dict): Label dictionary from configs, inversed, with  the grain types fully written out. Matches the int identifier to a string describing the grain: <int: str>
         n (int): how many pca components should be used -> choose such that at least 90% of the variance is explained by them
         dim (str): 2d, 3d or both - for visualization
-        file_name (str): path where the pic should be saved. if 'None' the plot is shown.
+        title (str): Title. No title if empty.
+        file_name (Path): path where the pic should be saved. if 'None' the plot is shown.
             Give it only a directory name "dir/subdir/subsubdir/"! the filenames are determiend by the function
     """
     smp_labelled = smp[(smp["label"] != 0) & (smp["label"] != 2)]
     x = smp_labelled.drop(["label", "smp_idx"], axis=1)
     y = smp_labelled["label"]
-    anti_colors = {ANTI_LABELS_LONG[key] : value for key, value in COLORS.items() if key in smp_labelled["label"].unique()}
+    anti_colors = {anti_labels_long[key] : value for key, value in colors.items() if key in smp_labelled["label"].unique()}
     pca = PCA(n_components=n, random_state=42)
     pca_result = pca.fit_transform(x)
     print("Cumulative explained variation for {} principal components: {}".format(n, np.sum(pca.explained_variance_ratio_)))
@@ -201,7 +233,7 @@ def tsne_pca(smp, n=3, dim="both", title="", file_name="output/plots_data/pca_ts
         if file_name is None:
             plt.show()
         else:
-            plt.savefig(file_name + "2d.png")
+            plt.savefig(str(file_name) + "2d.png")
             plt.close()
 
     if dim == "3d" or dim == "both":
@@ -211,7 +243,7 @@ def tsne_pca(smp, n=3, dim="both", title="", file_name="output/plots_data/pca_ts
 
         fig = plt.figure(figsize(16,10))
         ax = fig.add_subplot(projection="3d")
-        color_labels = [COLORS[label] for label in smp_pca_tsne["label"]]
+        color_labels = [colors[label] for label in smp_pca_tsne["label"]]
         ax.scatter(xs=smp_pca_tsne["tsne-one"], ys=smp_pca_tsne["tsne-two"], zs=smp_pca_tsne["tsne-three"], c=color_labels, alpha=0.3)
         ax.set_xlabel("tsne-one")
         ax.set_ylabel("tsne-two")
@@ -229,5 +261,5 @@ def tsne_pca(smp, n=3, dim="both", title="", file_name="output/plots_data/pca_ts
         if file_name is None:
             plt.show()
         else:
-            plt.savefig(file_name + "3d.png")
+            plt.savefig(str(file_name) + "3d.png")
             plt.close()
