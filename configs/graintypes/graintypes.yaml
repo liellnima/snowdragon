@@ -1,12 +1,13 @@
-used_labels:
-  - 6.0
-  - 3.0
-  - 4.0
-  - 12.0
-  - 5.0
-  - 16.0
-rare_labels: # [!] if you have no rare labels, please put here: rare_labels: []
-  - 17.0
+selected_labels:
+  used_labels:
+    - 6.0
+    - 3.0
+    - 4.0
+    - 12.0
+    - 5.0
+    - 16.0
+  rare_labels: # [!] if you have no rare labels, please put here: rare_labels: []
+    - 17.0
 labels:
   not_labelled: 0 # DO NOT CHANGE THAT ONE
   surface: 1 # DO NOT CHANGE THAT ONE
@@ -26,7 +27,7 @@ labels:
   mfcr: 15
   pp: 16
   rare: 17
-anti-labels:
+anti_labels:
   0: not_labelled # DO NOT CHANGE THAT ONE
   1: surface # DO NOT CHANGE THAT ONE
   2: ground # DO NOT CHANGE THAT ONE
@@ -45,7 +46,7 @@ anti-labels:
   15: mfcr
   16: pp
   17: rare
-anti-labels-long:
+anti_labels_long:
   0: Not labelled # DO NOT CHANGE THAT ONE
   1: Surface # DO NOT CHANGE THAT ONE
   2: Ground # DO NOT CHANGE THAT ONE
