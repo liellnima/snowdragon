@@ -35,7 +35,7 @@ def plot_balancing(
     # take only labelled data and exclude surface and ground
     labelled_smp = smp[(smp["label"] != 0) & (smp["label"] != 1) & (smp["label"] != 2)]
     # I can currently not find snow-ice because I am cutting of the last datapoints, if they are less than 1mm
-    print("Can I find the snow-ice label?", smp[smp["label"] == 11])
+    #print("Can I find the snow-ice label?", smp[smp["label"] == 11])
 
     my_colors = [colors[label_number] for label_number in labelled_smp["label"].value_counts().index]
     ax = sns.countplot(x="label", data=labelled_smp, order=labelled_smp["label"].value_counts().index, palette=my_colors)
@@ -51,6 +51,7 @@ def plot_balancing(
         y=p.get_bbox().get_points()[1,1]
         ax.annotate("{:.1f}%".format(100.*y/len(labelled_smp)), (x.mean(), y), ha="center", va="bottom") # set the alignment of the text
     x_labels = [anti_labels[label_number] for label_number in labelled_smp["label"].value_counts().index]
+    ax.set_xticks(ax.get_xticks())
     ax.set_xticklabels(x_labels, rotation=0)
     ax2.set_ylim(0,50)
     ax.set_ylim(0,len(labelled_smp)*0.5)
@@ -119,8 +120,17 @@ def corr_heatmap(
         smp_labelled = smp[(smp["label"] != 0) & (smp["label"] != 1) & (smp["label"] != 2)]
         smp_labelled = smp_labelled.drop("smp_idx", axis=1)
         for corr_label in correlation_labels:
+            
             # make the label integer if it not already
-            if not isinstance(corr_label, int): corr_label = labels[corr_label]
+            if isinstance(corr_label, int):
+                corr_label = corr_label 
+            elif isinstance(corr_label, float):
+                corr_label = int(corr_label)
+            elif isinstance(corr_label, str):
+                corr_label = str(int(corr_label))
+            else:
+                raise ValueError("The correlation labels must be integer numerics that can be passed as string, float, or int.")
+            
             # add the label to smp_labelled
             col_name = anti_labels[corr_label]
             col_names.append(col_name)
