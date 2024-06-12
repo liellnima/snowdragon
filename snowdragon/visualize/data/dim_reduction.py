@@ -18,7 +18,7 @@ def pca(
         dim: str = "both", 
         biplot: bool = True, 
         title: str = "", 
-        file_name: Path = OUTPUT_DIR / "plots_data" / "pca",
+        file_name: Path = OUTPUT_DIR / "plots_data",
     ):
     """ Visualizing 2d and 2d plot with the 2 or 3 principal components that explain the most variance.
     Parameters:
@@ -55,7 +55,7 @@ def pca(
     if file_name is None:
         plt.show()
     else:
-        plt.savefig(str(file_name) + "pca_explained_var.png")
+        plt.savefig(file_name / "pca_explained_var.png")
         plt.close()
     # 2d plot
     if dim == "2d" or dim == "both":
@@ -84,12 +84,12 @@ def pca(
         if file_name is None:
             plt.show()
         else:
-            plt.savefig(str(file_name) + "2d.png")
+            plt.savefig(file_name / "pca_2d.png")
             plt.close()
 
     # 3d plot
     if dim == "3d" or dim == "both":
-        fig = plt.figure(figsize(16,10))
+        fig = plt.figure(figsize=(16,10))
         ax = fig.add_subplot(projection="3d")
         color_labels = [colors[label] for label in smp_with_pca["label"]]
         g = ax.scatter(xs=smp_with_pca["pca-one"], ys=smp_with_pca["pca-two"], zs=smp_with_pca["pca-three"], c=color_labels, alpha=0.3)
@@ -109,7 +109,7 @@ def pca(
         if file_name is None:
             plt.show()
         else:
-            plt.savefig(str(file_name) + "3d.png")
+            plt.savefig(file_name / "pca_3d.png")
             plt.close()
 
 def tsne(
@@ -118,7 +118,7 @@ def tsne(
         anti_labels_long: dict,
         dim: str = "both", 
         title: str = "", 
-        file_name: Path = "outputs/plots_data/tsne",
+        file_name: Path = OUTPUT_DIR / "plots_data",
     ):
     """ Visualizing 2d and 2d plot with the 2 or 3 TSNE components.
     Parameters:
@@ -156,7 +156,7 @@ def tsne(
         if file_name is None:
             plt.show()
         else:
-            plt.savefig(str(file_name) + "2d.png") # 2d_new02.svg
+            plt.savefig(file_name / "tsne_2d.png") # 2d_new02.svg
             plt.close()
 
     if dim == "3d" or dim == "both":
@@ -164,7 +164,7 @@ def tsne(
         tsne_results = tsne.fit_transform(x)
         smp_with_tsne = pd.DataFrame({"tsne-one": tsne_results[:, 0], "tsne-two": tsne_results[:, 1], "tsne-three": tsne_results[:, 2], "label": y})
 
-        fig = plt.figure(figsize(16,10))
+        fig = plt.figure(figsize=(16,10))
         ax = fig.add_subplot(projection="3d")
         color_labels = [colors[label] for label in smp_with_tsne["label"]]
         ax.scatter(xs=smp_with_tsne["tsne-one"], ys=smp_with_tsne["tsne-two"], zs=smp_with_tsne["tsne-three"], c=color_labels, alpha=0.3)
@@ -183,7 +183,7 @@ def tsne(
         if file_name is None:
             plt.show()
         else:
-            plt.savefig(str(file_name) + "3d.png")
+            plt.savefig(file_name / "tsne_3d.png")
             plt.close()
 
 
@@ -194,7 +194,7 @@ def tsne_pca(
         n: int = 3, 
         dim: str = "both", 
         title: str = "", 
-        file_name: Path = OUTPUT_DIR / "plots_data" / "pca_tsne",
+        file_name: Path = OUTPUT_DIR / "plots_data",
     ):
     """ Visualizing 2d and 3d plot with the 2 or 3 TSNE components being feed with n principal components of a previous PCA.
     Parameters:
@@ -220,7 +220,7 @@ def tsne_pca(
         tsne_pca_results = tsne.fit_transform(pca_result)
         smp_pca_tsne = pd.DataFrame({"tsne-pca{}-one".format(n): tsne_pca_results[:, 0], "tsne-pca{}-two".format(n): tsne_pca_results[:, 1], "label": y})
 
-        sns.scatterplot(x="tsne-pca{}-one".format(n), y="tsne-pca{}-two".format(n), hue="label", palette=COLORS, data=smp_pca_tsne, alpha=0.3)
+        sns.scatterplot(x="tsne-pca{}-one".format(n), y="tsne-pca{}-two".format(n), hue="label", palette=colors, data=smp_pca_tsne, alpha=0.3)
         markers = [plt.Line2D([0,0],[0,0],color=color, marker='o', linestyle='') for color in anti_colors.values()]
         plt.legend(markers, anti_colors.keys(), title="Snow Grain Types", numpoints=1, loc="center left", bbox_to_anchor=(1.04, 0.5))
         # get rid off ticks and set a marker for zero
@@ -233,7 +233,7 @@ def tsne_pca(
         if file_name is None:
             plt.show()
         else:
-            plt.savefig(str(file_name) + "2d.png")
+            plt.savefig(file_name / "pca_tsne_2d.png")
             plt.close()
 
     if dim == "3d" or dim == "both":
@@ -241,7 +241,7 @@ def tsne_pca(
         tsne_pca_results = tsne.fit_transform(pca_result)
         smp_pca_tsne = pd.DataFrame({"tsne-one": tsne_pca_results[:, 0], "tsne-two": tsne_pca_results[:, 1], "tsne-three": tsne_pca_results[:, 2], "label": y})
 
-        fig = plt.figure(figsize(16,10))
+        fig = plt.figure(figsize=(16,10))
         ax = fig.add_subplot(projection="3d")
         color_labels = [colors[label] for label in smp_pca_tsne["label"]]
         ax.scatter(xs=smp_pca_tsne["tsne-one"], ys=smp_pca_tsne["tsne-two"], zs=smp_pca_tsne["tsne-three"], c=color_labels, alpha=0.3)
@@ -261,5 +261,5 @@ def tsne_pca(
         if file_name is None:
             plt.show()
         else:
-            plt.savefig(str(file_name) + "3d.png")
+            plt.savefig(file_name / "pca_tsne_3d.png")
             plt.close()
