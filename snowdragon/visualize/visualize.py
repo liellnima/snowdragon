@@ -44,6 +44,7 @@ parser.add_argument("--tsne", action="store_true", help="Plot T-SNE.")
 def visualize_normalized_data(
         smp: pd.DataFrame, 
         example_smp_name: str,
+        example_smp_path: Path,
         used_labels: list,
         labels: dict,
         anti_labels: dict, 
@@ -126,7 +127,7 @@ def visualize_normalized_data(
         anova(
             smp, 
             file_name = store_path / "anova.txt", 
-            tablefmt = "latex_raw",
+            tablefmt = "psql", #"latex_raw" for publications
         )
 
     # random forest feature extraction
@@ -136,7 +137,7 @@ def visualize_normalized_data(
             smp, 
             file_name = store_path / "forest_features.txt", 
             plot = False, 
-            tablefmt = "latex_raw"
+            tablefmt = "psql", # "latex_raw" for publications
         )
 
     # plot all normalized features as lines in one profile
@@ -146,7 +147,7 @@ def visualize_normalized_data(
             smp, 
             smp_name = example_smp_name, 
             features = ["mean_force", "var_force", "min_force_4", "max_force_4", "L_12", "gradient"], 
-            file_name = store_path / example_smp_name + "_features.png",
+            file_name = store_path / (str(example_smp_name) + "_features.png"),
         )
     
     plt.rcParams.update({"figure.dpi": 250})
@@ -169,6 +170,7 @@ def visualize_normalized_data(
             title = None, 
             file_name = store_path / "overview_data_norm.png", 
             profile_name = example_smp_name,
+            example_smp_path = example_smp_path,
         )
 
     # pca 
@@ -188,6 +190,8 @@ def visualize_normalized_data(
         print("\t\tPlotting tsne ...")
         tsne(
             smp, 
+            colors = colors, 
+            anti_labels_long = anti_labels_long,
             file_name = store_path,
         )
 
@@ -196,6 +200,8 @@ def visualize_normalized_data(
         print("\t\tPlotting tsne-pca ...")
         tsne_pca(
             smp, 
+            colors = colors, 
+            anti_labels_long = anti_labels_long,
             n = 5, 
             file_name = store_path,
         )
