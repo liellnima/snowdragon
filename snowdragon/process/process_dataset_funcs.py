@@ -31,7 +31,7 @@ def mosaic_specific_processing(smp: pd.DataFrame, labels: dict):
     precipation particles (similar enough). The classes if and sh are summed up to the class "rare".
     Parameters:
         smp (pd.DataFrame): smp data 
-        labels (dict): label dictionary (str name to int idx)
+        labels (dict): label dictionary, mapping the grain type to an index <str: int>
     Returns:
         pd.DataFrame
     """
@@ -40,9 +40,9 @@ def mosaic_specific_processing(smp: pd.DataFrame, labels: dict):
     #print(smp.loc[(smp["label"] == LABELS["sh"]), "smp_idx"].unique())
     #meltform_profiles_str = [int_to_idx(profile) for profile in meltform_profiles]
     # exclude these profiles!
-    smp = smp[~smp["smp_idx"].isin(meltform_profiles)]
+    smp = smp[~smp["smp_idx"].isin(meltform_profiles)].copy()
     # rename all df points to pp
-    smp.loc[smp["label"] == labels["df"], "label"] = labels["pp"]
+    smp.loc[smp.label == labels["df"], "label"] = labels["pp"]
     # keep: 6, 3, 4, 12, 5, 16, 8, 10: rgwp, dh, dhid, dhwp, mfdh, pp(, if, sh)
     smp = sum_up_labels(
         smp, 
