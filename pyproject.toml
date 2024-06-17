@@ -23,6 +23,12 @@ dependencies = [
   "tabulate",
   "tqdm",
 ]
+optional-dependencies = [
+  "ipympl",
+  "ipywidgets",
+  "jupyterlab",
+  "jupyterlab-widgets",
+]
 requires-python = ">=3.10"
 authors = [
   {name = "Julia Kaltenborn", email = "julia.kaltenborn@mail.mcgill.ca"},
