@@ -73,7 +73,7 @@ def visualize_normalized_data(
     store_path = OUTPUT_DIR / "plots_data" / "normalized"
     # ATTENTION: don't use bogplots or single profiles after normalization!
     #plt.rcParams.update({"figure.dpi": 180})
-    store_path.mkdir()
+    store_path.mkdir(parents=True, exist_ok=True)
 
     # shows how balanced is the labelled dataset
     if plot_balanced_dataset:
@@ -235,7 +235,7 @@ def visualize_original_data(
     # clean smp data from nan values (not preprocessed yet)
     smp = smp.fillna(0)
     store_path = OUTPUT_DIR / "plots_data" / "original"
-    store_path.mkdir()
+    store_path.mkdir(parents=True, exist_ok=True)
 
     # show how balanced the labelled dataset is 
     if plot_balanced_dataset:
@@ -350,7 +350,7 @@ def visualize_results(all_scores, label_acc, label_prec, cf_matrix=True, roc_auc
         roc_auc (bool): if roc auc curves should be created
     """
     store_path = OUTPUT_DIR / "plots_results" 
-    store_path.mkdir()
+    store_path.mkdir(parents=True, exist_ok=True)
 
     # resort label_acc (so the models have the right grouping order)
     # TODO REMOVE or make this accessible to everyone
@@ -481,7 +481,7 @@ def main():
 
     if args.tsne:
         store_path = OUTPUT_DIR / "plots_data" / "normalized"
-        store_path.mkdir()
+        store_path.mkdir(parents=True, exist_ok=True)
         tsne(smp_preprocessed, dim="2d", file_name="output/plots_data/normalized/tsne_2d_updated_")
 
     ## VISUALIZE RESULTS ##
