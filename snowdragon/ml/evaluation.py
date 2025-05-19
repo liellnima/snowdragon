@@ -1,5 +1,6 @@
 from snowdragon.ml.evaluation.metrics import METRICS, METRICS_PROB
-from snowdragon.utils.helper_funcs import reverse_normalize, int_to_idx, save_results
+from snowdragon.utils.idx_funcs import int_to_idx
+from snowdragon.utils.helper_funcs import reverse_normalize, save_results
 from data_handling.data_parameters import ANTI_LABELS, EXAMPLE_SMP_NAME
 from snowdragon.ml.models.semisupervised_models import assign_clusters
 from snowdragon.ml.models.anns import fit_ann_model, predict_ann_model

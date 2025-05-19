@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 
 from snowdragon import OUTPUT_DIR
-from snowdragon.utils.helper_funcs import idx_to_int
+from snowdragon.utils.idx_funcs import idx_to_int
 
 def smp_unlabelled(
         smp: pd.DataFrame, 

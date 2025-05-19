@@ -11,9 +11,9 @@ from snowmicropyn import Profile
 from sklearn.manifold import TSNE
 from sklearn.model_selection import StratifiedKFold
 
-
+from snowdragon.utils.idx_funcs import idx_to_int
 from snowdragon.ml.evaluation.cv_handler import cv_manual
-from snowdragon.utils.helper_funcs import load_smp_data, load_configs, npz_to_pd, idx_to_int
+from snowdragon.utils.helper_funcs import load_smp_data, npz_to_pd 
 from snowdragon.ml.evaluation.train_test_splitter import my_train_test_split
 from snowdragon.visualize.visualize import visualize_original_data, visualize_normalized_data
 from snowdragon.process.process_profile_funcs import label_pd, relativize, remove_negatives, summarize_rows, rolling_window

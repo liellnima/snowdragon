@@ -15,7 +15,7 @@ from snowdragon.ml.models.baseline import predict_baseline
 from snowdragon.ml.evaluation.cv_handler import assign_clusters_single_profile
 from snowdragon.ml.models.anns import predict_single_profile_ann
 from snowdragon.ml.run_models import remove_nans_mosaic, normalize_mosaic
-from snowdragon.utils.helper_funcs import int_to_idx
+from snowdragon.utils.idx_funcs import int_to_idx
 from tuning.tuning_parameters import BEST_PARAMS
 from data_handling.data_parameters import ANTI_LABELS, PARAMS
 from data_handling.data_preprocessing import export_pnt, npz_to_pd, search_markers

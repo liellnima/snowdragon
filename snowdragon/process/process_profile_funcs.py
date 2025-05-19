@@ -2,7 +2,7 @@
 #from data_handling.data_parameters import SMP_LOC, T_LOC, EXP_LOC, LABELS, PARAMS
 #from data_handling.data_parameters import SMP_ORIGINAL_NPZ
 from snowdragon import DATA_DIR
-from snowdragon.utils.helper_funcs import idx_to_int
+from snowdragon.utils.idx_funcs import idx_to_int
 
 # external imports
 import os

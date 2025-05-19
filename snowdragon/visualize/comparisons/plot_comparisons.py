@@ -11,7 +11,7 @@ import matplotlib.lines as mlines
 import matplotlib.colors as mcolors
 
 from tqdm import tqdm
-from snowdragon.utils.helper_funcs import idx_to_int
+from snowdragon.utils.idx_funcs import idx_to_int
 #from data_handling.data_parameters import COLORS, ANTI_LABELS, ANTI_LABELS_LONG, LABELS, USED_LABELS, RARE_LABELS
 
 # TODO

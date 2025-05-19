@@ -9,7 +9,7 @@ from pathlib import Path
 from snowmicropyn import Profile
 
 from snowdragon import OUTPUT_DIR
-from snowdragon.utils.helper_funcs import int_to_idx, idx_to_int
+from snowdragon.utils.idx_funcs import int_to_idx, idx_to_int
 
 # important setting to scale the pictures correctly
 plt.rcParams.update({"figure.dpi": 250})

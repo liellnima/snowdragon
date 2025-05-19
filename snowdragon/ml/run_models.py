@@ -5,7 +5,8 @@ from snowdragon.ml.evaluation.cv_handler import cv_manual, mean_kfolds
 from snowdragon.ml.models.supervised_models import svm, random_forest, ada_boost, knn
 from snowdragon.ml.models.semisupervised_models import kmeans, gaussian_mix, bayesian_gaussian_mix, label_spreading, self_training
 from snowdragon.ml.models.baseline import majority_class_baseline
-from snowdragon.utils.helper_funcs import normalize, save_results, load_results, reverse_normalize, int_to_idx
+from snowdragon.utils.idx_funcs import int_to_idx
+from snowdragon.utils.helper_funcs import normalize, save_results, load_results, reverse_normalize
 from snowdragon.ml.models.anns import ann, get_ann_model
 from snowdragon.ml.evaluation import testing, train_single_model
 from snowdragon.visualize.data.dataset import all_in_one_plot
