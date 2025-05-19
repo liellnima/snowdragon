@@ -23,14 +23,6 @@ dependencies = [
   "tabulate",
   "tqdm",
 ]
-optional-dependencies = [
-  "ipympl",
-  "ipywidgets",
-  "jupyterlab",
-  "jupyterlab-widgets",
-  "opentsne",
-  "shapely",
-]
 requires-python = ">=3.10"
 authors = [
   {name = "Julia Kaltenborn", email = "julia.kaltenborn@mail.mcgill.ca"},
@@ -42,6 +34,16 @@ description = "Automatic Layer-Segmentation and Graintype-Classification of Snow
 readme = "README.md"
 license = {file = "LICENSE.md"}
 keywords = ["ml", "snow", "smp", "graintype"]
+
+[project.optional-dependencies]
+notebook = [
+  "ipympl",
+  "ipywidgets",
+  "jupyterlab",
+  "jupyterlab-widgets",
+  "opentsne",
+  "shapely",
+]
 
 [project.urls]
 Paper = "https://doi.org/10.5194/gmd-16-4521-2023"
