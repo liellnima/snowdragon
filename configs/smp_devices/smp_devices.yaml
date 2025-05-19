@@ -1,3 +1,6 @@
+# DO NOT RENAME THIS FILE
+# all other files can be renamed and are loaded automatically
+# this file needs to have this name (you can change the content of the file though)
 smp_devices:
   S31H: 2
   S43M: 3
