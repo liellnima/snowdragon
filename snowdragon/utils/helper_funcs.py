@@ -1,4 +1,3 @@
-import re
 import glob
 import yaml
 import pickle
@@ -6,61 +5,6 @@ import numpy as np
 import pandas as pd
 
 from snowdragon import CONFIG_DIR
-
-def idx_to_int(string_idx):
-    """ Converts a string that indexes the smp profile to an int.
-    Paramters:
-        string_idx (String): the index that is converted
-    Returns:
-        int32: the index as int.
-        For smp profiles starting with S31H, S43M, S49M [1, 2, 3, 4] + the last four digits are the int.
-        For smp profiles starting with PS122, [0] + 1 digit Leg + 2 digit week + 3 digit id are the int.
-        All other profiles are 0.
-    """
-    if "PS122" in string_idx:
-        str_parts = re.split("_|-", string_idx)
-        #     Mosaic + Leg          + week                  + id number
-        return int("1" + str_parts[1] + str_parts[2].zfill(2) + str_parts[3].zfill(3))
-
-    elif "S31H" in string_idx:
-        return int("2" + string_idx[-4:].zfill(6))
-    elif "S43M" in string_idx:
-        return int("3" + string_idx[-4:].zfill(6))
-    elif "S49M" in string_idx:
-        return int("4" + string_idx[-4:].zfill(6))
-    elif "S36M" in string_idx:
-        return int("5" + string_idx[-4:].zfill(6))
-    else:
-        raise ValueError("SMP naming convention is unknown. Please add another elif line in idx_to_int to handle your SMP naming convention.")
-
-
-def int_to_idx(int_idx: int) -> str:
-    """ Converts an int that indexes the smp profile to a string.
-    Paramters:
-        int_idx (int): the index that is converted
-    Returns:
-        str: the index as string
-        For smp profiles starting with 200, 300 or 400, the last four digits are caught
-            and added either to       S31H, S43M, S49M.
-        For smp profiles starting with 1 throw an error, since no SMP profile should have a 1.
-            PS122 is only used to describe event ids.
-        Profiles with 0 throw an error.
-        All other profiles get their int index returned as string (unchanged).
-    """
-    int_idx = str(int_idx)
-    smp_device = int(int_idx[0])
-    if (smp_device == 1) or (smp_device == 0):
-        raise ValueError("SMP indices with 0 or 1 cannot be converted. Indices with 1 are reserved for event IDs. 0 means that no suitable match was found during index convertion.")
-    elif smp_device == 2:
-        return "S31H" + int_idx[3:7]
-    elif smp_device == 3:
-        return "S43M" + int_idx[3:7]
-    elif smp_device == 4:
-        return "S49M" + int_idx[3:7]
-    elif smp_device == 5:
-        return "S36M" + int_idx[3:7]
-    else:
-        return str(int_idx)
 
 def normalize(data: pd.DataFrame, features, min: int, max: int) -> pd.DataFrame:
     """ Normalizes the given features of a dataframe.
