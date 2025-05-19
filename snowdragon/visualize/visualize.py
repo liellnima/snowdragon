@@ -73,6 +73,7 @@ def visualize_normalized_data(
     store_path = OUTPUT_DIR / "plots_data" / "normalized"
     # ATTENTION: don't use bogplots or single profiles after normalization!
     #plt.rcParams.update({"figure.dpi": 180})
+    store_path.mkdir()
 
     # shows how balanced is the labelled dataset
     if plot_balanced_dataset:
@@ -234,6 +235,7 @@ def visualize_original_data(
     # clean smp data from nan values (not preprocessed yet)
     smp = smp.fillna(0)
     store_path = OUTPUT_DIR / "plots_data" / "original"
+    store_path.mkdir()
 
     # show how balanced the labelled dataset is 
     if plot_balanced_dataset:
@@ -347,6 +349,9 @@ def visualize_results(all_scores, label_acc, label_prec, cf_matrix=True, roc_auc
         cf_matrix (bool): if confusion matrices should be created
         roc_auc (bool): if roc auc curves should be created
     """
+    store_path = OUTPUT_DIR / "plots_results" 
+    store_path.mkdir()
+
     # resort label_acc (so the models have the right grouping order)
     # TODO REMOVE or make this accessible to everyone
     label_acc = label_acc.reindex([7, 5, 2, 0, 4, 10, 6, 11, 8, 9, 12, 3, 1, 13])
@@ -356,12 +361,12 @@ def visualize_results(all_scores, label_acc, label_prec, cf_matrix=True, roc_auc
     if comparison:
         plot_model_comparison_bars(
             label_acc, all_scores, plot_rare=False,
-            file_name="output/plots_results/model_comparison_bar_acc.pdf",
+            file_name= store_path / "model_comparison_bar_acc.pdf",
             metric_name="accuracy"
         )
         plot_model_comparison_bars(
             label_prec, all_scores, plot_rare=False,
-            file_name="output/plots_results/model_comparison_bar_prec.pdf",
+            file_name= store_path / "model_comparison_bar_prec.pdf",
             metric_name="precision"
         )
 
@@ -393,7 +398,7 @@ def visualize_results(all_scores, label_acc, label_prec, cf_matrix=True, roc_auc
                 cf_matrices_group,
                 label_orders_group,
                 names_group,
-                file_name="output/plots_results/confusion_matrixes_" + str(i) + ".pdf")
+                file_name = store_path / "confusion_matrixes_" + str(i) + ".pdf")
 
     # plot roc curves
     if roc_auc or bog_plot:
@@ -417,7 +422,7 @@ def visualize_results(all_scores, label_acc, label_prec, cf_matrix=True, roc_auc
                 labels_group, 
                 names_group, 
                 legend=True,
-                file_name= OUTPUT_DIR / "plots_results" / "roc_auc_curves.pdf",
+                file_name= store_path / "roc_auc_curves.pdf",
             )
 
         if bog_plot:
@@ -434,7 +439,7 @@ def visualize_results(all_scores, label_acc, label_prec, cf_matrix=True, roc_auc
                 smp_idx,
                 labels_group, 
                 names_group,
-                file_name= OUTPUT_DIR / "plots_results" / "bogplots_testset.pdf",
+                file_name= store_path / "bogplots_testset.pdf",
             )
 
 
@@ -475,16 +480,19 @@ def main():
         )
 
     if args.tsne:
+        store_path = OUTPUT_DIR / "plots_data" / "normalized"
+        store_path.mkdir()
         tsne(smp_preprocessed, dim="2d", file_name="output/plots_data/normalized/tsne_2d_updated_")
 
     ## VISUALIZE RESULTS ##
     if args.results:
         # load dataframe with performance data
         if prepare_scores:
+            # TODO changes this to pathlib
             prepare_score_data("output/evaluation/")
-        all_scores = pd.read_csv("output/scores/all_scores.csv")
-        label_acc = pd.read_csv("output/scores/acc_labels.csv")
-        label_prec = pd.read_csv("output/scores/prec_labels.csv")
+        all_scores = pd.read_csv(OUTPUT_DIR / "scores" / "all_scores.csv")
+        label_acc = pd.read_csv(OUTPUT_DIR / "scores" / "acc_labels.csv")
+        label_prec = pd.read_csv(OUTPUT_DIR / "scores" / "prec_labels.csv")
 
         visualize_results(all_scores, label_acc, label_prec,
                           cf_matrix=True,
