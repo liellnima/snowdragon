@@ -25,10 +25,16 @@ def idx_to_int(string_idx):
         return int("1" + str_parts[1] + str_parts[2].zfill(2) + str_parts[3].zfill(3))
     # SMP naming convention
     elif string_idx.startswith("S"):
+        # check if the SMP device was added
         try:
-            return int(str(SMP_DEVICES["smp_devices"][string_idx]) + string_idx[-4:].zfill(6))
+            SMP_DEVICES["smp_devices"][string_idx]
         except KeyError:
             raise ValueError("It looks like you are using the traditional SMP file naming convention. If yes, please add your SMP device (start of filename) to the configs/smp_devices/smp_devices.yaml.")
+        # try to convert the idx to int and return it
+        try:
+            return int(str(SMP_DEVICES["smp_devices"][string_idx]) + string_idx[-4:].zfill(6))
+        except Exception:
+            raise RuntimeError("Something is probably wrong with the code - this is not your fault (except if you are writing the code).")
     # ADD YOUR naming convention here with another elif line
     # Please make sure to add it to the configs/smp_devices/smp_devices.yaml
     else:
