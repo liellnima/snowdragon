@@ -29,7 +29,7 @@ def idx_to_int(string_idx):
         try:
             SMP_DEVICES["smp_devices"][string_idx]
         except KeyError:
-            raise ValueError("It looks like you are using the traditional SMP file naming convention. If yes, please add your SMP device (start of filename) to the configs/smp_devices/smp_devices.yaml.")
+            raise ValueError("Device {string_idx} was not found. It looks like you are using the traditional SMP file naming convention. If yes, please add your SMP device (start of filename) to the configs/smp_devices/smp_devices.yaml.")
         # try to convert the idx to int and return it
         try:
             return int(str(SMP_DEVICES["smp_devices"][string_idx]) + string_idx[-4:].zfill(6))
