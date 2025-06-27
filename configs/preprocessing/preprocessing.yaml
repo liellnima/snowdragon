@@ -1,6 +1,6 @@
 dataset:
   visualize_original: False # set to TRUE # general
-  visualize_normalized: True # genreal
+  visualize_normalized: False # genreal
   original_mosaic_dataset: True # indicates if you are working with the original mosaic dataset
   ignore_unlabelled: False # general
   sample_size_unlabelled: 1000 # general

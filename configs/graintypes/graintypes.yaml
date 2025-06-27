@@ -6,8 +6,16 @@ selected_labels:
     - 12.0
     - 5.0
     - 16.0
-  rare_labels: # [!] if you have no rare labels, please put here: rare_labels: []
+  rare_label: # [!] if you have no rare labels, please put here: rare_labels: []
     - 17.0
+  remove_profiles_with_labels: []
+    # - 13.0
+    # - 14.0
+    # - 15.0
+  merge_to_rare_label: []
+    # - 8.0 
+    # - 9.0 
+    # - 10.0
 labels:
   not_labelled: 0 # DO NOT CHANGE THAT ONE
   surface: 1 # DO NOT CHANGE THAT ONE

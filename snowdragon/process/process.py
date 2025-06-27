@@ -17,7 +17,7 @@ from snowdragon.utils.helper_funcs import load_smp_data, npz_to_pd
 from snowdragon.ml.evaluation.train_test_splitter import my_train_test_split
 from snowdragon.visualize.visualize import visualize_original_data, visualize_normalized_data
 from snowdragon.process.process_profile_funcs import label_pd, relativize, remove_negatives, summarize_rows, rolling_window
-from snowdragon.process.process_dataset_funcs import remove_nans_mosaic, normalize_dataset, mosaic_specific_processing
+from snowdragon.process.process_dataset_funcs import remove_nans_mosaic, normalize_dataset, mosaic_specific_processing, sum_up_labels
 
 
 # exports pnt files (our smp profiles!) to csv files in a target directory
@@ -278,6 +278,27 @@ def preprocess_dataset(
         print("\tMOSAiC specifc preprocessing ...")
         smp = mosaic_specific_processing(smp, label_configs["labels"])
 
+    # remove profiles with certain labels 
+    if not original_mosaic_dataset and (len(label_configs["selected_labels"]["remove_profiles_with_labels"])) > 0:
+        labels = label_configs["labels"]
+        labels_to_be_removed = [label_configs["anti_labels"][l] for l in label_configs["selected_labels"]["remove_profiles_with_labels"]]
+        print("Remove profiles with certain labels ...")
+        profiles_to_be_removed = [smp.loc[(smp["label"] == labels[gt]),  "smp_idx"].unique() for gt in labels_to_be_removed]
+        profiles_to_be_removed = set([p for profiles in profiles_to_be_removed for p in profiles])
+        smp = smp[~smp["smp_idx"].isin(profiles_to_be_removed)].copy()
+
+    # remove profiles with certain labels and merge labels to rare label
+    if not original_mosaic_dataset and (len(label_configs["selected_labels"]["merge_to_rare_label"])) > 0:
+        labels = label_configs["labels"]
+        print("Sum up labels ...")
+        labels_to_be_unified = [label_configs["anti_labels"][l] for l in label_configs["selected_labels"]["merge_to_rare_label"]]
+        smp = sum_up_labels(
+            smp, 
+            labels_to_be_unified = labels_to_be_unified, 
+            unified_label_idx=labels["rare"], 
+            all_labels_dict=labels,
+            )
+
     # save normalized and pre-processed data
     print("\tSave normalized data ...")
     dict = smp.to_dict(orient="list")
@@ -289,7 +310,7 @@ def preprocess_dataset(
             smp = smp,
             example_smp_name = visualize_configs["example_smp"]["name"],
             example_smp_path = Path(visualize_configs["example_smp"]["path"]),
-            used_labels = label_configs["selected_labels"]["used_labels"] + label_configs["selected_labels"]["rare_labels"],
+            used_labels = label_configs["selected_labels"]["used_labels"] + label_configs["selected_labels"]["rare_label"],
             **label_configs,
             colors = color_configs["grains"],
             **visualize_configs["normalize"],
