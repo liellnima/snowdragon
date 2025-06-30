@@ -287,7 +287,7 @@ def preprocess_dataset(
         profiles_to_be_removed = set([p for profiles in profiles_to_be_removed for p in profiles])
         smp = smp[~smp["smp_idx"].isin(profiles_to_be_removed)].copy()
 
-    # remove profiles with certain labels and merge labels to rare label
+    # merge labels to rare label
     if not original_mosaic_dataset and (len(label_configs["selected_labels"]["merge_to_rare_label"])) > 0:
         labels = label_configs["labels"]
         print("Sum up labels ...")
