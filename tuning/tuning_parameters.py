@@ -74,6 +74,7 @@ BEST_PARAMS = {"kmeans": KMEANS_PARAMS, "gmm": GMM_PARAMS, "bmm": BMM_PARAMS,
                 "baseline": BASELINE_PARAMS, "rf_bal": RF_BAL_PARAMS}
 
 FIELD_NAMES = ["model", "fit_time", "score_time", "train_balanced_accuracy", "test_balanced_accuracy",
+               "train_absolute_accuracy", "test_absolute_accuracy", "train_f1", "test_f1",
                "train_recall", "test_recall", "train_precision", "test_precision",
                "train_roc_auc", "test_roc_auc", "train_log_loss", "test_log_loss",
                "num_clusters", "find_num_clusters", "num_components", "cov_type",
