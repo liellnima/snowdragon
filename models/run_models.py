@@ -1,6 +1,6 @@
 # import from other snowdragon modules
 from data_handling.data_loader import load_data
-from data_handling.data_parameters import LABELS, ANTI_LABELS, COLORS, EXAMPLE_SMP_NAME
+from data_handling.data_parameters import LABELS, ANTI_LABELS, COLORS, EXAMPLE_SMP_NAME, USED_LABELS
 from models.cv_handler import cv_manual, mean_kfolds
 from models.supervised_models import svm, random_forest, ada_boost, knn
 from models.semisupervised_models import kmeans, gaussian_mix, bayesian_gaussian_mix, label_spreading, self_training
@@ -677,7 +677,7 @@ def evaluate_all_models(data, models=["all"], model_names=None, file_scores=None
 
     # here, we can pick out the interesting stuff, like comparing the labels
     # based on accuracy  and precision for all models
-    str_labels = [ANTI_LABELS[label] for label in [3, 4, 5, 6, 12, 16, 17]]
+    str_labels = [ANTI_LABELS[label] for label in USED_LABELS]
     acc_per_label = pd.DataFrame(columns=str_labels)
     prec_per_label = pd.DataFrame(columns=str_labels)
     for i, model in enumerate(all_scores_per_label):
