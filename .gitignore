@@ -3,6 +3,8 @@ snowdragon.egg-info/
 .vscode
 .ipynb_checkpoints
 data_handling/poisson_features.py
+snowdragon_venv/
+model_runs/
 
 output/plots_data/normalized/corr_heatmap_all.pdf
 output/plots_data/normalized/corr_heatmap_all.svg
