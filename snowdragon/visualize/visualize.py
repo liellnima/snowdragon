@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 
 from snowdragon import OUTPUT_DIR
-from snowdragon.utils.helper_funcs import load_smp_data
+from snowdragon.utils.helper_funcs import load_smp_data, load_main_config, load_configs
 
 # unchecked
 from snowdragon.visualize.data.dim_reduction import pca, tsne, tsne_pca
@@ -21,6 +21,12 @@ from snowdragon.visualize.data.dataset import plot_balancing, corr_heatmap, anov
 from snowdragon.visualize.explainability.decision_tree import forest_extractor, visualize_tree
 # unchecked
 from snowdragon.visualize.results.plot_results import plot_confusion_matrix, prepare_evaluation_data, plot_roc_auc, plot_test_bogplots, plot_model_comparison_bars, prepare_score_data
+
+EVAL_LOC = load_main_config("main.yaml")["processed_data"]["evaluation"]
+SMP_ORIGINAL_NPZ = load_main_config("main.yaml")["processed_data"]["npz_file"]
+SMP_NORMALIZED_NPZ = load_main_config("main.yaml")["processed_data"]["normalized_npz_file"]
+SMP_PREPROCESSED_TXT = load_main_config("main.yaml")["processed_data"]["preprocessed_data"]
+ANTI_LABELS = load_configs("graintypes", "graintypes.yaml")["anti_labels"]
 
 
 # important setting to scale the pictures correctly
