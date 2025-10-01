@@ -11,10 +11,18 @@ import matplotlib.lines as mlines
 import matplotlib.colors as mcolors
 
 from tqdm import tqdm
+from snowdragon.utils.helper_funcs import load_configs
 from snowdragon.utils.idx_funcs import idx_to_int
 #from data_handling.data_parameters import COLORS, ANTI_LABELS, ANTI_LABELS_LONG, LABELS, USED_LABELS, RARE_LABELS
 
-# TODO
+graintype_configs = load_configs("graintypes", "graintypes.yaml")
+COLORS = load_configs("colors", "colors.yaml")["grains"]
+ANTI_LABELS = graintype_configs["anti_labels"]
+ANTI_LABELS_LONG = graintype_configs["anti_labels_long"]
+LABELS = graintype_configs["labels"]
+USED_LABELS = graintype_configs["selected_labels"]["used_labels"]
+RARE_LABELS = graintype_configs["selected_labels"]["rare_label"]
+
 # make function to compare predicted profiles where we dont have the ground truth!
 # adapt compare_plot accordingly --> essentially: do this with ini files only!
 
