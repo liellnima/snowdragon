@@ -1,7 +1,11 @@
+import pickle
+import tabulate
+import pandas as pd
 from pathlib import Path
 
-from snowdragon.utils.helper_funcs import load_configs
-from snowdragon.process.process import preprocess_dataset, preprocess_all_profiles
+from utils.helper_funcs import load_configs, load_results
+from process.process import preprocess_dataset, preprocess_all_profiles
+from ml.run_models import validate_all_models, train_and_store_models, evaluate_all_models
 
 class Snowdragon():
     """
@@ -14,6 +18,7 @@ class Snowdragon():
             smp_npz: Path, 
             smp_normalized_npz: Path, 
             preprocess_file: Path,
+            models: list,
             random_seed: int,
             config_files: dict,
         ):
@@ -24,6 +29,7 @@ class Snowdragon():
         self.smp_npz = smp_npz 
         self.smp_normalized_npz = smp_normalized_npz
         self.preprocess_file = preprocess_file
+        self.models = list
         self.random_seed = random_seed
 
         self.label_configs = load_configs(
@@ -40,8 +46,11 @@ class Snowdragon():
             config_subdir="visualize",
             config_name=config_files["visualize"],
         )
+
+        self.data = None
     
-    # 01
+    # 01 A process data
+    # TODO make this pretty, put it into a class
     def process(self, process_config: str):
         # load preprocessing configs 
         preprocessing_configs = load_configs(
@@ -73,7 +82,7 @@ class Snowdragon():
         # normalize the data, remove nans, sum grains together, etc.
         # if this is done, you can load the data via the output txt file from then on
         print("Preprocess the Dataset: \n")
-        preprocess_dataset(
+        self.data = preprocess_dataset(
             smp_file_name = self.smp_npz, 
             smp_normalized_file_name = self.smp_normalized_npz,
             output_file = self.preprocess_file,
@@ -85,13 +94,42 @@ class Snowdragon():
         )
         print("Done.")
 
+    # 01 B: load data that has been preprocessed
+    def load_processed_data(self):
+        with open(self.preprocess_file, "rb") as f:
+            data = pickle.load(f)
+        
     # 02 
     def train(self, train_config: str):
         raise NotImplementedError 
 
     # 03 
+    # TODO make this pretty, put it into a class
     def validate(self, valid_config: str):
-        raise NotImplementedError 
+        intermediate_results = "data/validation_results.txt"
+        validate_all_models(self.data, intermediate_results)
+
+        all_scores = load_results(intermediate_results)
+
+        # print and save results the validation results
+        all_scores = pd.DataFrame(all_scores).rename(columns={"test_balanced_accuracy": "test_bal_acc",
+                                                             "train_balanced_accuracy": "train_bal_acc",
+                                                             "test_recall": "test_rec",
+                                                             "train_recall": "train_rec",
+                                                             "test_precision": "test_prec",
+                                                             "train_precision": "train_prec",
+                                                             "train_roc_auc": "train_roc",
+                                                             "test_roc_auc": "test_roc",
+                                                             "train_log_loss": "train_ll",
+                                                             "test_log_loss": "test_ll"})
+        print(tabulate(pd.DataFrame(all_scores), headers="keys", tablefmt="psql"))
+
+        with open("output/tables/models_160smp_test01.txt", 'w') as f:
+            f.write(tabulate(pd.DataFrame(all_scores), headers="keys", tablefmt="psql"))
+
+        with open("output/tables/models_160smp_test01_latex.txt", 'w') as f:
+            f.write(tabulate(pd.DataFrame(all_scores), headers="keys", tablefmt="latex_raw"))
+
 
     # 04 
     def test(self, test_config: str):
@@ -101,5 +139,14 @@ class Snowdragon():
     def predict(self, predict_config: str):
         raise NotImplementedError
 
+    # 06
     def tune(self, tune_config: str):
         raise NotImplementedError
+    
+    # TODO delete, separate things out
+    def train_and_store(self):
+        train_and_store_models(self.data, models=self.models)
+
+    # TODO delete, separate things out
+    def evaluate(self):
+        evaluate_all_models(self.data, models=self.models, overwrite_tables=False)

@@ -28,7 +28,7 @@ if __name__ == "__main__":
     normalized_npz_file = ROOT_DIR / configs["processed_data"]["normalized_npz_file"]
     npz_file = ROOT_DIR / configs["processed_data"]["npz_file"]
     evaluation_dir = ROOT_DIR / configs["processed_data"]["evaluation"]
-
+    models = configs["models"]
     random_seed = configs["random_seed"]
 
     snowdragon = Snowdragon(
@@ -37,6 +37,7 @@ if __name__ == "__main__":
         smp_npz = npz_file,
         smp_normalized_npz = normalized_npz_file,
         preprocess_file = preprocessed_data,
+        models = models,
         random_seed = random_seed,
         config_files = configs["configs"],
     )
@@ -45,6 +46,12 @@ if __name__ == "__main__":
         snowdragon.process(
             process_config = configs["configs"]["preprocessing"]
         )
+
+    if configs["run"]["train_and_store"]:
+        snowdragon.train_and_store() 
+
+    if configs["run"]["evaluate"]:
+        snowdragon.evaluate()
 
     if configs["run"]["train"]:
         snowdragon.train() 
