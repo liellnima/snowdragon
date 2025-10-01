@@ -11,6 +11,7 @@ from snowdragon.visualize.data.all_profiles import all_in_one_plot
 from snowdragon.visualize.data.profile import smp_labelled
 from snowdragon.tune.tuning_parameters import BEST_PARAMS
 
+
 import joblib
 import pickle
 import random
@@ -35,6 +36,7 @@ SMP_PREPROCESSED_TXT = main_configs["processed_data"]["preprocessed_data"]
 
 ANTI_LABELS = load_configs("graintypes", "graintypes.yaml")["anti_labels"]
 EXAMPLE_SMP_NAME = load_configs("visualize", "visualize.yaml")["example_smp"]["name"]
+USED_LABELS = load_configs("graintypes", "graintypes.yaml")["selected_labels"]["used_labels"]
 
 # Explanation
 # python -m models.run_models --preprocess
@@ -443,7 +445,7 @@ def evaluate_all_models(data, models=["all"], model_names=None, file_scores=None
 
     # here, we can pick out the interesting stuff, like comparing the labels
     # based on accuracy  and precision for all models
-    str_labels = [ANTI_LABELS[label] for label in [3, 4, 5, 6, 12, 16, 17]]
+    str_labels = [ANTI_LABELS[label] for label in USED_LABELS]
     acc_per_label = pd.DataFrame(columns=str_labels)
     prec_per_label = pd.DataFrame(columns=str_labels)
     for i, model in enumerate(all_scores_per_label):
