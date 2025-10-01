@@ -17,8 +17,10 @@ from snowdragon.ml.models.anns import predict_single_profile_ann
 from snowdragon.ml.run_models import remove_nans_mosaic, normalize_mosaic
 from snowdragon.utils.idx_funcs import int_to_idx
 from snowdragon.utils.helper_funcs import load_configs, load_main_config
-from tuning.tuning_parameters import BEST_PARAMS
-from data_handling.data_preprocessing import export_pnt, npz_to_pd, search_markers
+from tune.tuning_parameters import BEST_PARAMS
+from snowdragon.utils.helper_funcs import npz_to_pd
+from snowdragon.process.process_profile_funcs import search_markers
+from snowdragon.process.process import preprocess_all_profiles
 
 # make an argparser for knowing which model should be used
 # and which files should be processed
@@ -229,7 +231,7 @@ def load_profiles(data_dir, overwrite=False):
     filter = True
     # export data from pnt to csv or npz
     if export:
-        export_pnt(pnt_dir=data_dir, target_dir=export_dir, export_as="npz", overwrite=False, **PARAMS)
+        preprocess_all_profiles(pnt_dir=data_dir, target_dir=export_dir, export_as="npz", overwrite=False, **PARAMS)
     if markers:
         search_markers(pnt_dir=data_dir, store_dir=marker_path)
 
