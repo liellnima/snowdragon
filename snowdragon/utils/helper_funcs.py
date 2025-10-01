@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 
 from snowdragon import CONFIG_DIR
+from snowdragon.utils.idx_funcs import idx_to_int
 
 def normalize(data: pd.DataFrame, features, min: int, max: int) -> pd.DataFrame:
     """ Normalizes the given features of a dataframe.

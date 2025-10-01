@@ -1,16 +1,15 @@
 from snowdragon.ml.run_models import run_single_model
-from snowdragon.utils.helper_funcs import load_results
+from snowdragon.utils.helper_funcs import load_results, load_main_config
 from snowdragon.tune.tuning_parameters import KMEANS_PARAMS, GMM_PARAMS, BMM_PARAMS, LABEL_SPREADING_PARAMS
 from snowdragon.tune.tuning_parameters import SELF_TRAINER_PARAMS, RF_PARAMS, SVM_PARAMS, KNN_PARAMS, EASY_ENSEMBLE_PARAMS
 from snowdragon.tune.tuning_parameters import LSTM_PARAMS, BLSTM_PARAMS, ENC_DEC_PARAMS, FIELD_NAMES
-from snowdragon.data_handling.data_parameters import SMP_PREPROCESSED_TXT
-
 import argparse
 import pandas as pd
 
 from pathlib import Path
 from csv import DictWriter
 
+SMP_PREPROCESSED_TXT = load_main_config("main.yaml")["processed_data"]["preprocessed_data"]
 
 parser = argparse.ArgumentParser(description="Can be used for tuning, runs a single model. Parameters are specified arguments. Only a subset of the arguments are relevant when running one model. All arguments have default parameters from the tuning_parameters.py file.")
 
