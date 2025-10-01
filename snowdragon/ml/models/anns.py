@@ -631,6 +631,17 @@ def ann(x_train, y_train, smp_idx_train, ann_type="lstm", name="LSTM", cv_timese
             "y_pred_prob_valid": [],
         }
 
+        all_results = {
+            "score_time": [], 
+            "fit_time": [],
+            "y_true_train": [],
+            "y_true_valid": [],
+            "y_pred_train": [],
+            "y_pred_valid": [], 
+            "y_pred_prob_train": [], 
+            "y_pred_prob_valid": [],
+        }
+
         labels = list(y_train.unique())
         # for each fold in the crossvalidation
         for k in tqdm(cv_timeseries):
