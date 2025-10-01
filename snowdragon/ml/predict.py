@@ -16,8 +16,8 @@ from snowdragon.ml.evaluation.cv_handler import assign_clusters_single_profile
 from snowdragon.ml.models.anns import predict_single_profile_ann
 from snowdragon.ml.run_models import remove_nans_mosaic, normalize_mosaic
 from snowdragon.utils.idx_funcs import int_to_idx
+from snowdragon.utils.helper_funcs import load_configs, load_main_config
 from tuning.tuning_parameters import BEST_PARAMS
-from data_handling.data_parameters import ANTI_LABELS, PARAMS
 from data_handling.data_preprocessing import export_pnt, npz_to_pd, search_markers
 
 # make an argparser for knowing which model should be used
@@ -25,8 +25,9 @@ from data_handling.data_preprocessing import export_pnt, npz_to_pd, search_marke
 # and where the results should be saved (and if visualizations should be stored as well)
 
 # make predictions for all files in this folder
-
-IN_DIR = "/home/julia/Documents/University/BA/Data/Arctic_updated/"
+IN_DIR = load_main_config("main.yaml")["raw_data"]["smp"]
+ANTI_LABELS = load_configs("graintypes", "graintypes.yaml")["anti_labels"]
+PARAMS = load_configs("preprocessing", "preprocessing.yaml")["profile"]
 
 # save both the pics and the results as .ini files
 def predict_profile(smp, model, data, model_type):
