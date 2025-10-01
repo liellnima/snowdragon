@@ -1,13 +1,12 @@
 from snowdragon.ml.evaluation.metrics import METRICS, METRICS_PROB
 from snowdragon.utils.idx_funcs import int_to_idx
-from snowdragon.utils.helper_funcs import reverse_normalize, save_results
-from data_handling.data_parameters import ANTI_LABELS, EXAMPLE_SMP_NAME
+from snowdragon.utils.helper_funcs import reverse_normalize, save_results, load_configs
 from snowdragon.ml.models.semisupervised_models import assign_clusters
 from snowdragon.ml.models.anns import fit_ann_model, predict_ann_model
 from snowdragon.ml.models.baseline import fit_baseline, predict_baseline
 from snowdragon.ml.evaluation.metrics import calculate_metrics_raw, calculate_metrics_per_label
-from visualization.plot_profile import smp_pair_both, smp_pair, smp_labelled
-
+from snowdragon.visualize.comparisons.plot_comparisons import smp_pair_both, smp_pair
+from snowdragon.visualize.data.profile import smp_labelled
 from snowdragon.visualize.data.all_profiles import all_in_one_plot
 from snowdragon.visualize.results.plot_test_results import plot_test_confusion_matrix, plot_test_roc_curve
 
@@ -20,6 +19,10 @@ from tqdm import tqdm
 from pathlib import Path
 from tabulate import tabulate
 from sklearn.svm import SVC
+
+# TODO make this adaptable to different configs
+ANTI_LABELS = load_configs("graintypes", "graintypes.yaml")["anti_labels"]
+EXAMPLE_SMP_NAME = load_configs("visualize", "visualize.yaml")["example_smp"]["name"]
 
 # Longterm TODO: make more of the parameters optional!
 

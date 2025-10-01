@@ -70,6 +70,22 @@ def load_configs(config_subdir: str, config_name: str) -> dict:
 
     return configs
 
+def load_main_config(config_name: str) -> dict: 
+    """ Loads the main config from a yaml file. 
+    Parameters:
+        config_name (str): The name of the main config
+    Returns:
+        dict: The configs in form of a dictionary
+    """
+    with open(CONFIG_DIR / config_name) as file:
+        try:
+            configs = yaml.safe_load(file)
+        except yaml.YAMLErrot as err:
+            print(err)
+
+    return configs
+
+
 def load_smp_data(npz_name, test_print=False, **kwargs):
     """ Wrapper Function for npz_to_pd for easier usage. Returns the data from a npz file as pd.DataFrame.
     Paramters:

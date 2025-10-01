@@ -1,4 +1,4 @@
-from tuning.tuning_parameters import BEST_PARAMS
+from snowdragon.tune.tuning_parameters import BEST_PARAMS
 
 import pandas as pd
 

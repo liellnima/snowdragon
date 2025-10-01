@@ -1,9 +1,9 @@
 from snowdragon.ml.run_models import run_single_model
 from snowdragon.utils.helper_funcs import load_results
-from tuning.tuning_parameters import KMEANS_PARAMS, GMM_PARAMS, BMM_PARAMS, LABEL_SPREADING_PARAMS
-from tuning.tuning_parameters import SELF_TRAINER_PARAMS, RF_PARAMS, SVM_PARAMS, KNN_PARAMS, EASY_ENSEMBLE_PARAMS
-from tuning.tuning_parameters import LSTM_PARAMS, BLSTM_PARAMS, ENC_DEC_PARAMS, FIELD_NAMES
-from data_handling.data_parameters import SMP_PREPROCESSED_TXT
+from snowdragon.tune.tuning_parameters import KMEANS_PARAMS, GMM_PARAMS, BMM_PARAMS, LABEL_SPREADING_PARAMS
+from snowdragon.tune.tuning_parameters import SELF_TRAINER_PARAMS, RF_PARAMS, SVM_PARAMS, KNN_PARAMS, EASY_ENSEMBLE_PARAMS
+from snowdragon.tune.tuning_parameters import LSTM_PARAMS, BLSTM_PARAMS, ENC_DEC_PARAMS, FIELD_NAMES
+from snowdragon.data_handling.data_parameters import SMP_PREPROCESSED_TXT
 
 import argparse
 import pandas as pd

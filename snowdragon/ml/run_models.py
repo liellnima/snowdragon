@@ -1,18 +1,15 @@
 # import from other snowdragon modules
-from data_handling.data_loader import load_data
-from data_handling.data_parameters import LABELS, ANTI_LABELS, COLORS, EXAMPLE_SMP_NAME
-from snowdragon.ml.evaluation.cv_handler import cv_manual, mean_kfolds
+from snowdragon.ml.evaluation.cv_handler import mean_kfolds
 from snowdragon.ml.models.supervised_models import svm, random_forest, ada_boost, knn
 from snowdragon.ml.models.semisupervised_models import kmeans, gaussian_mix, bayesian_gaussian_mix, label_spreading, self_training
 from snowdragon.ml.models.baseline import majority_class_baseline
 from snowdragon.utils.idx_funcs import int_to_idx
-from snowdragon.utils.helper_funcs import normalize, save_results, load_results, reverse_normalize
+from snowdragon.utils.helper_funcs import save_results, load_results, reverse_normalize, load_configs, load_main_config
 from snowdragon.ml.models.anns import ann, get_ann_model
-from snowdragon.ml.evaluation import testing, train_single_model
-from snowdragon.visualize.data.dataset import all_in_one_plot
-from snowdragon.visualize.compare_profiles.plot_comparisons import smp_labelled
-from snowdragon.visualize.visualize import visualize_original_data, visualize_normalized_data
-from tuning.tuning_parameters import BEST_PARAMS
+from snowdragon.ml.evaluate import testing, train_single_model
+from snowdragon.visualize.data.all_profiles import all_in_one_plot
+from snowdragon.visualize.data.profile import smp_labelled
+from snowdragon.tune.tuning_parameters import BEST_PARAMS
 
 import joblib
 import pickle
@@ -32,7 +29,12 @@ from sklearn.model_selection import train_test_split, StratifiedKFold #, cross_v
 from sklearn.neighbors import KNeighborsClassifier
 from imblearn.ensemble import BalancedRandomForestClassifier
 
-from data_handling.data_parameters import SMP_ORIGINAL_NPZ, SMP_NORMALIZED_NPZ, SMP_PREPROCESSED_TXT
+main_configs = load_main_config("main_config.yaml")
+SMP_ORIGINAL_NPZ = main_configs["processed_data"]["npz_file"]
+SMP_PREPROCESSED_TXT = main_configs["processed_data"]["preprocessed_data"]
+
+ANTI_LABELS = load_configs("graintypes", "graintypes.yaml")["anti_labels"]
+EXAMPLE_SMP_NAME = load_configs("visualize", "visualize.yaml")["example_smp"]["name"]
 
 # Explanation
 # python -m models.run_models --preprocess
@@ -609,6 +611,7 @@ def main():
     args = parser.parse_args()
     #test = "data/preprocessed_data_test.txt"
 
+    # TODO remove this - should not be doing that anymore, as it's not an orchestrator
     if args.preprocess:
         data = preprocess_dataset(
             smp_file_name=args.smp_npz, 
