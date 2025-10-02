@@ -11,7 +11,7 @@ nox.options.sessions = ["precommit"]
 
 def get_paths(session):
     package_path = Path(session.bin).parent.parent.parent
-    main_package = package_path / "src"
+    main_package = package_path / "snowdragon"
     tests = package_path / "tests"
     scripts = package_path / "scripts"
     return {
