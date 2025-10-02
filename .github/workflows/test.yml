@@ -1,0 +1,42 @@
+name: Test
+
+on: [pull_request]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Poetry
+        run: |
+          pip install poetry
+
+      - name: Cache Poetry virtualenv and dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pypoetry
+            ~/.cache/pip
+          key: poetry-${{ runner.os }}-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: |
+            poetry-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: |
+          make install-dev
+
+      - name: Run tests
+        run: |
+          make test
