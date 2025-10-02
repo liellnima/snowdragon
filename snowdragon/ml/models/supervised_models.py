@@ -1,5 +1,5 @@
 from snowdragon.ml.evaluation.cv_handler import calculate_metrics_cv
-from visualization.plot_data import visualize_tree
+from snowdragon.visualize.explainability.decision_tree import visualize_tree
 
 import pandas as pd
 from sklearn.svm import SVC
