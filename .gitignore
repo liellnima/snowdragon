@@ -2,7 +2,7 @@ __pycache__/
 snowdragon.egg-info/
 .vscode
 .ipynb_checkpoints
-.poetry.lock
+poetry.lock
 data_handling/poisson_features.py
 snowdragon_venv/
 model_runs/
