@@ -1,65 +1,17 @@
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
-[project]
+[tool.poetry]
 name = "snowdragon"
 version = "2.0.0"
-dependencies = [
-  "graphviz",
-  "h5py",
-  "imbalanced-learn",
-  "keras",
-  "keras-self-attention",
-  "matplotlib",
-  "numpy",
-  "pandas",
-  "pingouin",
-  "PyYaml",
-  "scikit-learn",
-  "scipy",
-  "seaborn",
-  "snowmicropyn",
-  "tabulate",
-  "tqdm",
-]
-requires-python = ">=3.10"
-authors = [
-  {name = "Julia Kaltenborn", email = "julia.kaltenborn@mail.mcgill.ca",
-  name = "Daria Paul", email = "daria.paul@awi.de"},
-]
-maintainers = [
-  {name = "Julia Kaltenborn", email = "julia.kaltenborn@mail.mcgill.ca",
-  name = "Daria Paul", email = "daria.paul@awi.de"}
-]
 description = "Automatic Layer-Segmentation and Graintype-Classification of SnowMicroPen Profiles"
+authors = [ "Julia Kaltenborn <julia.kaltenborn@mail.mcgill.ca>", "Daria Paul <daria.paul@awi.de>" ]
 readme = "README.md"
-license = {file = "LICENSE.md"}
+license = "LICENSE.md"
 keywords = ["ml", "snow", "smp", "graintype"]
 
-[project.optional-dependencies]
-notebook = [
-  "ipympl",
-  "ipywidgets",
-  "jupyterlab",
-  "jupyterlab-widgets",
-  "opentsne",
-  "shapely",
-]
-
-[project.urls]
+[tool.poetry.urls]
 Paper = "https://doi.org/10.5194/gmd-16-4521-2023"
 Data = "https://doi.org/10.1594/PANGAEA.935934"
 Repository = "https://github.com/liellnima/snowdragon.git"
 "Bug Tracker" = "https://github.com/liellnima/snowdragon/issues"
-
-
-[tool.poetry]
-name = "src"
-version = "0.0.0"
-description = ""
-authors = [ "Francis Pelletier <fplt.softwaredeveloper@gmail.com>" ]
-readme = "README.md"
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.13"
