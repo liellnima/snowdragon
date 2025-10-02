@@ -3,7 +3,7 @@ import tabulate
 import pandas as pd
 from pathlib import Path
 
-from utils.helper_funcs import load_configs, load_results
+from snowdragon.utils.helper_funcs import load_configs, load_results
 from process.process import preprocess_dataset, preprocess_all_profiles
 from ml.run_models import validate_all_models, train_and_store_models, evaluate_all_models
 
