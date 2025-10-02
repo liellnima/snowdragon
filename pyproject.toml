@@ -25,10 +25,12 @@ dependencies = [
 ]
 requires-python = ">=3.10"
 authors = [
-  {name = "Julia Kaltenborn", email = "julia.kaltenborn@mail.mcgill.ca"},
+  {name = "Julia Kaltenborn", email = "julia.kaltenborn@mail.mcgill.ca",
+  name = "Daria Paul", email = "daria.paul@awi.de"},
 ]
 maintainers = [
-  {name = "Julia Kaltenborn", email = "julia.kaltenborn@mail.mcgill.ca"}
+  {name = "Julia Kaltenborn", email = "julia.kaltenborn@mail.mcgill.ca",
+  name = "Daria Paul", email = "daria.paul@awi.de"}
 ]
 description = "Automatic Layer-Segmentation and Graintype-Classification of SnowMicroPen Profiles"
 readme = "README.md"
