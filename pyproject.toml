@@ -53,12 +53,155 @@ Data = "https://doi.org/10.1594/PANGAEA.935934"
 Repository = "https://github.com/liellnima/snowdragon.git"
 "Bug Tracker" = "https://github.com/liellnima/snowdragon/issues"
 
-[tool.scikit-build]
-wheel.expand-macos-universal-tags = true
 
-# add something to rewrite import in keras_self_attention:
-# from tensorflow import keras
-# instead of: import keras
+[tool.poetry]
+name = "src"
+version = "0.0.0"
+description = ""
+authors = [ "Francis Pelletier <fplt.softwaredeveloper@gmail.com>" ]
+readme = "README.md"
 
-# TODO add: keras_requires=">=2, <3",
-# TODO add: imbalanced_learn >= 0.12.0
+[tool.poetry.dependencies]
+python = ">=3.10,<3.13"
+
+[tool.poetry.group.dev]
+optional = true
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.5"
+pylint = "^3.3.7"
+black = "^25.1.0"
+isort = "^6.0.1"
+bump-my-version = "^1.1.4"
+flynt = "^1.0.2"
+flake8 = "^7.2.0"
+pre-commit = "^4.2.0"
+flake8-pyproject = "^1.2.3"
+docformatter = {extras = ["tomli"], version = "^1.7.7"}
+nox = "^2025.5.1"
+mccabe = "^0.7.0"
+autoflake = "^2.3.1"
+autopep8 = "^2.3.2"
+ruff = "^0.11.11"
+mdformat = "^0.7.22"
+mdformat-gfm = "^0.4.1"
+mdformat-gfm-alerts = "^2.0.0"
+
+[tool.poetry.group.lab]
+optional = true
+
+[tool.poetry.group.lab.dependencies]
+jupyterlab = "^4.4.3"
+notebook = "^7.4.3"
+jupyterlab-lsp = "^5.1.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+#
+# Scripts
+#
+[tool.poetry.scripts]
+
+#
+# Tools
+#
+
+[tool.bumpversion]
+current_version = "0.0.0"
+commit = true
+message = "Version {new_version} released."
+tag = true
+tag_name = "{new_version}"
+parse = '(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+) (?P<releaseTime>.*)?'
+serialize = [
+    "{major}.{minor}.{patch}"
+]
+
+[[tool.bumpversion.files]]
+filename = "CHANGES.md"
+search = '''
+## [Unreleased](REPOSITORY_URL/tree/main) (latest)
+
+______________________________________________________________________
+'''
+replace = '''
+## [Unreleased](REPOSITORY_URL/tree/main) (latest)
+
+______________________________________________________________________
+
+<!-- (New changes here in list form) -->
+
+## [{new_version}](REPOSITORY_URL/tree/{new_version}) ({utcnow:%Y-%m-%d})
+
+______________________________________________________________________
+'''
+
+[[tool.bumpversion.files]]
+filename = "pyproject.toml"
+search = 'version = "{current_version}"'
+replace = 'version = "{new_version}"'
+
+[[tool.bumpversion.files]]
+filename = "Makefile.variables"
+search = "APP_VERSION := {current_version}"
+replace = "APP_VERSION := {new_version}"
+
+[tool.pylint]
+disable = "C0114,C0115,C0116,R0903,R1710,W1203"
+max-line-length = 120
+max-locals = 20
+max-args = 16
+max-positional-arguments = 16
+max-attributes = 20
+ignore = [
+    ".git",
+    "migrations",
+    "__pycache__"
+]
+
+[tool.autoflake]
+remove-all-unused-imports = true
+in-place = true
+ignore-init-module-imports = true
+remove-unused-variables = true
+recursive = true
+
+[tool.autopep8]
+max_line_length = 120
+in-place = true
+aggressive = 2
+ignore = ["W503", "E203", "E501"]
+recursive = true
+
+[tool.flake8]
+max-line-length = 120
+ignore = ["E203", "E266", "E501", "W503"]
+docstring-convention = "numpy"
+max-complexity = 20
+per-file-ignores = []
+exclude = [
+    ".git",
+    "migrations",
+    "__pycache__"
+]
+
+[tool.black]
+line-length = 120
+target-version = ["py311"]
+
+[tool.isort]
+profile = "black"
+
+[tool.flynt]
+line-length = 120
+transform-concats = true
+verbose = true
+
+[tool.docformatter]
+style = "numpy"
+pre-summary-newline = true
+wrap-descriptions = 120
+wrap-summaries = 120
+blank = false

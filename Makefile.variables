@@ -1,0 +1,13 @@
+# This file is for custom makefile variable at the project level.
+# They are meant to be share by the whole project team.
+
+APP_VERSION := 0.0.0
+APPLICATION_NAME := lab_advanced_template
+CONDA_ENVIRONMENT := lab-advanced-template
+
+# Be mindful of python version when on the Mila cluster, as python 3.11 is not yet 
+# available as a cluster module and generally requires using a conda environment.
+# If you don't want to use a conda environment on the Mila cluster, consider setting
+# the python version to 3.10 (both below and in your project's documentation) 
+# and loading the appropriate module. 
+PYTHON_VERSION := 3.11

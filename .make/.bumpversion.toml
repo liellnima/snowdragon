@@ -1,0 +1,40 @@
+[tool.bumpversion]
+current_version = "0.7.1"
+commit = true
+message = "Makefile version {new_version} released."
+tag = true
+tag_name = "makefile-{new_version}"
+parse = '(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+) (?P<releaseTime>.*)?'
+serialize = [
+    "{major}.{minor}.{patch}"
+]
+
+[[tool.bumpversion.files]]
+filename = "CHANGES_MAKEFILE.md"
+search = '''
+## [Unreleased](https://github.com/RolnickLab/lab-advanced-template/tree/main) (latest)
+
+______________________________________________________________________
+'''
+replace = '''
+## [Unreleased](https://github.com/RolnickLab/lab-advanced-template/tree/main) (latest)
+
+______________________________________________________________________
+
+<!-- (New changes here in list form) -->
+
+## [{new_version}](https://github.com/RolnickLab/lab-advanced-template/tree/makefile-{new_version}) ({utcnow:%Y-%m-%d})
+
+______________________________________________________________________
+'''
+
+[[tool.bumpversion.files]]
+filename = "base.make"
+search = 'MAKEFILE_VERSION := {current_version}'
+replace = 'MAKEFILE_VERSION := {new_version}'
+
+
+[[tool.bumpversion.files]]
+filename = "Makefile"
+search = 'MAKEFILE_VERSION := {current_version}'
+replace = 'MAKEFILE_VERSION := {new_version}'
