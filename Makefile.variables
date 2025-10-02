@@ -3,7 +3,7 @@
 
 APP_VERSION := 2.0.0
 APPLICATION_NAME := snowdragon
-CONDA_ENVIRONMENT := snowdragon-env
+CONDA_ENVIRONMENT := snowdragon
 
 # Be mindful of python version when on the Mila cluster, as python 3.11 is not yet 
 # available as a cluster module and generally requires using a conda environment.
