@@ -185,3 +185,64 @@ pre-summary-newline = true
 wrap-descriptions = 120
 wrap-summaries = 120
 blank = false
+
+[tool.ruff]
+line-length = 120
+
+target-version = "py311"
+
+exclude = [
+  ".git",
+  "migrations",
+  "__pycache__",
+]
+
+[tool.ruff.lint]
+select = [
+    "A",   # Flake8 Built ins
+    "E",   # Error (Flake8)
+    "F",   # Pyflakes (Flake8)
+    "W",   # Warning (Flake8)
+    "I",   # isort (import sorting)
+    "N",   # Naming conventions (Pylint, etc.)
+    "C90", # mccabe complexity (replaces flake8 --max-complexity and mccabe)
+    "B",   # Bugbear (common linting issues)
+    "UP",  # pyupgrade (suggests modern Python syntax)
+    "PLR", # Pylint refactor
+    "PLE", # Pylint error (specific Pylint error rules)
+    "PLW", # Pylint warning (specific Pylint warning rules)
+    "PLC", # Pylint convention (specific Pylint convention rules)
+    "R",   # Refactor (Pylint refactoring suggestions)
+    "TID", # TO DO comments
+    "FAST",# FastAPI
+    "C4",  # List and dict comprehensions
+    "DJ",  # Django
+    "PIE", # Returns and unnecessary returns
+    "Q",   # Double quotes
+    "RET", # Fix return statements
+    "PTH", # Enforce pathlib
+    "ARG", # Unused argument
+    "FLY", # Flynt
+    "NPY", # Numpy specific
+    "PD",  # Pandas specific
+    "RUF", # Ruff specific
+]
+
+ignore = [
+  "E203",  # whitespace before ':', Black already handles this
+  "E266",  # too many leading '#' for comments
+  "E501",  # line too long (we enforce via line-length instead)
+  "RET504",
+  "RUF013",
+  "PTH123"
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.pylint]
+max-args = 16
+
+[tool.ruff.lint.mccabe]
+# cyclomatic complexity
+max-complexity = 18
