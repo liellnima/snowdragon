@@ -14,7 +14,34 @@ Repository = "https://github.com/liellnima/snowdragon.git"
 "Bug Tracker" = "https://github.com/liellnima/snowdragon/issues"
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.13"
+python = ">=3.11,<3.13"
+graphviz = "^0.21"
+h5py = "^3.14.0"
+imbalanced-learn = "^0.14.0"
+keras-self-attention = "^0.51.0"
+matplotlib = "^3.10.6"
+numpy = "^2.3.3"
+pingouin = "^0.5.5"
+pandas = "^2.3.3"
+pyyaml = "^6.0.3"
+scikit-learn = "^1.7.2"
+tabulate = "^0.9.0"
+scipy = "^1.16.2"
+seaborn = "^0.13.2"
+snowmicropyn = "^1.2.1"
+tqdm = "^4.67.1"
+keras = "^3.11.3"
+
+[tool.poetry.group.notebook]
+optional = true 
+
+[tool.poetry.group.notebook.dependencies]
+ipympl = "^0.9.7"
+ipywidgets = "^8.1.7"
+jupyterlab = "^4.4.9"
+jupyterlab-widgets = "^3.0.15"
+opentsne = "^1.0.2"
+shapely = "^2.1.2"
 
 [tool.poetry.group.dev]
 optional = true
@@ -74,18 +101,18 @@ serialize = [
 [[tool.bumpversion.files]]
 filename = "CHANGES.md"
 search = '''
-## [Unreleased](REPOSITORY_URL/tree/main) (latest)
+## [Unreleased](https://github.com/liellnima/snowdragon.git/tree/main) (latest)
 
 ______________________________________________________________________
 '''
 replace = '''
-## [Unreleased](REPOSITORY_URL/tree/main) (latest)
+## [Unreleased](https://github.com/liellnima/snowdragon.git/tree/main) (latest)
 
 ______________________________________________________________________
 
 <!-- (New changes here in list form) -->
 
-## [{new_version}](REPOSITORY_URL/tree/{new_version}) ({utcnow:%Y-%m-%d})
+## [{new_version}](https://github.com/liellnima/snowdragon.git/tree/{new_version}) ({utcnow:%Y-%m-%d})
 
 ______________________________________________________________________
 '''

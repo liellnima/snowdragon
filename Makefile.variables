@@ -1,9 +1,9 @@
 # This file is for custom makefile variable at the project level.
 # They are meant to be share by the whole project team.
 
-APP_VERSION := 0.0.0
-APPLICATION_NAME := lab_advanced_template
-CONDA_ENVIRONMENT := lab-advanced-template
+APP_VERSION := 2.0.0
+APPLICATION_NAME := snowdragon
+CONDA_ENVIRONMENT := snowdragon-env
 
 # Be mindful of python version when on the Mila cluster, as python 3.11 is not yet 
 # available as a cluster module and generally requires using a conda environment.

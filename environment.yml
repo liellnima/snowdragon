@@ -1,4 +1,4 @@
-name: lab-advanced-template
+name: snowdragon
 channels:
   - conda-forge
 dependencies:
