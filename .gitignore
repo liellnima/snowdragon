@@ -175,7 +175,7 @@ scripts/config.sh
 Makefile.private
 
 # Optional
- poetry.lock
+poetry.lock
 
 snowdragon.egg-info/
 .vscode
