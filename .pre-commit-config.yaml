@@ -1,0 +1,70 @@
+exclude: ^docs/|/migrations/|Makefile*
+default_stages: [pre-commit]
+
+repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v5.0.0
+  hooks:
+  - id: check-json
+  - id: check-toml
+  - id: check-xml
+  - id: check-yaml
+  - id: debug-statements
+  - id: check-builtin-literals
+  - id: check-case-conflict
+  - id: check-docstring-first
+  - id: detect-private-key
+  - id: check-added-large-files
+    args: [--maxkb=5000]
+
+- repo: https://github.com/PyCQA/autoflake
+  rev: v2.3.1
+  hooks:
+  - id: autoflake
+
+- repo: https://github.com/hhatto/autopep8
+  rev: v2.3.2
+  hooks:
+  - id: autopep8
+
+- repo: https://github.com/psf/black
+  rev: 25.1.0
+  hooks:
+  - id: black
+
+- repo: https://github.com/PyCQA/isort
+  rev: 6.0.1
+  hooks:
+  - id: isort
+
+- repo: https://github.com/PyCQA/docformatter
+  rev: v1.7.7
+  hooks:
+  - id: docformatter
+    args: [--in-place]
+    additional_dependencies: [tomli]
+
+- repo: https://github.com/PyCQA/flake8
+  rev: 7.2.0
+  hooks:
+  - id: flake8
+    additional_dependencies: [flake8-pyproject]
+
+- repo: https://github.com/ikamensh/flynt
+  rev: 1.0.1
+  hooks:
+  - id: flynt
+
+- repo: https://github.com/hukkin/mdformat
+  rev: 0.7.22
+  hooks:
+  - id: mdformat
+    additional_dependencies:
+    - mdformat-gfm
+    - mdformat-gfm-alerts
+
+# sets up .pre-commit-ci.yaml to ensure pre-commit dependencies stay up to date
+ci:
+  autoupdate_schedule: weekly
+  skip: []
+  submodules: false

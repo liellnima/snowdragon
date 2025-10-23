@@ -1,62 +1,248 @@
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
-[project]
+[tool.poetry]
 name = "snowdragon"
 version = "2.0.0"
-dependencies = [
-  "graphviz",
-  "h5py",
-  "imbalanced-learn",
-  "keras",
-  "keras-self-attention",
-  "matplotlib",
-  "numpy",
-  "pandas",
-  "pingouin",
-  "PyYaml",
-  "scikit-learn",
-  "scipy",
-  "seaborn",
-  "snowmicropyn",
-  "tabulate",
-  "tqdm",
-]
-requires-python = ">=3.10"
-authors = [
-  {name = "Julia Kaltenborn", email = "julia.kaltenborn@mail.mcgill.ca"},
-]
-maintainers = [
-  {name = "Julia Kaltenborn", email = "julia.kaltenborn@mail.mcgill.ca"}
-]
 description = "Automatic Layer-Segmentation and Graintype-Classification of SnowMicroPen Profiles"
+authors = [ "Julia Kaltenborn <julia.kaltenborn@mail.mcgill.ca>", "Daria Paul <daria.paul@awi.de>" ]
 readme = "README.md"
-license = {file = "LICENSE.md"}
+license = "LICENSE.md"
 keywords = ["ml", "snow", "smp", "graintype"]
 
-[project.optional-dependencies]
-notebook = [
-  "ipympl",
-  "ipywidgets",
-  "jupyterlab",
-  "jupyterlab-widgets",
-  "opentsne",
-  "shapely",
-]
-
-[project.urls]
+[tool.poetry.urls]
 Paper = "https://doi.org/10.5194/gmd-16-4521-2023"
 Data = "https://doi.org/10.1594/PANGAEA.935934"
 Repository = "https://github.com/liellnima/snowdragon.git"
 "Bug Tracker" = "https://github.com/liellnima/snowdragon/issues"
 
-[tool.scikit-build]
-wheel.expand-macos-universal-tags = true
+[tool.poetry.dependencies]
+python = ">=3.11,<3.13"
+graphviz = "^0.21"
+h5py = "^3.14.0"
+imbalanced-learn = "^0.14.0"
+keras-self-attention = "^0.51.0"
+matplotlib = "^3.10.6"
+numpy = "^2.3.3"
+pingouin = "^0.5.5"
+pandas = "^2.3.3"
+pyyaml = "^6.0.3"
+scikit-learn = "^1.7.2"
+tabulate = "^0.9.0"
+scipy = "^1.16.2"
+seaborn = "^0.13.2"
+snowmicropyn = "^1.2.1"
+tqdm = "^4.67.1"
+keras = "^3.11.3"
+tensorflow = "^2.20.0"
+shapely = "^2.1.2"
 
-# add something to rewrite import in keras_self_attention:
-# from tensorflow import keras
-# instead of: import keras
+[tool.poetry.group.notebook]
+optional = true 
 
-# TODO add: keras_requires=">=2, <3",
-# TODO add: imbalanced_learn >= 0.12.0
+[tool.poetry.group.notebook.dependencies]
+ipympl = "^0.9.7"
+ipywidgets = "^8.1.7"
+jupyterlab = "^4.4.9"
+jupyterlab-widgets = "^3.0.15"
+opentsne = "^1.0.2"
+
+[tool.poetry.group.dev]
+optional = true
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.5"
+pylint = "^3.3.7"
+black = "^25.1.0"
+isort = "^6.0.1"
+bump-my-version = "^1.1.4"
+flynt = "^1.0.2"
+flake8 = "^7.2.0"
+pre-commit = "^4.2.0"
+flake8-pyproject = "^1.2.3"
+docformatter = {extras = ["tomli"], version = "^1.7.7"}
+nox = "^2025.5.1"
+mccabe = "^0.7.0"
+autoflake = "^2.3.1"
+autopep8 = "^2.3.2"
+ruff = "^0.11.11"
+mdformat = "^0.7.22"
+mdformat-gfm = "^0.4.1"
+mdformat-gfm-alerts = "^2.0.0"
+
+[tool.poetry.group.lab]
+optional = true
+
+[tool.poetry.group.lab.dependencies]
+jupyterlab = "^4.4.3"
+notebook = "^7.4.3"
+jupyterlab-lsp = "^5.1.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+#
+# Scripts
+#
+[tool.poetry.scripts]
+
+#
+# Tools
+#
+
+[tool.bumpversion]
+current_version = "0.0.0"
+commit = true
+message = "Version {new_version} released."
+tag = true
+tag_name = "{new_version}"
+parse = '(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+) (?P<releaseTime>.*)?'
+serialize = [
+    "{major}.{minor}.{patch}"
+]
+
+[[tool.bumpversion.files]]
+filename = "CHANGES.md"
+search = '''
+## [Unreleased](https://github.com/liellnima/snowdragon.git/tree/main) (latest)
+
+______________________________________________________________________
+'''
+replace = '''
+## [Unreleased](https://github.com/liellnima/snowdragon.git/tree/main) (latest)
+
+______________________________________________________________________
+
+<!-- (New changes here in list form) -->
+
+## [{new_version}](https://github.com/liellnima/snowdragon.git/tree/{new_version}) ({utcnow:%Y-%m-%d})
+
+______________________________________________________________________
+'''
+
+[[tool.bumpversion.files]]
+filename = "pyproject.toml"
+search = 'version = "{current_version}"'
+replace = 'version = "{new_version}"'
+
+[[tool.bumpversion.files]]
+filename = "Makefile.variables"
+search = "APP_VERSION := {current_version}"
+replace = "APP_VERSION := {new_version}"
+
+[tool.pylint]
+disable = "C0114,C0115,C0116,R0903,R1710,W1203"
+max-line-length = 120
+max-locals = 20
+max-args = 16
+max-positional-arguments = 16
+max-attributes = 20
+ignore = [
+    ".git",
+    "migrations",
+    "__pycache__"
+]
+
+[tool.autoflake]
+remove-all-unused-imports = true
+in-place = true
+ignore-init-module-imports = true
+remove-unused-variables = true
+recursive = true
+
+[tool.autopep8]
+max_line_length = 120
+in-place = true
+aggressive = 2
+ignore = ["W503", "E203", "E501"]
+recursive = true
+
+[tool.flake8]
+max-line-length = 120
+ignore = ["E203", "E266", "E501", "W503"]
+docstring-convention = "numpy"
+max-complexity = 20
+per-file-ignores = []
+exclude = [
+    ".git",
+    "migrations",
+    "__pycache__"
+]
+
+[tool.black]
+line-length = 120
+target-version = ["py311"]
+
+[tool.isort]
+profile = "black"
+
+[tool.flynt]
+line-length = 120
+transform-concats = true
+verbose = true
+
+[tool.docformatter]
+style = "numpy"
+pre-summary-newline = true
+wrap-descriptions = 120
+wrap-summaries = 120
+blank = false
+
+[tool.ruff]
+line-length = 120
+
+target-version = "py311"
+
+exclude = [
+  ".git",
+  "migrations",
+  "__pycache__",
+]
+
+[tool.ruff.lint]
+select = [
+    "A",   # Flake8 Built ins
+    "E",   # Error (Flake8)
+    "F",   # Pyflakes (Flake8)
+    "W",   # Warning (Flake8)
+    "I",   # isort (import sorting)
+    "N",   # Naming conventions (Pylint, etc.)
+    "C90", # mccabe complexity (replaces flake8 --max-complexity and mccabe)
+    "B",   # Bugbear (common linting issues)
+    "UP",  # pyupgrade (suggests modern Python syntax)
+    "PLR", # Pylint refactor
+    "PLE", # Pylint error (specific Pylint error rules)
+    "PLW", # Pylint warning (specific Pylint warning rules)
+    "PLC", # Pylint convention (specific Pylint convention rules)
+    "R",   # Refactor (Pylint refactoring suggestions)
+    "TID", # TO DO comments
+    "FAST",# FastAPI
+    "C4",  # List and dict comprehensions
+    "DJ",  # Django
+    "PIE", # Returns and unnecessary returns
+    "Q",   # Double quotes
+    "RET", # Fix return statements
+    "PTH", # Enforce pathlib
+    "ARG", # Unused argument
+    "FLY", # Flynt
+    "NPY", # Numpy specific
+    "PD",  # Pandas specific
+    "RUF", # Ruff specific
+]
+
+ignore = [
+  "E203",  # whitespace before ':', Black already handles this
+  "E266",  # too many leading '#' for comments
+  "E501",  # line too long (we enforce via line-length instead)
+  "RET504",
+  "RUF013",
+  "PTH123"
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.pylint]
+max-args = 16
+
+[tool.ruff.lint.mccabe]
+# cyclomatic complexity
+max-complexity = 18

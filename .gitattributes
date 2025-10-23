@@ -1,0 +1,15 @@
+# Auto detect text files and normalize EOL
+* text=auto
+
+# Explicitly set LF for files that should be executed on a server/cluster
+*.sh text eol=lf
+*.py text eol=lf
+
+# Explicitly set CRLF for Windows specific files
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary files (do not normalize)
+*.jpg binary
+*.png binary
+*.pdf binary
