@@ -1,11 +1,14 @@
 import re
-from snowdragon.utils.helper_funcs import load_configs
+import yaml
+from snowdragon import CONFIG_DIR
 
+# TODO delete after hashin idx_to_int function
 # load smp devices configs:
-SMP_DEVICES = load_configs(
-            config_subdir="smp_devices",
-            config_name="smp_devices.yaml",
-        )
+with open(CONFIG_DIR / "smp_devices" / "smp_devices.yaml") as file:
+    try:
+        SMP_DEVICES = yaml.safe_load(file)
+    except yaml.YAMLErrot as err:
+        print(err)
 SMP_DEVICE_VALUES = list(SMP_DEVICES["smp_devices"].values())
 
 def idx_to_int(string_idx):

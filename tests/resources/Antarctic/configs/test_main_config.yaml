@@ -7,14 +7,14 @@ run: # best is to just set one to true
   predict: False
   tune: False
 raw_data: # this can come from anywhere in your system
-  smp: /home/julia/Documents/BSc/BA/Data/Arctic_updated/
+  smp: /home/a/a270262/snowdragon/tests/data/
   temperature: /home/julia/Documents/BSc/BA/Data/Arctic/MOSAiC_ICE_Temperature.csv
 processed_data: # this is all expected to live in the snowdragon root dir
-   preprocessed_data: data/preprocess_k5.txt
-   exported_smp_files:  data/smp_profiles
-   normalized_npz_file: data/smp_profiles_normalized.npz
-   npz_file: data/smp_profiles.npz
-   evaluation: output/evaluation/
+   preprocessed_data: test/data/preprocess_k5.txt
+   exported_smp_files:  test/data/smp_profiles
+   normalized_npz_file: test/data/smp_profiles_normalized.npz
+   npz_file: test/data/smp_profiles.npz
+   evaluation: test/data/output/evaluation/
 models: # the models you would like to run
   - baseline
   - kmeans
@@ -31,7 +31,7 @@ models: # the models you would like to run
   - enc_dec
 configs:
   colors: colors.yaml
-  graintypes: graintypes.yaml
+  graintypes: test_graintypes.yaml
   model_params: model_params.yaml
   names: names.yaml
   visualize: visualize.yaml
