@@ -1,0 +1,43 @@
+# This file is meant for private variables and targets that apply only to each person's
+# local developments variables (ie. configurations specific to your own local
+# development environment) as well as sensitive information, like access keys,
+# passwords and such.
+#
+# Ex. personal targets while exploring new parameters or configurations that should not
+# be share with other project members
+#
+# Make a copy of this file and name it `Makefile.private`, then define your own
+# variables in it.
+#
+# `Makefile.private` is already ignored by the `.gitignore` file.
+#
+# DO NOT COMMIT YOUR `Makefile.private`!!!
+
+
+## Private variables
+
+# Most, but not all install/remove targets use this variable. A 'false' value will ask
+# users to confirm some steps. A 'true' value will automatically install/remove without
+# asking beforehand.
+AUTO_INSTALL := false
+
+# The default environment to use. The choices are as follow: [venv, poetry, conda]
+# If this is not set, the makefile will use the `poetry` command without activating 
+# an environment before hand.
+DEFAULT_INSTALL_ENV := venv
+
+# The default environment where Poetry will be installed. The choices are as follow: [venv, conda]
+# If this is not set, the makefile will ask the user where they want to install Poetry
+#DEFAULT_POETRY_INSTALL_ENV := venv
+
+
+# This variable is to enable the '-y' flag when newer version of conda is available.
+# The default Mila conda module does not allow this flag; leave blanks or commented out
+#CONDA_YES_OPTION := -y
+
+# If you use a different Conda tool, say `micromamba`, or if you use a different alias
+# CONDA_TOOL := <YOU_CONDA_TOOL_IF_DIFFERENT_FROM_CONDA>
+DOCKER_COMPOSE := docker compose
+
+## -- Private targets ------------------------------------------------------------------------------------------------##
+
