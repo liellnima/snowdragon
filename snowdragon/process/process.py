@@ -1,36 +1,52 @@
-import os
 import glob
+import os
+import pickle
 import time
-import pickle 
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
-
-from tqdm import tqdm
-from pathlib import Path
-from snowmicropyn import Profile
 from sklearn.manifold import TSNE
 from sklearn.model_selection import StratifiedKFold
+from snowmicropyn import Profile
+from tqdm import tqdm
 
-from snowdragon.utils.idx_funcs import idx_to_int
 from snowdragon.ml.evaluation.cv_handler import cv_manual
-from snowdragon.utils.helper_funcs import load_smp_data, npz_to_pd 
 from snowdragon.ml.evaluation.train_test_splitter import my_train_test_split
-from snowdragon.visualize.visualize import visualize_original_data, visualize_normalized_data
-from snowdragon.process.process_profile_funcs import label_pd, relativize, remove_negatives, summarize_rows, rolling_window
-from snowdragon.process.process_dataset_funcs import remove_nans_mosaic, normalize_dataset, mosaic_specific_processing, sum_up_labels
+from snowdragon.process.process_dataset_funcs import (
+    mosaic_specific_processing,
+    normalize_dataset,
+    remove_nans_mosaic,
+    sum_up_labels,
+)
+from snowdragon.process.process_profile_funcs import (
+    label_pd,
+    relativize,
+    remove_negatives,
+    rolling_window,
+    summarize_rows,
+)
+from snowdragon.utils.helper_funcs import load_smp_data, npz_to_pd
+from snowdragon.utils.idx_funcs import idx_to_int
+from snowdragon.visualize.visualize import (
+    visualize_normalized_data,
+    visualize_original_data,
+)
 
 
 # exports pnt files (our smp profiles!) to csv files in a target directory
 def preprocess_all_profiles(
-        data_dir: Path, 
-        export_dir: Path, 
-        labels: dict,
-        npz_name: str = "smp_all.npz", 
-        export_as: str = "npz", 
-        overwrite: bool = False, 
-        **params,
-    ):
-    """ Exports all pnt files from a dir and its subdirs as csv files into a new dir.
+    data_dir: Path,
+    export_dir: Path,
+    labels: dict,
+    npz_name: str = "smp_all.npz",
+    export_as: str = "npz",
+    overwrite: bool = False,
+    **params,
+):
+    """
+    Exports all pnt files from a dir and its subdirs as csv files into a new dir.
+
     Preproceses the profiles, according to kwargs arguments.
     Parameters:
         data_dir (Path): Directory where all the pnt data (= the smp profiles) and their ini files (= the smp markers) are stored
@@ -49,7 +65,6 @@ def preprocess_all_profiles(
             rolling_cols (list): List of columns over which should be rolled
             poisson_cols (list): List of features that should be taken from poisson shot model.
                 List can include: "distance", "median_force", "lambda", "f0", "delta", "L"
-    
     """
     print("Starting to export and/or convert data")
     start = time.time()
@@ -60,19 +75,23 @@ def preprocess_all_profiles(
         export_dir.mkdir(parents=True, exist_ok=True)
 
     if not data_dir.is_dir():
-        raise ValueError("The following directory does not exist: {}. \nPlease use a directory in the main configs for raw_data, smp that contains pnt files.".format(data_dir))
+        raise ValueError(
+            "The following directory does not exist: {}. \nPlease use a directory in the main configs for raw_data, smp that contains pnt files.".format(
+                data_dir
+            )
+        )
 
     # match all files in the dir who end on .pnt recursively
-    match_pnt = data_dir.as_posix() + "/**/*.pnt"
+    match_pnt = f"{data_dir.as_posix()}/**/*.pnt"
     # use generator to reduce memory usage
     file_generator_size = len(list(glob.iglob(match_pnt, recursive=True)))
     file_generator = glob.iglob(match_pnt, recursive=True)
 
     # yields each matching file and exports it
-    #print("Progressbar is only correct when using the Mosaic SMP Data.")
-    with tqdm(total=file_generator_size) as pbar: #3825
+    # print("Progressbar is only correct when using the Mosaic SMP Data.")
+    with tqdm(total=file_generator_size) as pbar:  # 3825
         for file in file_generator:
-            file_name = Path(export_dir, file.split("/")[-1].split(".")[0] + "." + export_as)
+            file_name = Path(export_dir, f"{file.split('/')[-1].split('.')[0]}.{export_as}")
             # exports file only if we want to overwrite it or it doesnt exist yet
             if overwrite or not file_name.is_file():
                 smp_profile = Profile.load(file)
@@ -80,7 +99,7 @@ def preprocess_all_profiles(
                 preprocess_profile(smp_profile, export_dir, labels, export_as=export_as, **params)
             pbar.update(1)
 
-    print("Finished exporting all pnt file as {} files in {}.".format(export_as, export_dir))
+    print(f"Finished exporting all pnt file as {export_as} files in {export_dir}.")
     ##########################
 
     # load pd.DataFrame from all npz files and save this pd as united DataFrame in npz
@@ -89,24 +108,22 @@ def preprocess_all_profiles(
     np.savez_compressed(npz_name, **dict)
 
     end = time.time()
-    print("Elapsed time for export and dataframe creation: ", end-start)
-    print("\nUnited smp data was stored in {}.".format(npz_name))
-
+    print("Elapsed time for export and dataframe creation: ", end - start)
+    print(f"\nUnited smp data was stored in {npz_name}.")
 
 
 def preprocess_profile(
-        profile: Profile, 
-        target_dir: Path, 
-        labels: dict,
-        export_as: str ="csv", 
-        sum_mm: float = 1.0, 
-        gradient: bool = False, 
-        **params,
-    ):
-    """ Preprocesses a smp profile. Jobs done:
-    Indexing, labelling, select data between surface and ground (and relativizes this data).
-    Summarizing data in a certain mm window (reduces precision/num of rows).
-    Applies a rolling window.
+    profile: Profile,
+    target_dir: Path,
+    labels: dict,
+    export_as: str = "csv",
+    sum_mm: float = 1.0,
+    gradient: bool = False,
+    **params,
+):
+    """
+    Preprocesses a smp profile. Jobs done: Indexing, labelling, select data between surface and ground (and relativizes
+    this data). Summarizing data in a certain mm window (reduces precision/num of rows). Applies a rolling window.
     Exports profile as csv.
 
     Parameters:
@@ -135,7 +152,7 @@ def preprocess_profile(
             profile.detect_ground()
             profile.detect_surface()
         except ValueError:
-            print("Profile {} is too short for data processing. Profile is skipped.".format(profile.name))
+            print(f"Profile {profile.name} is too short for data processing. Profile is skipped.")
             # leave function
             return
 
@@ -161,7 +178,7 @@ def preprocess_profile(
     if any(df["force"] < 0):
         # skip profile if more than 80 % of the values are negative
         if sum(df["force"] < 0) >= (0.8 * len(df)):
-            print("Profile {} contains more than 80% negative values. Profile is skipped.".format(profile.name))
+            print(f"Profile {profile.name} contains more than 80% negative values. Profile is skipped.")
             return
         df = remove_negatives(df, col="force")
 
@@ -176,7 +193,11 @@ def preprocess_profile(
         try:
             final_df["gradient"] = np.gradient(final_df["mean_force"])
         except ValueError as e:
-            if len(e.args) > 0 and e.args[0] == "Shape of array too small to calculate a numerical gradient, at least (edge_order + 1) elements are required.":
+            if (
+                len(e.args) > 0
+                and e.args[0]
+                == "Shape of array too small to calculate a numerical gradient, at least (edge_order + 1) elements are required."
+            ):
                 print("Array was too small, replaced gradient with 0.")
                 final_df["gradient"] = 0
             else:
@@ -186,10 +207,13 @@ def preprocess_profile(
     # Add SMP idx
     final_df["smp_idx"] = idx_to_int(profile.name)
     # Add relative position feature, if df is not empty
-    final_df["pos_rel"] = final_df.apply(lambda x: x["distance"] / final_df["distance"].max(), axis=1) if not final_df.empty else 0
+    final_df["pos_rel"] = (
+        final_df.apply(lambda x: x["distance"] / final_df["distance"].max(), axis=1) if not final_df.empty else 0
+    )
     # Add distance from ground, if df is not empty
-    final_df["dist_ground"] = final_df.apply(lambda x: final_df["distance"].max() - x["distance"], axis=1) if not final_df.empty else 0
-
+    final_df["dist_ground"] = (
+        final_df.apply(lambda x: final_df["distance"].max() - x["distance"], axis=1) if not final_df.empty else 0
+    )
 
     for col in final_df:
         if col == "label" or col == "smp_idx":
@@ -199,7 +223,7 @@ def preprocess_profile(
 
     # export as csv or npz
     if export_as == "csv":
-        final_df.to_csv(os.path.join(target_dir, Path(profile.name + ".csv")))
+        final_df.to_csv(os.path.join(target_dir, Path(f"{profile.name}.csv")))
     elif export_as == "npz":
         dict = final_df.to_dict(orient="list")
         np.savez_compressed(os.path.join(target_dir, Path(profile.name)), **dict)
@@ -208,25 +232,27 @@ def preprocess_profile(
 
 
 def preprocess_dataset(
-        smp_file_name, 
-        smp_normalized_file_name, 
-        label_configs: dict,
-        color_configs: dict,
-        visualize_configs: dict,
-        output_file = None, 
-        random_seed: int = 42, 
-        visualize_original: bool = False, 
-        visualize_normalized: bool = False, 
-        sample_size_unlabelled: int = 1000, 
-        tsne: int = 0, 
-        ignore_unlabelled: bool = False, 
-        k_fold: int = 5,
-        test_size: float = 0.2, 
-        train_size: float = 0.8, 
-        original_mosaic_dataset: bool = True,
-        **kwargs,
-    ):
-    """ Preprocesses the complete smp data and returns what is needed for the models.
+    smp_file_name,
+    smp_normalized_file_name,
+    label_configs: dict,
+    color_configs: dict,
+    visualize_configs: dict,
+    output_file=None,
+    random_seed: int = 42,
+    visualize_original: bool = False,
+    visualize_normalized: bool = False,
+    sample_size_unlabelled: int = 1000,
+    tsne: int = 0,
+    ignore_unlabelled: bool = False,
+    k_fold: int = 5,
+    test_size: float = 0.2,
+    train_size: float = 0.8,
+    original_mosaic_dataset: bool = True,
+    **kwargs,
+):
+    """
+    Preprocesses the complete smp data and returns what is needed for the models.
+
     Parameters:
         smp_file_name (str): where the complete smp data is saved
         output_file (str): where the resulting dict should be saved. If None it
@@ -251,19 +277,19 @@ def preprocess_dataset(
     smp_org = load_smp_data(smp_file_name)
 
     # remove nans
-    #TODO ADAPT THIS FUNCTION FOR YOUR OWN DATASET IF NEEDED
+    # TODO ADAPT THIS FUNCTION FOR YOUR OWN DATASET IF NEEDED
     if original_mosaic_dataset:
         print("\tRemove nans...")
         smp_org = remove_nans_mosaic(smp_org)
 
     # 2. Visualize before normalization
-    if visualize_original: 
+    if visualize_original:
         visualize_original_data(
-            smp = smp_org, 
-            example_smp_name = visualize_configs["example_smp"]["name"], 
-            example_smp_path = Path(visualize_configs["example_smp"]["path"]),
+            smp=smp_org,
+            example_smp_name=visualize_configs["example_smp"]["name"],
+            example_smp_path=Path(visualize_configs["example_smp"]["path"]),
             **label_configs,
-            colors = color_configs["grains"],
+            colors=color_configs["grains"],
             **visualize_configs["original"],
         )
 
@@ -278,12 +304,17 @@ def preprocess_dataset(
         print("\tMOSAiC specifc preprocessing ...")
         smp = mosaic_specific_processing(smp, label_configs["labels"])
 
-    # remove profiles with certain labels 
+    # remove profiles with certain labels
     if not original_mosaic_dataset and (len(label_configs["selected_labels"]["remove_profiles_with_labels"])) > 0:
         labels = label_configs["labels"]
-        labels_to_be_removed = [label_configs["anti_labels"][l] for l in label_configs["selected_labels"]["remove_profiles_with_labels"]]
+        labels_to_be_removed = [
+            label_configs["anti_labels"][label]
+            for label in label_configs["selected_labels"]["remove_profiles_with_labels"]
+        ]
         print("Remove profiles with certain labels ...")
-        profiles_to_be_removed = [smp.loc[(smp["label"] == labels[gt]),  "smp_idx"].unique() for gt in labels_to_be_removed]
+        profiles_to_be_removed = [
+            smp.loc[(smp["label"] == labels[label]), "smp_idx"].unique() for label in labels_to_be_removed
+        ]
         profiles_to_be_removed = set([p for profiles in profiles_to_be_removed for p in profiles])
         smp = smp[~smp["smp_idx"].isin(profiles_to_be_removed)].copy()
 
@@ -291,13 +322,15 @@ def preprocess_dataset(
     if not original_mosaic_dataset and (len(label_configs["selected_labels"]["merge_to_rare_label"])) > 0:
         labels = label_configs["labels"]
         print("Sum up labels ...")
-        labels_to_be_unified = [label_configs["anti_labels"][l] for l in label_configs["selected_labels"]["merge_to_rare_label"]]
+        labels_to_be_unified = [
+            label_configs["anti_labels"][label] for label in label_configs["selected_labels"]["merge_to_rare_label"]
+        ]
         smp = sum_up_labels(
-            smp, 
-            labels_to_be_unified = labels_to_be_unified, 
-            unified_label_idx=labels["rare"], 
+            smp,
+            labels_to_be_unified=labels_to_be_unified,
+            unified_label_idx=labels["rare"],
             all_labels_dict=labels,
-            )
+        )
 
     # save normalized and pre-processed data
     print("\tSave normalized data ...")
@@ -305,14 +338,15 @@ def preprocess_dataset(
     np.savez_compressed(smp_normalized_file_name, **dict)
 
     # 5. Visualize the data after normalization
-    if visualize_normalized: 
+    if visualize_normalized:
         visualize_normalized_data(
-            smp = smp,
-            example_smp_name = visualize_configs["example_smp"]["name"],
-            example_smp_path = Path(visualize_configs["example_smp"]["path"]),
-            used_labels = label_configs["selected_labels"]["used_labels"] + label_configs["selected_labels"]["rare_label"],
+            smp=smp,
+            example_smp_name=visualize_configs["example_smp"]["name"],
+            example_smp_path=Path(visualize_configs["example_smp"]["path"]),
+            used_labels=label_configs["selected_labels"]["used_labels"]
+            + label_configs["selected_labels"]["rare_label"],
             **label_configs,
-            colors = color_configs["grains"],
+            colors=color_configs["grains"],
             **visualize_configs["normalize"],
         )
 
@@ -327,11 +361,11 @@ def preprocess_dataset(
         smp_with_tsne = {"label": labels, "smp_idx": indices}
 
         for i in range(tsne):
-            smp_with_tsne["tsne" + str(i)] = tsne_results[:, i]
+            smp_with_tsne[f"tsne{str(i)}"] = tsne_results[:, i]
 
         smp = pd.DataFrame(smp_with_tsne)
 
-    #print(smp)
+    # print(smp)
     # 6. Prepare unlabelled data for two of the semisupervised modles:
     if ignore_unlabelled:
         unlabelled_smp_x = None
@@ -347,44 +381,76 @@ def preprocess_dataset(
         unlabelled_smp_y = unlabelled_smp["label"]
         # sample in order to make it time-wise possible
         # OBSERVATION: the more data we include the worse the scores for the models become
-        unlabelled_x = unlabelled_smp_x.sample(sample_size_unlabelled) # complete data: 650 326
-        unlabelled_y = unlabelled_smp_y.sample(sample_size_unlabelled) # we can do this, because labels are only -1 anyway
+        unlabelled_x = unlabelled_smp_x.sample(sample_size_unlabelled)  # complete data: 650 326
+        unlabelled_y = unlabelled_smp_y.sample(
+            sample_size_unlabelled
+        )  # we can do this, because labels are only -1 anyway
 
-    # 7. Split up the labelled data into training and test data
-    print("\tSplit data into training and testing data ...")
-    x_train, x_test, y_train, y_test, smp_idx_train, smp_idx_test = my_train_test_split(smp, test_size=test_size, train_size=train_size)
-
-    # For two of the semisupervised models: include unlabelled data points in x_train and y_train (test data stays the same!)
-    x_train_all = None if ignore_unlabelled else pd.concat([x_train, unlabelled_x])
-    y_train_all = None if ignore_unlabelled else pd.concat([y_train, unlabelled_y])
-
-    # 8. Make crossvalidation split
-    print("\tCreate cross-validation data from training data ...")
-    # Note: if we want to use StratifiedKFold, we can just hand over an integer to the functions
-    cv_stratified = list(StratifiedKFold(n_splits=k_fold, shuffle=True, random_state=random_seed).split(x_train, y_train))
-    # Attention the cv fold for these two semi-supervised models is different from the other cv folds!
-    if ignore_unlabelled:
-        cv_semisupervised = None
-    else:
-        cv_semisupervised = list(StratifiedKFold(n_splits=k_fold, shuffle=True, random_state=random_seed).split(x_train_all, y_train_all))
-    
-    data = x_train.copy()
-    target = y_train.copy()
-    data["smp_idx"] = smp_idx_train
-    cv_timeseries = cv_manual(
-            data=data, 
-            target=target, 
-            k=k_fold, 
-            random_state=random_seed
+    # check if we only want to have unlabelled data
+    if (test_size == 0.0) and (train_size == 0.0) and (k_fold == 0):
+        print(
+            "Warning: If you want to just run prediction on unlabelled profiles, you do not need to call preprocessing, but you can go straight for the predict.py."
         )
-    #print(np.unique(y_train, return_counts=True))
+        x_train = None
+        y_train = None
+        x_train_all = None
+        y_train_all = None
+        x_test = None
+        y_test = None
+        unlabelled_smp_x = None
+        cv_stratified = None
+        cv_semisupervised = None
+        cv_timeseries = None
+        smp_idx_train = None
+        smp_idx_test = None
+
+    else:
+        # 7. Split up the labelled data into training and test data
+        print("\tSplit data into training and testing data ...")
+        x_train, x_test, y_train, y_test, smp_idx_train, smp_idx_test = my_train_test_split(
+            smp, test_size=test_size, train_size=train_size
+        )
+
+        # For two of the semisupervised models: include unlabelled data points in x_train and y_train (test data stays the same!)
+        x_train_all = None if ignore_unlabelled else pd.concat([x_train, unlabelled_x])
+        y_train_all = None if ignore_unlabelled else pd.concat([y_train, unlabelled_y])
+
+        # 8. Make crossvalidation split
+        print("\tCreate cross-validation data from training data ...")
+        # Note: if we want to use StratifiedKFold, we can just hand over an integer to the functions
+        cv_stratified = list(
+            StratifiedKFold(n_splits=k_fold, shuffle=True, random_state=random_seed).split(x_train, y_train)
+        )
+        # Attention the cv fold for these two semi-supervised models is different from the other cv folds!
+        if ignore_unlabelled:
+            cv_semisupervised = None
+        else:
+            cv_semisupervised = list(
+                StratifiedKFold(n_splits=k_fold, shuffle=True, random_state=random_seed).split(x_train_all, y_train_all)
+            )
+
+        data = x_train.copy()
+        target = y_train.copy()
+        data["smp_idx"] = smp_idx_train
+        cv_timeseries = cv_manual(data=data, target=target, k=k_fold, random_state=random_seed)
+        # print(np.unique(y_train, return_counts=True))
 
     # what is needed for the models:
     # save this in a dictionary and save the dictionary as npz file
-    prepared_data = {"x_train": x_train, "y_train": y_train, "x_test": x_test, "y_test": y_test,
-                     "x_train_all": x_train_all, "y_train_all": y_train_all, "unlabelled_data": unlabelled_smp_x,
-                     "cv": cv_stratified, "cv_semisupervised": cv_semisupervised, "cv_timeseries": cv_timeseries,
-                     "smp_idx_train": smp_idx_train, "smp_idx_test": smp_idx_test}
+    prepared_data = {
+        "x_train": x_train,
+        "y_train": y_train,
+        "x_test": x_test,
+        "y_test": y_test,
+        "x_train_all": x_train_all,
+        "y_train_all": y_train_all,
+        "unlabelled_data": unlabelled_smp_x,
+        "cv": cv_stratified,
+        "cv_semisupervised": cv_semisupervised,
+        "cv_timeseries": cv_timeseries,
+        "smp_idx_train": smp_idx_train,
+        "smp_idx_test": smp_idx_test,
+    }
 
     if output_file is not None:
         print("\tStore fully preprocessed data in npz file...")

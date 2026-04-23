@@ -6,6 +6,8 @@ run: # best is to just set one to true
   test: False
   predict: False
   tune: False
+  train_and_store: False
+  evaluate: False
 raw_data: # this can come from anywhere in your system
   smp: /home/julia/Documents/BSc/BA/Data/Arctic_updated/
   temperature: /home/julia/Documents/BSc/BA/Data/Arctic/MOSAiC_ICE_Temperature.csv
